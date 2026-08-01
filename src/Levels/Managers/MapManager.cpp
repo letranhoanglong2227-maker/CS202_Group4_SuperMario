@@ -89,6 +89,16 @@ const std::vector<sf::FloatRect>& MapManager::getSolidBlocks() const {
     return solidBlocks;
 }
 
+std::vector<sf::FloatRect> MapManager::getNearbyBlocks(const sf::FloatRect& entityHitbox, float radius) const {
+    std::vector<sf::FloatRect> nearbyBlocks;
+    for (const auto& block : solidBlocks) {
+        if (std::abs(block.position.x - entityHitbox.position.x) < radius) {
+            nearbyBlocks.push_back(block);
+        }
+    }
+    return nearbyBlocks;
+}
+
 const sf::Vector2f& MapManager::getSpawnPoint() const {
     return spawnPointP1;
 }

@@ -2,6 +2,7 @@
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include "Components/MovementComponent.hpp"
+#include <vector>
 
 struct CollisionInfo {
     bool collided = false;
@@ -16,8 +17,14 @@ public:
 
     void applyGravity(MovementComponent& movementComponent, float dt);
     
-    // Giải quyết va chạm AABB giữa thực thể (hitbox) và một block tĩnh (blockHitbox)
-    CollisionInfo resolveCollision(sf::FloatRect& entityHitbox, MovementComponent& movement, const sf::FloatRect& blockHitbox);
+    // Di chuyển và xử lý va chạm trục X
+    void moveX(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt);
+    
+    // Di chuyển và xử lý va chạm trục Y (kết hợp nhảy, rớt)
+    void moveY(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt, CollisionInfo& info);
+    
+    // Kiểm tra an toàn trước khi lớn lên (thay đổi Hitbox)
+    bool canGrow(const sf::FloatRect& currentHitbox, const sf::Vector2f& newSize, const std::vector<sf::FloatRect>& blocks);
 
 private:
     float gravity;
