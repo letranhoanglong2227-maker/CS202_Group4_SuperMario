@@ -12,7 +12,7 @@ public:
   MapManager(float gridSize = 32.f);
 
   bool loadFromImage(const std::string &filename);
-  v void drawDebug(sf::RenderWindow &window) const;
+  void drawDebug(sf::RenderWindow &window) const;
 
   const std::vector<sf::FloatRect> &getSolidBlocks() const;
   std::vector<sf::FloatRect> getNearbyBlocks(const sf::FloatRect &entityHitbox,
