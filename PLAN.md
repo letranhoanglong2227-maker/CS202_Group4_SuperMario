@@ -51,7 +51,7 @@
 *   **Nhiệm vụ cụ thể:**
     1.  Định nghĩa `MovementComponent`: Quản lý vận tốc, gia tốc, ma sát.
     2.  Xây dựng `PhysicsEngine` cơ bản: Gia tốc trọng lực (gravity) rơi tự do.
-    3.  **Trình đọc bản đồ theo pixel (Code Map Parser):** Viết logic nạp ảnh bằng `sf::Image` và duyệt pixel.
+    3.  **Trình đọc bản đồ theo pixel (Code Map Parser):** Viết logic nạp ảnh bằng `sf::Image` và duyệt pixel. Áp dụng Grid/Spatial Partitioning để giới hạn phạm vi xét va chạm, tối ưu FPS.
     4.  **Tạo file ảnh test:** Vẽ một ảnh `test_map.png` siêu nhỏ (ví dụ chỉ có nền đen nằm ngang ở dưới làm đất, một chấm đỏ ở trên làm người chơi) để test code. Vẽ viền đỏ debug các hitbox.
 
 #### 👤 Người 3: OOP Entity Hierarchy & Player Logic cơ bản
@@ -83,7 +83,7 @@
 #### 👤 Người 2: Thuật Toán Va Chạm Toàn Diện & Tích Hợp Obstacles Lên Map Test
 *   **File phụ trách:** `Physics/PhysicsEngine.cpp` (hàm va chạm), `Objects/Environment/Pipe.hpp`, `Objects/Environment/Lava.hpp`, `Levels/Managers/LevelManager.hpp`.
 *   **Nhiệm vụ cụ thể:**
-    1.  Hoàn thiện va chạm AABB trong `PhysicsEngine.cpp`: Đẩy nhân vật ra khỏi gạch tĩnh (xử lý kẹt tường, trượt góc).
+    1.  Hoàn thiện va chạm AABB trong `PhysicsEngine.cpp`: Áp dụng Axis-Separated Collision (tách trục X, Y) để xử lý kẹt tường, trượt góc, tránh lỗi kẹt mép gạch.
     2.  Tạo lớp `Pipe` (ống nước) và `Lava` (dung nham).
     3.  **Cập nhật `test_map.png`:** Thêm pixel màu ống nước và dung nham vào ảnh map test để chạy thử nghiệm va chạm.
 

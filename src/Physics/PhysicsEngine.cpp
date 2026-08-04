@@ -10,39 +10,53 @@ void PhysicsEngine::applyGravity(MovementComponent& movementComponent, float dt)
     movementComponent.applyForce({0.f, gravity * clampedDt});
 }
 
-CollisionInfo PhysicsEngine::resolveCollision(sf::FloatRect& entityHitbox, MovementComponent& movement, const sf::FloatRect& blockHitbox) {
-    CollisionInfo info;
-    
-    if (auto intersectionOpt = entityHitbox.findIntersection(blockHitbox)) {
-        sf::FloatRect intersection = *intersectionOpt;
-        info.collided = true;
-        
-        // Giải quyết theo hướng có độ lún (penetration) nhỏ nhất
-        if (intersection.size.x < intersection.size.y) {
-            // Va chạm theo phương ngang (X)
-            info.wallHit = true;
-            // Xác định xem thực thể nằm bên trái hay bên phải của block để đẩy ra
-            float pushDir = (entityHitbox.position.x + entityHitbox.size.x / 2.f < blockHitbox.position.x + blockHitbox.size.x / 2.f) ? -1.f : 1.f;
-            entityHitbox.position.x += intersection.size.x * pushDir;
-            // Dừng vận tốc ngang
-            movement.setVelocity(0.f, movement.getVelocity().y);
-        } else {
-            // Va chạm theo phương dọc (Y)
-            if (entityHitbox.position.y + entityHitbox.size.y / 2.f < blockHitbox.position.y + blockHitbox.size.y / 2.f) {
-                // Va chạm từ phía trên block -> Đáp đất
-                info.grounded = true;
-                entityHitbox.position.y -= intersection.size.y;
-                // Dừng vận tốc rơi
-                movement.setVelocity(movement.getVelocity().x, 0.f);
-            } else {
-                // Va chạm từ phía dưới block -> Đụng trần
-                info.ceilHit = true;
-                entityHitbox.position.y += intersection.size.y;
-                // Triệt tiêu vận tốc hướng lên
-                movement.setVelocity(movement.getVelocity().x, 0.f);
+void PhysicsEngine::moveX(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt) {
+    hitbox.position.x += movement.getVelocity().x * dt;
+    for (const auto& block : blocks) {
+        if (auto intersect = hitbox.findIntersection(block)) {
+            // Đang đi sang phải
+            if (movement.getVelocity().x > 0.f) {
+                hitbox.position.x = block.position.x - hitbox.size.x;
+            } 
+            // Đang đi sang trái
+            else if (movement.getVelocity().x < 0.f) {
+                hitbox.position.x = block.position.x + block.size.x;
             }
+            movement.setVelocity(0.f, movement.getVelocity().y);
         }
     }
-    
-    return info;
+}
+
+void PhysicsEngine::moveY(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt, CollisionInfo& info) {
+    hitbox.position.y += movement.getVelocity().y * dt;
+    info.grounded = false; // Reset grounded state
+
+    for (const auto& block : blocks) {
+        if (auto intersect = hitbox.findIntersection(block)) {
+            // Đang rơi xuống (chạm đất)
+            if (movement.getVelocity().y > 0.f) {
+                hitbox.position.y = block.position.y - hitbox.size.y;
+                info.grounded = true;
+            } 
+            // Đang nhảy lên (đụng trần)
+            else if (movement.getVelocity().y < 0.f) {
+                hitbox.position.y = block.position.y + block.size.y;
+                info.ceilHit = true;
+            }
+            movement.setVelocity(movement.getVelocity().x, 0.f);
+        }
+    }
+}
+
+bool PhysicsEngine::canGrow(const sf::FloatRect& currentHitbox, const sf::Vector2f& newSize, const std::vector<sf::FloatRect>& blocks) {
+    sf::FloatRect projectedHitbox = currentHitbox;
+    projectedHitbox.position.y -= (newSize.y - currentHitbox.size.y);
+    projectedHitbox.size = newSize;
+
+    for (const auto& block : blocks) {
+        if (projectedHitbox.findIntersection(block)) {
+            return false;
+        }
+    }
+    return true;
 }

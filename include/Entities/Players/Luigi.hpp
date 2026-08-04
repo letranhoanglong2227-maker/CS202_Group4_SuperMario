@@ -1,5 +1,11 @@
-﻿#pragma once
+#pragma once
 
-class Luigi {
+#include "Entities/Players/PlayerManager.hpp"
+
+class Luigi : public PlayerManager {
+public:
+    Luigi();
+    ~Luigi() override = default;
+
+    void updateAnimation(float dt) override;
 };
-

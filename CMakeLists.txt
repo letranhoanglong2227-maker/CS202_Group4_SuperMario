@@ -5,9 +5,27 @@ project(SuperMarioProject VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find SFML 3.x
-find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Audio Window System)
+# Sửa lỗi compatibility với FreeType của SFML trên các bản CMake mới
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
+# ==============================================================================
+# TỰ ĐỘNG TẢI & TÍCH HỢP SFML 3.0 VIA FETCHCONTENT
+# ==============================================================================
+include(FetchContent)
+
+# Tắt build các phần không cần thiết của SFML để tăng tốc độ biên dịch
+set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG        3.0.0 # Tải chính xác bản SFML 3.0.0 Stable
+)
+FetchContent_MakeAvailable(SFML)
+# ==============================================================================
 
 # Gather source files
 file(GLOB_RECURSE SOURCES
