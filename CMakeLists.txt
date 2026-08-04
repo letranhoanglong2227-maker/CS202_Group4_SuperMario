@@ -36,3 +36,13 @@ if(MSVC)
 else()
     target_compile_options(SuperMario PRIVATE -Wall -Wextra)
 endif()
+
+# Copy SFML DLLs to executable directory after build
+if(WIN32)
+    add_custom_command(TARGET SuperMario POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${SFML_DIR}/../../../bin"
+        $<TARGET_FILE_DIR:SuperMario>
+    )
+endif()
+
