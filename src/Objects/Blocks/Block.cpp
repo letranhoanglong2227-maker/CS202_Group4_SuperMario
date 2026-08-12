@@ -1,15 +1,8 @@
-﻿#include "Objects/Blocks/Block.hpp"
+#include "Objects/Blocks/Block.hpp"
 
-Block::Block()
+Block::Block() : animationComponent(entitySprite, TextureBlockManager::getBlocksTexture())
 {
     position = {0, 0};
-    exist = false;
-    entitySprite.setTexture(TextureBlockManager::getBlocksTexture());
-}
-
-Block::Block(float x, float y)
-{
-    position = {x, y};
     exist = false;
     entitySprite.setTexture(TextureBlockManager::getBlocksTexture());
 }
