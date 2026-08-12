@@ -1,10 +1,6 @@
-﻿/* Note:
-    Nhân: Đây là code tui viết tạm thời để test lại object block
-*/
-
-// include/Core/GameObject.hpp
 #pragma once
-#include<iostream>
+
+#include <iostream>
 #include <SFML/Graphics.hpp>
 
 class GameEventMediator; // Forward declaration
@@ -18,23 +14,24 @@ protected:
     GameEventMediator* eventMediator{ nullptr };
 
 public:
-    GameObject();
     sf::RectangleShape hitbox;
 
+    GameObject();
     virtual ~GameObject() = default;
 
-    // Getters & Setters
-    virtual sf::Vector2f getPosition() const { return position; }
-    virtual void setPosition(const sf::Vector2f& pos) { 
-        position = pos; 
-        entitySprite.setPosition(pos);
-        hitbox.setPosition(pos);
-    }
-    
+    // Getters & Setters Position
+    virtual sf::Vector2f getPosition() const;
+    virtual void setPosition(const sf::Vector2f& pos);
+    virtual void setPosition(float x, float y);
+    virtual sf::Vector2f getCenter() const;
+
+    // Getters & Setters Size
+    virtual sf::Vector2f getSize() const;
+    virtual void setSize(const sf::Vector2f& sz);
+    virtual void setSize(float width, float height);
+
+    virtual void setEventMediator(GameEventMediator* mediator);
+
     virtual void update(float dt) = 0;
-    virtual void render(sf::RenderTarget* target) {
-        if (target) {
-            target->draw(entitySprite);
-        }
-    }
+    virtual void render(sf::RenderTarget* target);
 };
