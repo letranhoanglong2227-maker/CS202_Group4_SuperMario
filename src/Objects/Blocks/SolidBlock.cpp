@@ -1,13 +1,9 @@
-﻿#include "Objects/Blocks/SolidBlock.hpp"
+#include "Objects/Blocks/SolidBlock.hpp"
 
 SolidBlock::SolidBlock(){
     name = "SolidBlock";
     initSpritesSheet();
-}
-
-SolidBlock::SolidBlock(float x, float y) : Block(x, y){
-    name = "SolidBlock";
-    initSpritesSheet();
+    animationComponent.addAnimation("Idle", {spritesSheet["SolidBlock"]});
 }
 
 void SolidBlock::initSpritesSheet()
@@ -20,7 +16,7 @@ void SolidBlock::reacToCollison(int collidedSide){
 }
 
 void SolidBlock::update(float dt){
-    // Nothing to do (quite sure)
+    animationComponent.play("Idle", dt);
 }
 
 void SolidBlock::setupTexture(){

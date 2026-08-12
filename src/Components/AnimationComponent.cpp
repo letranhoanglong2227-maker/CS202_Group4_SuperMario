@@ -9,6 +9,7 @@ AnimationComponent::AnimationComponent(sf::Sprite& sprite, sf::Texture& textureS
       currentFrame(0), 
       currentAnimationKey("Null") 
 {
+    this->sprite.setTexture(this->textureSheet);
 }
 
 void AnimationComponent::setInterval(float interval) {

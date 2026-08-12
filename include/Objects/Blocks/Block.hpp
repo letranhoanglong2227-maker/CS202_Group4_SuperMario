@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include<iostream>
 #include<string>
 #include<unordered_map>
@@ -14,7 +14,6 @@ protected:
     AnimationComponent animationComponent;
 public:
     Block();
-    Block(float x, float y);
 
     virtual void initSpritesSheet() = 0;
     virtual void reacToCollison(int collidedSide) = 0;
