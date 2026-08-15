@@ -18,7 +18,7 @@ void spawnCallback(GameObject* newObj) {
 
 int main() {
     // 1. Setup Window
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "CoinBlock Test");
+    sf::RenderWindow window(sf::VideoMode(800, 600), "CoinBlock Test");
     window.setFramerateLimit(60);
 
     // 2. Load Textures
@@ -31,15 +31,15 @@ int main() {
     // Assuming Coin handles its own texture loading or we can just see a white box if it fails.
 
     // 3. Create CoinBlock
-    CoinBlock myBlock(0, spawnCallback);
+    CoinBlock myBlock(3, spawnCallback);
     
     // Set position and let it initialize originalY
     myBlock.setPosition({400.f, 300.f});
     // In our actual implementation, update() initializes originalY on first frame if it's -1.
 
     // View to zoom in a bit since sprites are 16x16
-    sf::View view(sf::FloatRect({0.f, 0.f}, {800.f, 600.f}));
-    view.setCenter({400.f, 300.f});
+    sf::View view(sf::FloatRect(0, 0, 800, 600));
+    view.setCenter(400.f, 300.f);
     view.zoom(0.2f);
     window.setView(view);
 
@@ -50,17 +50,16 @@ int main() {
         float dt = clock.restart().asSeconds();
 
         // Event polling
-        while (std::optional<sf::Event> event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
                 window.close();
             }
 
             // Press SPACE to simulate hitting the block from below
-            if (const auto* keyPress = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPress->code == sf::Keyboard::Key::Space) {
-                    std::cout << "Space pressed! Simulating collision...\n";
-                    myBlock.reactToCollision(COLLISION_BOTTOM);
-                }
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
+                std::cout << "Space pressed! Simulating collision...\n";
+                myBlock.reactToCollision(COLLISION_BOTTOM);
             }
         }
 
@@ -84,10 +83,10 @@ int main() {
         // Render
         window.clear(sf::Color(100, 149, 237)); // Mario sky blue
         
-        myBlock.render(&window);
+        myBlock.render(window);
         
         for (auto& entity : activeEntities) {
-            entity->render(&window);
+            entity->render(window);
         }
 
         window.display();

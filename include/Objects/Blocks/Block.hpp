@@ -16,10 +16,8 @@ public:
     Block();
 
     virtual void initSpritesSheet() = 0;
-    virtual void reacToCollison(int collidedSide) = 0;
+    virtual void reactToCollision(int collidedSide) = 0;
     virtual void update(float dt) = 0;
-
-    virtual void setupTexture() = 0;
 
     virtual ~Block();
 };

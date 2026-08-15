@@ -6,10 +6,8 @@ public:
     SolidBlock();
 
     void initSpritesSheet();
-    void reacToCollison(int collidedSide);
+    void reactToCollision(int collidedSide);
     void update(float dt);
-
-    void setupTexture();
 
     ~SolidBlock();
 };
