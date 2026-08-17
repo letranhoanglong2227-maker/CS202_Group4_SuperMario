@@ -4,6 +4,9 @@
 #include "Components/MovementComponent.hpp"
 #include <vector>
 
+class Block;
+class LivingEntity;
+
 struct CollisionInfo {
     bool collided = false;
     bool grounded = false;  // Va chạm từ trên đỉnh block (đáp đất)
@@ -25,6 +28,12 @@ public:
     
     // Kiểm tra an toàn trước khi lớn lên (thay đổi Hitbox)
     bool canGrow(const sf::FloatRect& currentHitbox, const sf::Vector2f& newSize, const std::vector<sf::FloatRect>& blocks);
+
+    CollisionInfo step(LivingEntity& entity, const std::vector<Block*>& blocks,
+                       float dt);
+    std::vector<Block*> queryNearbyBlocks(const sf::FloatRect& entityHitbox,
+                                          const std::vector<Block*>& blocks,
+                                          unsigned int paddingTiles = 1) const;
 
 private:
     float gravity;
