@@ -13,6 +13,7 @@
 #include "Objects/Environment/Cannon.hpp"
 #include "Objects/Environment/Lava.hpp"
 #include "Objects/Environment/Pipe.hpp"
+#include "Objects/Environment/Rocket.hpp"
 #include "Objects/Environment/Trampoline.hpp"
 #include "Objects/Environment/WinFlag.hpp"
 #include "Objects/Items/PowerUpObject.hpp"
@@ -54,8 +55,16 @@ void LevelManager::setPlayerDeathCallback(PlayerCallback callback) {
     playerDeathCallback = std::move(callback);
 }
 
-void LevelManager::addEntity(std::unique_ptr<GameObject> entity) {
+void LevelManager::addEntity(std::unique_ptr<GameObject> entity,
+                             bool participatesInGenericPhysics,
+                             bool participatesInBlockCollisions) {
     if (!entity) return;
+    if (participatesInGenericPhysics) {
+        genericPhysicsParticipants.insert(entity.get());
+    }
+    if (participatesInBlockCollisions) {
+        blockCollisionParticipants.insert(entity.get());
+    }
     if (updating) {
         pendingEntities.push_back(std::move(entity));
         return;
@@ -76,7 +85,7 @@ void LevelManager::update(float dt) {
             physicsEngine.step(*player, blocks, dt);
         }
     }
-    for (Enemy* enemy : enemies) {
+    for (Enemy* enemy : physicsEnemies) {
         if (enemy && !enemy->isDead()) {
             physicsEngine.step(*enemy, blocks, dt);
         }
@@ -102,6 +111,17 @@ void LevelManager::update(float dt) {
                 }
             }
         }
+        for (Rocket* rocket : rockets) {
+            if (rocket && rocket->isActive() &&
+                player->hitbox.getGlobalBounds().findIntersection(
+                    rocket->hitbox.getGlobalBounds())) {
+                rocket->deactivate();
+                player->takeDamage(1);
+                if (player->isDead() && playerDeathCallback) {
+                    playerDeathCallback(*player);
+                }
+            }
+        }
         for (WinFlag* flag : winFlags) {
             if (flag && player->hitbox.getGlobalBounds().findIntersection(
                             flag->hitbox.getGlobalBounds())) {
@@ -116,12 +136,7 @@ void LevelManager::update(float dt) {
     updating = false;
     flushPendingEntities();
 
-    entities.erase(std::remove_if(entities.begin(), entities.end(),
-        [](const std::unique_ptr<GameObject>& entity) {
-            const auto* bullet = dynamic_cast<const Bullet*>(entity.get());
-            return bullet && !bullet->isActive();
-        }), entities.end());
-    rebuildViews();
+    removeInactiveEntities();
 }
 
 void LevelManager::render(sf::RenderTarget* target) {
@@ -139,19 +154,25 @@ void LevelManager::clear() {
     entities.clear();
     blocks.clear();
     enemies.clear();
+    physicsEnemies.clear();
     powerUps.clear();
     lavaHazards.clear();
     bullets.clear();
+    rockets.clear();
     winFlags.clear();
+    genericPhysicsParticipants.clear();
+    blockCollisionParticipants.clear();
 }
 
 const MapManager& LevelManager::getMapManager() const noexcept { return mapManager; }
 const std::vector<std::unique_ptr<GameObject>>& LevelManager::getEntities() const noexcept { return entities; }
 const std::vector<Block*>& LevelManager::getBlocks() const noexcept { return blocks; }
 const std::vector<Enemy*>& LevelManager::getEnemies() const noexcept { return enemies; }
+const std::vector<Enemy*>& LevelManager::getPhysicsEnemies() const noexcept { return physicsEnemies; }
 
 void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
     std::unique_ptr<GameObject> object;
+    bool participatesInGenericPhysics = false;
     auto adoptRawSpawn = [this](GameObject* spawned) {
         addEntity(std::unique_ptr<GameObject>(spawned));
     };
@@ -200,21 +221,25 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
         break;
     case MapObjectType::Goomba:
         object = EntityFactory::createEnemy("Goomba", spawnInfo.position);
+        participatesInGenericPhysics = true;
         break;
     case MapObjectType::Koopa:
         object = EntityFactory::createEnemy("Koopa", spawnInfo.position);
+        participatesInGenericPhysics = true;
         break;
     case MapObjectType::FlyingKoopa:
         object = EntityFactory::createEnemy("FlyingKoopa", spawnInfo.position);
         break;
     case MapObjectType::Heriss:
         object = EntityFactory::createEnemy("Heriss", spawnInfo.position);
+        participatesInGenericPhysics = true;
         break;
     case MapObjectType::PeteyPiranha:
         object = EntityFactory::createEnemy("PeteyPiranha", spawnInfo.position);
         break;
     case MapObjectType::Bowser:
         object = EntityFactory::createEnemy("Bowser", spawnInfo.position);
+        participatesInGenericPhysics = true;
         break;
     case MapObjectType::Player1Spawn:
         if (PlayerManager* player = findPlayer(1)) player->setPosition(spawnInfo.position);
@@ -230,15 +255,27 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
         object->setSize({static_cast<float>(spawnInfo.widthInTiles) * MapFormat::TILE_SIZE,
                          static_cast<float>(spawnInfo.heightInTiles) * MapFormat::TILE_SIZE});
     }
-    addEntity(std::move(object));
+    const bool participatesInBlockCollisions =
+        dynamic_cast<Block*>(object.get()) != nullptr;
+    addEntity(std::move(object), participatesInGenericPhysics,
+              participatesInBlockCollisions);
 }
 
 void LevelManager::registerEntity(GameObject& entity) {
-    if (auto* block = dynamic_cast<Block*>(&entity)) blocks.push_back(block);
-    if (auto* enemy = dynamic_cast<Enemy*>(&entity)) enemies.push_back(enemy);
+    if (auto* block = dynamic_cast<Block*>(&entity);
+        block && blockCollisionParticipants.contains(&entity)) {
+        blocks.push_back(block);
+    }
+    if (auto* enemy = dynamic_cast<Enemy*>(&entity)) {
+        enemies.push_back(enemy);
+        if (genericPhysicsParticipants.contains(&entity)) {
+            physicsEnemies.push_back(enemy);
+        }
+    }
     if (auto* powerUp = dynamic_cast<PowerUpObject*>(&entity)) powerUps.push_back(powerUp);
     if (auto* lava = dynamic_cast<Lava*>(&entity)) lavaHazards.push_back(lava);
     if (auto* bullet = dynamic_cast<Bullet*>(&entity)) bullets.push_back(bullet);
+    if (auto* rocket = dynamic_cast<Rocket*>(&entity)) rockets.push_back(rocket);
     if (auto* flag = dynamic_cast<WinFlag*>(&entity)) winFlags.push_back(flag);
 }
 
@@ -253,9 +290,32 @@ void LevelManager::flushPendingEntities() {
 }
 
 void LevelManager::rebuildViews() {
-    blocks.clear(); enemies.clear(); powerUps.clear();
-    lavaHazards.clear(); bullets.clear(); winFlags.clear();
+    blocks.clear(); enemies.clear(); physicsEnemies.clear(); powerUps.clear();
+    lavaHazards.clear(); bullets.clear(); rockets.clear(); winFlags.clear();
     for (auto& entity : entities) if (entity) registerEntity(*entity);
+}
+
+void LevelManager::removeInactiveEntities() {
+    entities.erase(std::remove_if(entities.begin(), entities.end(),
+        [this](const std::unique_ptr<GameObject>& entity) {
+            bool remove = false;
+            if (const auto* bullet = dynamic_cast<const Bullet*>(entity.get())) {
+                remove = !bullet->isActive();
+            } else if (const auto* rocket = dynamic_cast<const Rocket*>(entity.get())) {
+                remove = !rocket->isActive();
+            } else if (const auto* enemy = dynamic_cast<const Enemy*>(entity.get())) {
+                remove = enemy->isDead();
+            } else if (const auto* powerUp =
+                           dynamic_cast<const PowerUpObject*>(entity.get())) {
+                remove = !powerUp->exists();
+            }
+            if (remove) {
+                genericPhysicsParticipants.erase(entity.get());
+                blockCollisionParticipants.erase(entity.get());
+            }
+            return remove;
+        }), entities.end());
+    rebuildViews();
 }
 
 PlayerManager* LevelManager::findPlayer(int playerId) const {

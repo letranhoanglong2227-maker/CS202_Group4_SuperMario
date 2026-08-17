@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 class Block;
@@ -16,6 +17,7 @@ class GameObject;
 class Lava;
 class PlayerManager;
 class PowerUpObject;
+class Rocket;
 class WinFlag;
 
 class LevelManager {
@@ -34,7 +36,9 @@ public:
     // LevelManager invokes these callbacks and never owns the state-flow target.
     void setLevelCompletedCallback(LevelCallback callback);
     void setPlayerDeathCallback(PlayerCallback callback);
-    void addEntity(std::unique_ptr<GameObject> entity);
+    void addEntity(std::unique_ptr<GameObject> entity,
+                   bool participatesInGenericPhysics = false,
+                   bool participatesInBlockCollisions = false);
     void update(float dt);
     void render(sf::RenderTarget* target);
     void clear();
@@ -42,6 +46,7 @@ public:
     const std::vector<std::unique_ptr<GameObject>>& getEntities() const noexcept;
     const std::vector<Block*>& getBlocks() const noexcept;
     const std::vector<Enemy*>& getEnemies() const noexcept;
+    const std::vector<Enemy*>& getPhysicsEnemies() const noexcept;
 
 protected:
     virtual void onMapLoaded() {}
@@ -51,6 +56,7 @@ private:
     void registerEntity(GameObject& entity);
     void flushPendingEntities();
     void rebuildViews();
+    void removeInactiveEntities();
     PlayerManager* findPlayer(int playerId) const;
 
     MapManager mapManager;
@@ -59,10 +65,14 @@ private:
     std::vector<std::unique_ptr<GameObject>> pendingEntities;
     std::vector<Block*> blocks;
     std::vector<Enemy*> enemies;
+    std::vector<Enemy*> physicsEnemies;
     std::vector<PowerUpObject*> powerUps;
     std::vector<Lava*> lavaHazards;
     std::vector<Bullet*> bullets;
+    std::vector<Rocket*> rockets;
     std::vector<WinFlag*> winFlags;
+    std::unordered_set<const GameObject*> genericPhysicsParticipants;
+    std::unordered_set<const GameObject*> blockCollisionParticipants;
     std::vector<PlayerManager*> players;
     LevelCallback levelCompletedCallback;
     PlayerCallback playerDeathCallback;

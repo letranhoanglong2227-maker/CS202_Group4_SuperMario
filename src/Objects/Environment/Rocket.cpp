@@ -2,9 +2,12 @@
 #include "Levels/Managers/MapManager.hpp"
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
-Rocket::Rocket(sf::Vector2f pos, const GameObject* followTarget, float moveSpeed)
-    : target(followTarget), speed(std::max(0.f, moveSpeed)) {
+Rocket::Rocket(sf::Vector2f pos, TargetResolver resolver, float moveSpeed,
+               float activeLifetime)
+    : targetResolver(std::move(resolver)), speed(std::max(0.f, moveSpeed)),
+      lifetime(std::max(0.f, activeLifetime)) {
     setPosition(pos);
     setSize({MapFormat::TILE_SIZE, MapFormat::TILE_SIZE * 0.5f});
     shape.setPosition(pos);
@@ -12,12 +15,25 @@ Rocket::Rocket(sf::Vector2f pos, const GameObject* followTarget, float moveSpeed
     shape.setFillColor(sf::Color(235, 235, 235));
 }
 
-void Rocket::setTarget(const GameObject* newTarget) noexcept { target = newTarget; }
+void Rocket::setTargetResolver(TargetResolver resolver) {
+    targetResolver = std::move(resolver);
+}
 
 void Rocket::update(float dt) {
-    if (dt <= 0.f) return;
-    if (target) {
-        sf::Vector2f offset = target->getCenter() - getCenter();
+    if (!active || dt <= 0.f) return;
+    lifetime -= dt;
+    if (lifetime <= 0.f) {
+        deactivate();
+        return;
+    }
+
+    if (targetResolver) {
+        const std::optional<sf::Vector2f> targetPosition = targetResolver();
+        if (!targetPosition) {
+            deactivate();
+            return;
+        }
+        sf::Vector2f offset = *targetPosition - getCenter();
         const float length = std::sqrt(offset.x * offset.x + offset.y * offset.y);
         if (length > 0.001f) velocity = offset / length * speed;
     }
@@ -26,6 +42,10 @@ void Rocket::update(float dt) {
 }
 
 void Rocket::render(sf::RenderTarget* renderTarget) {
-    if (renderTarget) renderTarget->draw(shape);
+    if (renderTarget && active) renderTarget->draw(shape);
 }
+
+bool Rocket::isActive() const noexcept { return active; }
+
+void Rocket::deactivate() noexcept { active = false; }
 

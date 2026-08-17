@@ -1,18 +1,26 @@
 ﻿#pragma once
 
 #include "Core/GameObject.hpp"
+#include <functional>
+#include <optional>
 
 class Rocket : public GameObject {
 public:
-    Rocket(sf::Vector2f position = {}, const GameObject* target = nullptr,
-           float speed = 140.f);
-    void setTarget(const GameObject* target) noexcept;
+    using TargetResolver = std::function<std::optional<sf::Vector2f>()>;
+
+    Rocket(sf::Vector2f position = {}, TargetResolver targetResolver = {},
+           float speed = 140.f, float lifetime = 8.f);
+    void setTargetResolver(TargetResolver targetResolver);
     void update(float dt) override;
     void render(sf::RenderTarget* target) override;
+    bool isActive() const noexcept;
+    void deactivate() noexcept;
 private:
-    const GameObject* target;
+    TargetResolver targetResolver;
     float speed;
+    float lifetime;
     sf::Vector2f velocity{};
     sf::RectangleShape shape;
+    bool active{true};
 };
 
