@@ -216,9 +216,14 @@ int main() {
     {
         LevelManager level;
         Mario player;
+        Mario sameFrameFollower;
         player.setPosition({64.f, 98.f});
         player.getMovementComponent()->setVelocity(0.f, -200.f);
-        level.setPlayers({&player});
+        player.setGrounded(false);
+        sameFrameFollower.setPosition({64.f, 98.f});
+        sameFrameFollower.getMovementComponent()->setVelocity(0.f, -200.f);
+        sameFrameFollower.setGrounded(false);
+        level.setPlayers({&player, &sameFrameFollower});
 
         int callbackCalls = 0;
         std::unordered_set<GameObject*> delivered;
@@ -232,6 +237,17 @@ int main() {
         level.addEntity(std::move(brick), false, true);
 
         level.update(0.05f);
+
+        passed &= check(callbackCalls == 4 &&
+                            nearlyEqual(player.getPosition().y, 96.f) &&
+                            nearlyEqual(
+                                player.getMovementComponent()->getVelocity().y,
+                                0.f),
+                        "first actor breaks normal Brick before same-frame follower");
+        passed &= check(sameFrameFollower.getPosition().y < 96.f &&
+                            sameFrameFollower.getMovementComponent()
+                                    ->getVelocity().y < 0.f,
+                        "later same-frame actor ignores retained inactive Brick");
 
         std::unordered_set<const GameObject*> fragmentAddresses;
         bool ownsOnlyFragments = level.getEntities().size() == 4;
@@ -255,6 +271,31 @@ int main() {
             physics.step(player, level.getBlocks(), 0.05f);
         passed &= check(!collision.ceilHit && player.getPosition().y < 98.f,
                         "subsequent physics no longer collides with removed Brick");
+    }
+
+    {
+        BrickFragment fragment({0.f, 1079.f}, {0.f, 0.f});
+        fragment.update(0.05f);
+        passed &= check(fragment.getPosition().y > 1080.f &&
+                            !fragment.isExist(),
+                        "real BrickFragment expires through its lifecycle rule");
+    }
+
+    {
+        LevelManager level;
+        auto fragment = std::make_unique<BrickFragment>(
+            sf::Vector2f{0.f, 1079.f}, sf::Vector2f{0.f, 0.f});
+        BrickFragment* fragmentView = fragment.get();
+        level.addEntity(std::move(fragment), false, true);
+        const bool registeredBeforeExpiry =
+            level.getEntities().size() == 1 && level.getBlocks().size() == 1 &&
+            level.getBlocks().front() == fragmentView;
+
+        level.update(0.05f);
+
+        passed &= check(registeredBeforeExpiry && level.getEntities().empty() &&
+                            level.getBlocks().empty(),
+                        "expired BrickFragment leaves no owned or block-view pointer");
     }
 
     return passed ? 0 : 1;

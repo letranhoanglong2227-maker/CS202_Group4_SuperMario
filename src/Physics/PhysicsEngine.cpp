@@ -80,7 +80,8 @@ std::vector<Block*> PhysicsEngine::queryNearbyBlocks(
     std::vector<Block*> nearby;
     nearby.reserve(blocks.size());
     for (Block* block : blocks) {
-        if (block && queryArea.findIntersection(block->hitbox.getGlobalBounds())) {
+        if (block && block->isExist() &&
+            queryArea.findIntersection(block->hitbox.getGlobalBounds())) {
             nearby.push_back(block);
         }
     }
@@ -102,7 +103,7 @@ CollisionInfo PhysicsEngine::step(LivingEntity& entity,
 
     bounds.position.x += movement->getVelocity().x * safeDt;
     for (Block* block : nearby) {
-        if (!block) continue;
+        if (!block || !block->isExist()) continue;
         const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
         if (!bounds.findIntersection(blockBounds)) continue;
         if (movement->getVelocity().x > 0.f) {
@@ -120,7 +121,7 @@ CollisionInfo PhysicsEngine::step(LivingEntity& entity,
 
     bounds.position.y += movement->getVelocity().y * safeDt;
     for (Block* block : nearby) {
-        if (!block) continue;
+        if (!block || !block->isExist()) continue;
         const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
         if (!bounds.findIntersection(blockBounds)) continue;
         if (movement->getVelocity().y > 0.f) {
