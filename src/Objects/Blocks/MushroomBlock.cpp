@@ -10,6 +10,7 @@ MushroomBlock::MushroomBlock(std::function<void(GameObject*)> spawnCallback)
       onSpawnItem(spawnCallback) 
 {
     name = "MushroomBlock";
+    exist = true;
     originalY = -1.f; 
 
     // Initialize textures and add animations directly in the constructor

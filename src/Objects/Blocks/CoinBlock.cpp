@@ -14,6 +14,7 @@ CoinBlock::CoinBlock(int count, std::function<void(GameObject*)> spawnCallback)
     }
 
     name = "CoinBlock";
+    exist = true;
     
     // Store original position (assumes position is set right after creation in the Level parser)
     // In update(), we'll check if originalY is uninitialized and set it, or you can set it when adding to the level.
