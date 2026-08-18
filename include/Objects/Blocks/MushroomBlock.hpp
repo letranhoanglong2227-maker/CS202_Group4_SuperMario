@@ -1,9 +1,7 @@
 #pragma once
 #include "Objects/Blocks/Block.hpp"
+#include "Core/Constants.hpp"
 #include <functional>
-
-// Reusing the collision constant
-extern const int COLLISION_BOTTOM; 
 
 class MushroomBlock : public Block {
 private:

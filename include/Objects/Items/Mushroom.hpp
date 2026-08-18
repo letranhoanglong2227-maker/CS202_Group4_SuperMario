@@ -13,7 +13,7 @@ private:
     std::unique_ptr<MovementComponent> movementComponent;
 
 public:
-    Mushroom(const sf::Vector2f& pos = { 0.f, 0.f });
+    Mushroom(const sf::Vector2f& pos = { 0.f, 0.f }, bool popped = false);
     ~Mushroom() override = default;
 
     void onCollect(PlayerManager* player);

@@ -1,12 +1,6 @@
 #include "Objects/Blocks/MushroomBlock.hpp"
 #include "Objects/Items/Mushroom.hpp"
 
-// We declare COLLISION_BOTTOM here if not already available in a global header
-#ifndef COLLISION_BOTTOM_DEF
-#define COLLISION_BOTTOM_DEF
-const int COLLISION_BOTTOM = 0; 
-#endif
-
 MushroomBlock::MushroomBlock(std::function<void(GameObject*)> spawnCallback)
     : isEmpty(false), 
       isBouncing(false), 
@@ -38,12 +32,9 @@ void MushroomBlock::reactToCollision(int collidedSide) {
     if (collidedSide == COLLISION_BOTTOM) {
         if (!isEmpty && !isBouncing) {
             
-            // Spawn Mushroom (Temporarily removed for testing)
             if (onSpawnItem) {
-                Mushroom* newMushroom = new Mushroom(); 
-                newMushroom->setPosition({this->position.x, this->position.y - 16.f}); 
+                Mushroom* newMushroom = new Mushroom({this->position.x, this->position.y - 32.f}, true); 
                 onSpawnItem(newMushroom);
-                // onSpawnItem(nullptr); // Just to trigger the callback for testing
             }
 
             isEmpty = true;
@@ -70,7 +61,6 @@ void MushroomBlock::update(float dt) {
         animationComponent.play("Empty", dt);
     }
 
-    // TODO: USER TASK
     if(isBouncing){
         bounceVelocity = bounceVelocity + bounceGravity * dt;
         position.y = position.y + bounceVelocity * dt;
@@ -81,7 +71,7 @@ void MushroomBlock::update(float dt) {
             position.y = originalY;
         }
 
-        this->setPosition(position);
+        entitySprite.setPosition(position);
     }
     
 }
