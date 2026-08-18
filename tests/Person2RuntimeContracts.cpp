@@ -1,6 +1,9 @@
 #include "Entities/Base/Enemy.hpp"
+#include "Entities/Players/Mario.hpp"
 #include "Levels/Managers/LevelManager.hpp"
 #include "Objects/Blocks/Block.hpp"
+#include "Objects/Blocks/Brick.hpp"
+#include "Objects/Blocks/BrickFragment.hpp"
 #include "Objects/Environment/Bullet.hpp"
 #include "Objects/Environment/Cannon.hpp"
 #include "Objects/Environment/Rocket.hpp"
@@ -11,6 +14,8 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace {
 class TestEnemy final : public Enemy {
@@ -165,6 +170,91 @@ int main() {
                             level.getEnemies().empty() &&
                             level.getPhysicsEnemies().empty(),
                         "dead enemy removal rebuilds all non-owning views");
+    }
+
+    {
+        PhysicsEngine physics(980.f);
+        Mario player;
+        player.setPosition({64.f, 98.f});
+        player.getMovementComponent()->setVelocity(0.f, -200.f);
+
+        std::vector<std::unique_ptr<GameObject>> fragments;
+        std::unordered_set<GameObject*> delivered;
+        int callbackCalls = 0;
+        Brick brick([&](GameObject* spawned) {
+            ++callbackCalls;
+            if (spawned) {
+                delivered.insert(spawned);
+                fragments.emplace_back(spawned);
+            }
+        });
+        brick.setPosition({64.f, 64.f});
+        brick.setSize({32.f, 32.f});
+
+        const CollisionInfo collision = physics.step(player, {&brick}, 0.05f);
+        passed &= check(collision.ceilHit,
+                        "real player headbutt reaches normal Brick bottom");
+        passed &= check(!brick.isExist(),
+                        "normal Brick reports inactive after headbutt");
+
+        bool allFragments = fragments.size() == 4;
+        for (const auto& fragment : fragments) {
+            allFragments = allFragments &&
+                dynamic_cast<BrickFragment*>(fragment.get()) != nullptr;
+        }
+        passed &= check(callbackCalls == 4 && delivered.size() == 4 &&
+                            allFragments,
+                        "normal Brick spawns exactly four unique BrickFragments");
+
+        player.setPosition({64.f, 98.f});
+        player.getMovementComponent()->setVelocity(0.f, -200.f);
+        physics.step(player, {&brick}, 0.05f);
+        passed &= check(callbackCalls == 4 && fragments.size() == 4,
+                        "repeated normal Brick headbutt spawns no extra fragments");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({64.f, 98.f});
+        player.getMovementComponent()->setVelocity(0.f, -200.f);
+        level.setPlayers({&player});
+
+        int callbackCalls = 0;
+        std::unordered_set<GameObject*> delivered;
+        auto brick = std::make_unique<Brick>([&](GameObject* spawned) {
+            ++callbackCalls;
+            if (spawned) delivered.insert(spawned);
+            level.addEntity(std::unique_ptr<GameObject>(spawned));
+        });
+        brick->setPosition({64.f, 64.f});
+        brick->setSize({32.f, 32.f});
+        level.addEntity(std::move(brick), false, true);
+
+        level.update(0.05f);
+
+        std::unordered_set<const GameObject*> fragmentAddresses;
+        bool ownsOnlyFragments = level.getEntities().size() == 4;
+        for (const auto& entity : level.getEntities()) {
+            ownsOnlyFragments = ownsOnlyFragments &&
+                dynamic_cast<const BrickFragment*>(entity.get()) != nullptr;
+            fragmentAddresses.insert(entity.get());
+        }
+        passed &= check(callbackCalls == 4 && delivered.size() == 4 &&
+                            fragmentAddresses.size() == 4,
+                        "LevelManager adopts four BrickFragments exactly once");
+        passed &= check(ownsOnlyFragments,
+                        "LevelManager removes inactive Brick ownership");
+        passed &= check(level.getBlocks().empty(),
+                        "inactive Brick disappears from block collision view");
+
+        player.setPosition({64.f, 98.f});
+        player.getMovementComponent()->setVelocity(0.f, -200.f);
+        PhysicsEngine physics(980.f);
+        const CollisionInfo collision =
+            physics.step(player, level.getBlocks(), 0.05f);
+        passed &= check(!collision.ceilHit && player.getPosition().y < 98.f,
+                        "subsequent physics no longer collides with removed Brick");
     }
 
     return passed ? 0 : 1;

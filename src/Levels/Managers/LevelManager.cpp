@@ -299,7 +299,9 @@ void LevelManager::removeInactiveEntities() {
     entities.erase(std::remove_if(entities.begin(), entities.end(),
         [this](const std::unique_ptr<GameObject>& entity) {
             bool remove = false;
-            if (const auto* bullet = dynamic_cast<const Bullet*>(entity.get())) {
+            if (const auto* block = dynamic_cast<const Block*>(entity.get())) {
+                remove = !block->isExist();
+            } else if (const auto* bullet = dynamic_cast<const Bullet*>(entity.get())) {
                 remove = !bullet->isActive();
             } else if (const auto* rocket = dynamic_cast<const Rocket*>(entity.get())) {
                 remove = !rocket->isActive();
