@@ -2,6 +2,7 @@
 
 SolidBlock::SolidBlock(){
     name = "SolidBlock";
+    exist = true;
     initSpritesSheet();
     animationComponent.addAnimation("Idle", {spritesSheet["SolidBlock"]});
 }
@@ -12,6 +13,7 @@ void SolidBlock::initSpritesSheet()
 }
 
 void SolidBlock::reactToCollision(int collidedSide){
+    (void)collidedSide;
     // Nothing to do (or maybe not yet)
 }
 

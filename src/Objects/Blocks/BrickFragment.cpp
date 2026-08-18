@@ -4,7 +4,7 @@ BrickFragment::BrickFragment(sf::Vector2f startPos, sf::Vector2f initialVelocity
     : velocity(initialVelocity), gravity(1500.f) 
 {
     name = "BrickFragment";
-    position = startPos;
+    setPosition(startPos);
     exist = true; // Ensure fragment updates and renders
     
     initSpritesSheet();

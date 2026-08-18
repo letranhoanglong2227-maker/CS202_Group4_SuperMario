@@ -14,6 +14,7 @@ CoinBlock::CoinBlock(int count, std::function<void(GameObject*)> spawnCallback)
     }
 
     name = "CoinBlock";
+    exist = true;
     
     // Store original position (assumes position is set right after creation in the Level parser)
     // In update(), we'll check if originalY is uninitialized and set it, or you can set it when adding to the level.
@@ -45,10 +46,7 @@ void CoinBlock::reactToCollision(int collidedSide) {
             
             // Spawn Coin
             if (onSpawnItem) {
-                // Assuming Coin constructor takes position or you set it after
-                Coin* newCoin = new Coin(); 
-                // Set the coin's position slightly above the block
-                newCoin->setPosition({this->position.x, this->position.y - 16.f}); 
+                Coin* newCoin = new Coin({this->position.x, this->position.y - 32.f}, true); 
                 onSpawnItem(newCoin);
             }
 

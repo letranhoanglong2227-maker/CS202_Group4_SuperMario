@@ -1,10 +1,7 @@
 #pragma once
 #include "Objects/Blocks/Block.hpp"
+#include "Core/Constants.hpp"
 #include <functional>
-
-// You can coordinate with your partner to agree on these constants.
-// For example: 0 = Bottom, 1 = Top, 2 = Left, 3 = Right
-const int COLLISION_BOTTOM = 0; 
 
 class CoinBlock : public Block {
 private:

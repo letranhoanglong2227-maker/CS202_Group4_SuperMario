@@ -14,6 +14,9 @@ protected:
     AnimationComponent animationComponent;
 public:
     Block();
+    
+    bool isExist() const { return exist; }
+    void setSizeBlock(const sf::Vector2f& sz);
 
     virtual void initSpritesSheet() = 0;
     virtual void reactToCollision(int collidedSide) = 0;

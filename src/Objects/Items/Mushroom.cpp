@@ -1,8 +1,9 @@
 #include "Objects/Items/Mushroom.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 
-Mushroom::Mushroom(const sf::Vector2f& pos)
+Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
     : Item("Mushroom", 1000) {
+    (void)popped;
     setPosition(pos);
     hitbox.setPosition(pos);
     hitbox.setSize(sf::Vector2f(32.f, 32.f));
