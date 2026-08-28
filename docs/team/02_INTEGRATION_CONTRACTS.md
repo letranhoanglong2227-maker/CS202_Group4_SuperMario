@@ -38,7 +38,7 @@ Contract status vocabulary:
 - **Timing:** once during state activation/reload, before the first gameplay update or camera query.
 - **Current interface / missing behavior:** `LevelManager::load` returns `bool` and MapManager has an error; `ConfiguredLevel` constructs `assets/levels/...`, discards the `bool`, and all named PNGs are under `assets/textures` at audit.
 - **Failure behavior:** Clear partial runtime, retain diagnostic, report false, do not call gameplay callbacks, and let P1 transition safely.
-- **Status:** `BLOCKED_DECISION` on `DEC-ASSET-ROOT`.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION`; `DEC-ASSET-ROOT` is resolved.
 - **Dependent tasks:** `P2-LOAD-001`, `P1-GAME-001`, `P2-NINE-LEVEL-001`, `P4-PACKAGE-001`.
 
 ### CON-P1-P2-WORLD-EXTENT — map-derived world rectangle
@@ -47,7 +47,7 @@ Contract status vocabulary:
 - **Consumer:** P1 camera; P2 bounds, pit, cleanup, and projectile logic.
 - **Runtime owner:** immutable/value extent associated with the successfully loaded map.
 - **Lifetime / ownership:** valid from successful load until clear/reload/destruction.
-- **Input:** parsed dynamic image width, 15 logical gameplay rows, `TILE_SIZE=32`.
+- **Input:** parsed dynamic image width, 15 logical gameplay rows, `MapFormat::TILE_SIZE` (`CELL_SIZE=64` in the adopted sketches).
 - **Output:** pixel-space world rectangle (or width/height values) with origin and explicit validity.
 - **Call direction:** consumers query P2 after successful load.
 - **Timing:** compute once per load; never derive from window size or a hard-coded level width.
@@ -75,15 +75,15 @@ Contract status vocabulary:
 
 - **Provider / implementation owner:** P2 detects world/hazard/contact death; P1 consumes and transitions.
 - **Consumer:** P1 `GameState` / mediator; P4 lives data and P3 reset are downstream consumers through P1.
-- **Runtime owner:** P1 owns sequencing and transitions; P4 UserData owns lives values; the selected-player runtime owner follows still-open `DEC-PLAYER-OWNER`; P2 owns detection runtime and only borrows the affected player.
+- **Runtime owner:** P1 owns sequencing and transitions; P4 UserData owns lives values; P1 owns the selected player under resolved `DEC-PLAYER-OWNER`; P2 owns detection runtime and only borrows the affected player.
 - **Lifetime / ownership:** callback receives an affected player reference/identity valid during the call only; it must not be retained.
-- **Input:** a transition from alive/eligible to dead/fallen, with stable player identity and cause. For a pit, P2 triggers when the active player's world-position Y is greater than `worldExtent.bottom + TILE_SIZE` (one 32-pixel row below the logical 15-row world).
+- **Input:** a transition from alive/eligible to dead/fallen, with the single active player's identity and cause. For a pit, P2 triggers when the active player's world-position Y is greater than `worldExtent.bottom + TILE_SIZE` (one configured map cell below the logical 15-row world).
 - **Output:** one queued death event per affected player occurrence.
 - **Call direction:** P2 callback → P1 queues session mutation and transition.
 - **Timing:** after movement/contact detection and before cleanup. P2 filters that player from later same-frame interactions and emits at most once for the death occurrence; P1 applies destructive state changes only after `LevelManager::update` returns. P2-owned object cleanup uses its separate off-world policy, not this player-death threshold contract.
 - **Current interface / missing behavior:** callback exists; pit/enemy paths are absent, Lava can notify without actual death, and P1 has no consumer.
-- **Failure behavior:** duplicate contacts in one frame do not decrement lives repeatedly; a callback must not fire when a powered player merely downgrades and remains alive.
-- **Status:** `BLOCKED_DECISION` on `DEC-MULTIPLAYER-DEATH` and `DEC-RESPAWN` for consumption policy; provider correctness can proceed.
+- **Failure behavior:** duplicate contacts in one frame do not decrement lives repeatedly; a callback must not fire when a powered player merely downgrades and remains alive. A fatal event spends exactly one 1P session life; a nonfatal power downgrade emits no death event.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION`; 2P is out of scope for this release.
 - **Dependent tasks:** `P2-PIT-001`, `P2-LAVA-001`, `P2-CONTACT-ENEMY-001`, `P1-DEATH-001`, `P3-PLAYER-RESET-001`, `P4-PERSISTENCE-001`.
 
 ### CON-P1-P2-COMPLETION — exactly-once level completion
@@ -95,27 +95,27 @@ Contract status vocabulary:
 - **Input:** first valid player activation of the correctly anchored flag.
 - **Output:** one completion event for the current stage identity.
 - **Call direction:** P2 callback → P1 queues win/progression transition.
-- **Timing:** during level update; state replacement occurs only after update returns. Optional animation delay follows `DEC-WINFLAG-POLISH` but cannot change exactly-once semantics.
+- **Timing:** during level update; state replacement occurs only after update returns. A valid contact starts the finite flag animation, and completion is emitted once after the animation finishes; a bounded animation failure path must not stall progression forever.
 - **Current interface / missing behavior:** one-shot callback exists; P1 consumer is absent and Group4 treats the base marker as the top.
 - **Failure behavior:** repeated overlap cannot duplicate score/unlock/save; invalid/failed stage cannot complete.
-- **Status:** `PARTIAL`.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
 - **Dependent tasks:** `P2-WINFLAG-001`, `P1-GAME-001`, `P1-WIN-001`, `P4-PERSISTENCE-001`.
 
 ## P1 ↔ P3 contracts
 
 ### CON-P1-P3-PLAYER-OWNERSHIP — selected-player owner and borrowed views
 
-- **Provider / implementation owner:** P3 provides concrete player/factory types; the session owner approved by `DEC-PLAYER-OWNER` creates/holds the production collection. P1 is the recommended default, not an approved fact.
+- **Provider / implementation owner:** P3 provides concrete player/factory types; P1/GameState creates and holds the production owner approved by `DEC-PLAYER-OWNER`.
 - **Consumer:** P1 states and P2 LevelManager borrowed-player API.
-- **Runtime owner:** recommended default is P1 `GameState`/session owning `std::unique_ptr<PlayerManager>`; this remains unapproved until `DEC-PLAYER-OWNER` closes.
+- **Runtime owner:** P1 `GameState`/session owns one `std::unique_ptr<PlayerManager>` for the current 1P session.
 - **Lifetime / ownership:** player addresses must stay stable while P2 holds raw non-owning views; P2 clears/rebinds views before the approved session owner destroys/replaces owners.
-- **Input:** phase 1 is 1P/2P selection, player type, and key mapping/profile. Map spawn data is not a P3 factory input.
+- **Input:** phase 1 is 1P selection, player type, and the approved 1P key mapping. Map spawn data is not a P3 factory input.
 - **Output:** stable owner collection plus temporary `std::vector<PlayerManager*>` view.
 - **Call direction:** the approved session owner requests P3 factory creation and passes borrowed views to P2; after a successful load, P2 applies actor-layer spawn positions to those borrowed players.
 - **Timing:** construct stable player owners before active-level load; apply spawn positions during successful P2 load/reload; rebind views on replacement; destroy only after active-level update/destruction is safe.
 - **Current interface / missing behavior:** P3 factory can return player `unique_ptr`; no approved production session owner exists.
-- **Failure behavior:** unknown player type fails explicitly; no null entry is passed to P2; partial two-player construction rolls back safely.
-- **Status:** `BLOCKED_DECISION` on `DEC-PLAYER-OWNER`.
+- **Failure behavior:** unknown player type fails explicitly; no null entry is passed to P2; the single-player construction rolls back safely.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
 - **Dependent tasks:** `P1-SELECT-001`, `P1-GAME-001`, `P3-FACTORY-001`, `P3-PLAYER-RESET-001`.
 
 ### CON-P1-P3-PLAYER-RESET — reset/reconstruct after death or restart
@@ -129,8 +129,8 @@ Contract status vocabulary:
 - **Call direction:** P1 coordinates the transition; the approved session owner invokes P3 API/reconstruction, then P1 reinjects the resulting borrowed view into P2.
 - **Timing:** outside active level traversal; after lives policy is applied and before resumed update.
 - **Current interface / missing behavior:** no explicit reset contract; current player methods cover only parts of state.
-- **Failure behavior:** failed reset/reload goes to a safe menu/error path; never resume with stale pointers or partially reset movement/buffs.
-- **Status:** `BLOCKED_DECISION` on `DEC-RESPAWN`, `DEC-MULTIPLAYER-DEATH`, and `DEC-PLAYER-OWNER`.
+- **Failure behavior:** failed reset/reload goes to a safe menu/error path; never resume with stale pointers or partially reset movement/buffs. Fatal reset returns the player to the stage start; nonfatal power loss resets only power state and preserves position.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION`; 2P reset behavior is out of scope for this release.
 - **Dependent tasks:** `P3-PLAYER-RESET-001`, `P1-DEATH-001`, `P1-PAUSE-001`, `P2-PIT-001`.
 
 ## P2 ↔ P3 contracts
@@ -171,7 +171,7 @@ Contract status vocabulary:
 - **Consumer:** P2 runtime; P1/P4 consume semantic outcome.
 - **Runtime owner:** P2 owns each map/spawned item `unique_ptr`; the owner approved by `DEC-PLAYER-OWNER` owns the player; P3 methods retain neither pointer.
 - **Lifetime / ownership:** item lives until P3 marks it inactive and P2 cleanup removes the owner/view.
-- **Input:** active item, eligible player, resolved overlap, and block/world contacts for moving items. Before a Mushroom/fire growth, P2 evaluates the proposed 32×64 player bounds anchored at the current feet against active solid Blocks and supplies a clearance result.
+- **Input:** active item, eligible player, resolved overlap, and block/world contacts for moving items. Before a Mushroom/fire growth, P2 evaluates the proposed 64×128 player bounds anchored at the current feet against active solid Blocks and supplies a clearance result.
 - **Output:** exactly one item effect/outcome, inactive transition, and optional score/coin/power event. A denied growth clearance returns `not consumed/not applied`: player size/power and item active state remain unchanged so no player is enlarged into a solid Block.
 - **Call direction:** P2 moves/resolves item → detects player overlap → invokes P3 collection → queues event/cleanup.
 - **Timing:** after movement/block resolution and before cleanup; newly spawned payload joins via pending queue and is not double-updated in its birth traversal.
@@ -224,7 +224,7 @@ Contract status vocabulary:
 - **Timing:** once for a qualifying collision; inactive block is excluded from all later contacts in the same frame.
 - **Current interface / missing behavior:** `reactToCollision(int)` and lifecycle work for current normal Brick; actor/power context is absent.
 - **Failure behavior:** unknown actor is non-activating but still receives safe solid collision; no unsafe cast or default break.
-- **Status:** `BLOCKED_DECISION` on `DEC-BLOCK-ACTOR-ELIGIBILITY` for extended blocks; normal Brick baseline stays verified.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION` under the approved actor/power eligibility rule; normal Brick baseline stays verified.
 - **Dependent tasks:** `P4-PAYLOAD-BLOCK-001`, `P4-CLOUD-001`, `P2-CONTACT-ENEMY-001`, `P2-ENV-001`.
 
 ### CON-P2-P4-BLOCK-LIFECYCLE — deactivate now, delete after traversal
@@ -263,23 +263,23 @@ Contract status vocabulary:
 - **Consumer:** P2 `constructSpawn` and P4 constructors/factories.
 - **Runtime owner:** constructed object becomes P2-owned.
 - **Lifetime / ownership:** variant is copied at construction; it does not reference map-image memory.
-- **Input:** map object type plus validated variant and approved Cloud semantics.
+- **Input:** map object type plus validated supported variant. CloudPlatform is excluded from the current release.
 - **Output:** correct concrete block configuration and payload behavior.
 - **Call direction:** P2 parser → P2 construction mapping → P4 behavior object.
 - **Timing:** once at load/construction before first update/render.
-- **Current interface / missing behavior:** parser recognizes variants but `LevelManager` discards them; Cloud marker always becomes P2 MovingBlock while P4 CloudBlock is empty.
+- **Current interface / missing behavior:** parser recognizes variants but `LevelManager` discards them; CloudPlatform mapping is intentionally deferred and must not be wired in this release.
 - **Failure behavior:** unknown variant produces a diagnostic and safe default/rejected load as agreed; never silently emits the wrong reward.
-- **Status:** `BLOCKED_DECISION` on `DEC-CLOUD-SEMANTICS`; payload mapping also waits on P4/P3 APIs.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION` for supported payload variants; CloudPlatform remains `DEFERRED` and is not a dependency for this release.
 - **Dependent tasks:** `P2-VARIANT-WIRE-001`, `P4-PAYLOAD-BLOCK-001`, `P4-CLOUD-001`, `P3-ITEM-001`.
 
-### CON-P2-P4-BLOCK-VISUAL-SIZE — 32×32 hitbox and sprite alignment
+### CON-P2-P4-BLOCK-VISUAL-SIZE — 64×64 hitbox and sprite alignment
 
 - **Provider / implementation owner:** P4 owns Block visual invariant/API; P2 uses it during construction.
 - **Consumer:** all block subclasses and P2 runtime/rendering.
 - **Runtime owner:** P2 owns objects; texture/sprite resources remain under P4 class/resource policy.
 - **Lifetime / ownership:** scale/size state remains with the Block; texture lifetime outlives sprite/animation references.
-- **Input:** logical tile size 32×32 and source atlas frame dimensions, currently commonly 16×16.
-- **Output:** one aligned 32×32 collision box and rendered footprint at the same world position.
+- **Input:** logical tile size 64×64 and source atlas frame dimensions, currently commonly 16×16.
+- **Output:** one aligned 64×64 collision box and rendered footprint at the same world position.
 - **Call direction:** P2 construction invokes P4's single size API; P4 maintains alignment after frame switches.
 - **Timing:** immediately after construction and before registration/first render.
 - **Current interface / missing behavior:** `setSizeBlock` can scale, but P2 calls generic `setSize`, leaving art at half the physics tile.
@@ -333,7 +333,7 @@ Contract status vocabulary:
 - **Timing:** once per semantic interaction, after collision resolution and before HUD snapshot for the next render.
 - **Current interface / missing behavior:** in-memory counters exist; mediator and gameplay propagation are absent.
 - **Failure behavior:** reject overflow/invalid negative state; duplicate event IDs or one-shot guards prevent repeated award/decrement.
-- **Status:** `BLOCKED_DECISION` for multiplayer lives semantics; score/coin surface can be defined independently.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION` for the single-player lives semantics.
 - **Dependent tasks:** `P1-EVENT-001`, `P1-DEATH-001`, `P2-CONTACT-ITEM-001`, `P2-CONTACT-ENEMY-001`, `P3-ITEM-001`, `P4-HUD-001`, `P4-PERSISTENCE-001`.
 
 ### CON-P1-P4-HUD-DATA — immutable per-frame presentation snapshot
@@ -378,7 +378,7 @@ Contract status vocabulary:
 - **Timing:** load before selection/progression display; save at approved completion/death/exit points from `DEC-PERSISTENCE`.
 - **Current interface / missing behavior:** UserData is in-memory only; `SaveData` contains only `.gitkeep`.
 - **Failure behavior:** missing file creates safe defaults; corrupt/unsupported file is preserved or quarantined and reported; write uses recoverable replacement so previous valid data is not lost.
-- **Status:** `BLOCKED_DECISION` on `DEC-PERSISTENCE`, which alone governs the user-writable save location and durable-save policy. `DEC-ASSET-ROOT` governs read-only packaged/runtime assets only.
+- **Status:** `DEFINED_PENDING_IMPLEMENTATION` under the approved versioned profile and writable-location policy. `DEC-ASSET-ROOT` governs read-only packaged/runtime assets only.
 - **Dependent tasks:** `P4-PERSISTENCE-001`, `P4-LEADERBOARD-001`, `P1-EVENT-001`, later `P1-MENU-001`/`P1-SELECT-001` restoration/result handling, and `P4-PACKAGE-001`. P1 death/win merely emit stable semantic outcomes and are not blocked by durable I/O.
 
 ### CON-P1-P4-PROGRESSION — exactly nine-stage unlock model

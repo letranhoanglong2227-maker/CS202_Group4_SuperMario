@@ -63,7 +63,7 @@ Accounting totals: 20 existing header/source pairs; 20 `TASK`; 0 `VERIFIED_DONE`
 - `GameObject` owns an SFML texture/sprite, synchronizes position to sprite and public hitbox, synchronizes size to the hitbox, renders the sprite, stores a non-owning mediator pointer, and prints on every construction.
 - `LivingEntity` owns `MovementComponent` and `AnimationComponent` slots by `std::unique_ptr`; current concrete constructors create movement only. Health/dead transitions work for ordinary damage. `updateAnimation` is empty at the base.
 - `Character` tracks grounded/jumping and applies a jump velocity only while grounded.
-- `PlayerManager` creates a 32x32 hitbox, supports separate 1P/2P keyboard maps, movement/jump, owned buffs, small/big/fire state, fire→big→small→dead damage downgrade, and temporary invulnerability. Growing changes a 32x32 hitbox directly to 32x64 without clearance or foot-position preservation.
+- `PlayerManager` currently creates a 64x64 hitbox and grows directly to 64x128, with movement/jump, owned buffs, small/big/fire state, fire→big→small→dead damage downgrade, and temporary invulnerability. Clearance and foot-position preservation remain P3 work; the current release is 1P-only.
 - Mario and Luigi provide distinct movement/jump tuning. Their update code requests `idle`/`big_idle`, but no texture is loaded, no `AnimationComponent` is allocated, and no frames are registered.
 - Goomba, Koopa, FlyingKoopa, Heriss, Bowser, and PeteyPiranha contain ordinary deterministic movement/state logic except Bowser currently chooses with `rand()`. None initializes visible textures/animations. P2 can apply block physics to selected enemies and remove dead enemies, but no player/enemy contact loop exists.
 - Goomba squishes for 0.5 seconds; Koopa enters shell/kick states; FlyingKoopa loses wings; Heriss's stomp method intentionally does nothing. These methods are not yet sufficient to communicate all runtime contact outcomes.
@@ -137,7 +137,7 @@ If a P3 task proves a required change in a read-only file, stop that task at `SO
 
 ### 6.1 Required contract inputs
 
-- `CON-P1-P3-PLAYER-OWNERSHIP`: the owner approved by open `DEC-PLAYER-OWNER` owns selected-player `std::unique_ptr` objects (P1 is the recommended default); P2 receives non-owning `PlayerManager*` views; P3 only supplies implementations/construction.
+- `CON-P1-P3-PLAYER-OWNERSHIP`: P1 owns the selected-player `std::unique_ptr` under resolved `DEC-PLAYER-OWNER`; P2 receives a non-owning `PlayerManager*` view; P3 only supplies implementations/construction.
 - `CON-P1-P3-PLAYER-RESET`: P1 invokes a P3 reset/reconstruction API only at a safe state boundary and reinjects stable borrowed pointers before P2 resumes.
 - `CON-P2-P3-ENTITY-CONSTRUCTION`: P2 supplies validated map type/position; P3 returns a non-null render-ready enemy/item `unique_ptr` or explicit failure; P2 becomes sole runtime owner.
 - `CON-P2-P3-PLAYER-ENEMY`: P2 classifies/orchestrates contact after movement; P3 owns enemy/player state transitions and reports deterministic outcomes.
@@ -158,12 +158,12 @@ If a P3 task proves a required change in a read-only file, stop that task at `SO
 | `DEC-ASSET-ROOT` | Blocks final durable entity texture path/loading policy. |
 | `DEC-PERSISTENCE` | Blocks which score/coin/power outcomes persist across death/level/session. |
 
-`DEC-CLOUD-SEMANTICS` and `DEC-WINFLAG-POLISH` are also `OPEN` globally but do not block a P3-owned source task. No task may resolve any decision by implementation side effect.
+`DEC-CLOUD-SEMANTICS` is resolved as deferred from the current release and `DEC-WINFLAG-POLISH` is resolved as animation-gated. Neither blocks a P3-owned source task. No task may resolve any decision by implementation side effect.
 
 ### 6.3 Fixed inputs
 
 - Exactly nine levels exist in the completion matrix: `W1_LV1` through `W3_LV3`; do not duplicate P3 engine behavior per level.
-- Maps remain dynamic width, 30 image rows split into two logical 15-row layers, with `TILE_SIZE=32`.
+- Adopted maps remain dynamic width and 45 image rows at `CELL_SIZE=64`; P2 consumes two logical 15-row runtime bands and ignores the final legacy band.
 - P2's `std::unique_ptr` runtime owner and typed non-owning views are fixed baselines.
 - The Group5 chatbot/LLM/Ollama/ChatUI system is `EXCLUDED`. Ordinary enemy behavior is required and is not “special AI.”
 
@@ -175,7 +175,7 @@ If a P3 task proves a required change in a read-only file, stop that task at `SO
 | `CON-P1-P3-PLAYER-RESET` | Reset/reconstruction provider | Deterministic reset API/result that clears transient state and places at P1/P2-provided spawn without retaining references | P1 coordinates between frames/reloads with the approved session owner | Invalid policy/input fails without deleting/replacing the live player in place. |
 | `CON-P2-P3-ENTITY-CONSTRUCTION` | Enemy/item construction provider | Non-null, render-ready `unique_ptr<GameObject>` of the validated requested type and position, or explicit failure | P2 calls during load and takes sole ownership before registration | Unknown/null/asset failure is diagnosed and fails readiness; never substitute another type. |
 | `CON-P2-P3-PLAYER-ENEMY` | Behavior provider | Contact capabilities and outcome: stompability, damage, score value, state transition, bounce/request data | P2 calls once per classified contact after movement and before cleanup | Unsupported/invalid contact produces no mutation and a diagnosable result. |
-| `CON-P2-P3-PLAYER-ITEM` | Behavior provider | One-shot collection outcome, item existence, movement/contact response, and proposed growth bounds | P2 calls after movement/before cleanup and supplies clearance for feet-anchored 32×64 growth | Already-inactive item is a no-op; denied clearance leaves player and item unchanged; no double award. |
+| `CON-P2-P3-PLAYER-ITEM` | Behavior provider | One-shot collection outcome, item existence, movement/contact response, and proposed growth bounds | P2 calls after movement/before cleanup and supplies clearance for feet-anchored 64×128 growth | Already-inactive item is a no-op; denied clearance leaves player and item unchanged; no double award. |
 | `CON-P2-P3-ENEMY-REMOVAL` | Lifecycle provider | Stable `isDead`/inactive result after behavior update | P2 checks after traversal and owns erasure/view rebuild | P3 never deletes itself or any P2-owned object. |
 | `CON-P2-P3-PROJECTILE-SPAWN` | Boss/fire request provider | Value or move-only attack kind/origin/direction/target identity with no retained raw pointer | P2 accepts at action edge, materializes/adopts after traversal, then owns collision/cleanup | Invalid/rejected request creates no partial owner and is diagnosable. |
 | `CON-P3-P4-ANIMATION` | Consumer in P3-owned entities | Valid registered keys, texture-load result, scale/origin, state-to-key selection | P3 initializes before first render and plays once/update | Missing texture/key is reported and level/startup fails visibly according to the published contract; no warning flood per frame. |
@@ -222,12 +222,12 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Owner:** Person 3.
 - **Priority / requirement / status:** P0; `REQUIRED_BY_PLAN`; `READY`. `STATUS_CHANGED_SINCE_AUDIT: NO`.
 - **Purpose:** deliver the representative enemy required by the first vertical slice with deterministic stomp/harm/lifecycle behavior and visible animation.
-- **Exact current behavior:** Goomba starts with one health, one damage, 100 points, a 32x32 hitbox, leftward walking, and a MovementComponent. `onStomped` changes it to a 32x16 hitbox, zero damage, and a squished state; after 0.5 seconds `dead=true`. P2 applies generic gravity/block collision and removes dead enemies. No player contact invokes this path, shrinking does not explicitly preserve the foot position, and no texture/animation component exists.
+- **Exact current behavior:** Goomba starts with one health, one damage, 100 points, a 64x64 hitbox, leftward walking, and a MovementComponent. `onStomped` changes it to a 64x32 hitbox, zero damage, and a squished state; after 0.5 seconds `dead=true`. P2 applies generic gravity/block collision and removes dead enemies. No player contact invokes this path, shrinking does not explicitly preserve the foot position, and no texture/animation component exists.
 - **Missing behavior checklist:**
   - [ ] Expose a deterministic stompable/harmful contact capability/result for P2 without moving side classification into Goomba.
   - [ ] Preserve the bottom edge when entering the 16-pixel squish hitbox.
   - [ ] Make stomp idempotent; expose the 100-point award exactly once; suppress damage while squished/dead.
-  - [ ] Register/play walk and squished visuals with correct 32-pixel world scale.
+  - [ ] Register/play walk and squished visuals with correct 64-pixel world scale.
   - [ ] Ensure wall reversal still comes only through the P2 physics contract.
   - [ ] Verify death becomes visible to P2 only after the intended squish interval and never self-deletes.
 - **Exact target files:** `include/Entities/Enemies/Goomba.hpp`, `src/Entities/Enemies/Goomba.cpp`, `tests/P3GoombaContracts.cpp`.
@@ -238,7 +238,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Contracts provided / consumed:** provides Goomba behavior under `CON-P2-P3-PLAYER-ENEMY` and lifecycle under `CON-P2-P3-ENEMY-REMOVAL`; produces one score outcome toward `CON-P1-P4-SCORE-COINS-LIVES`; consumes `CON-P3-P4-ANIMATION`.
 - **Group5 reference:** its player/enemy ordering may be used only as a contact-order technique. **Do not copy:** raw-pointer deletion, mediator ownership, 64-pixel scale, or chatbot/LLM code.
 - **Implementation/integration notes:** P2 classifies top-vs-side contact and applies player bounce/damage; P3 mutates only Goomba state and returns value outcomes. Never retain the borrowed player pointer.
-- **SFML 3.1 requirements:** valid SFML 3.1 rect/texture APIs, stable texture lifetime, 32x32 walk visual and bottom-aligned squish visual.
+- **SFML 3.1 requirements:** valid SFML 3.1 rect/texture APIs, stable texture lifetime, 64x64 walk visual and bottom-aligned squish visual.
 - **Compile check:** syntax-check Goomba production and focused test against C++20/SFML 3.1 after foundation changes.
 - **Runtime check:** assert walk direction, one reversal, first/repeated stomp, bottom-preserving shrink, 0.5-second boundary, one score outcome, damage suppression, dead state, and P2-safe removal observation.
 - **Visual check:** capture walk frames in both directions and squished frame aligned to the same floor.
@@ -253,7 +253,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Owner:** Person 3.
 - **Priority / requirement / status:** P1; `REQUIRED_BY_PLAN`; `READY`. `STATUS_CHANGED_SINCE_AUDIT: NO`.
 - **Purpose:** make Koopa's walk→shell→kick lifecycle explicit enough for P2 to orchestrate player/enemy/block contacts safely.
-- **Exact current behavior:** Koopa walks with a 32x48 hitbox and 200-point value. First `onStomped` enters a stationary 32x32 shell; a second calls `kickShell(true)` regardless of contact geometry; a stomp on a moving shell sets dead. A kicked shell rebuilds its MovementComponent at speed 300. No player runtime calls these methods, no shell-vs-enemy behavior is integrated, bottom alignment is not preserved explicitly, and no visuals exist.
+- **Exact current behavior:** Koopa walks with a 64x96 hitbox and 200-point value. First `onStomped` enters a stationary 64x56 shell; a second calls `kickShell(true)` regardless of contact geometry; a stomp on a moving shell sets dead. A kicked shell rebuilds its MovementComponent at speed 300. No player runtime calls these methods, no shell-vs-enemy behavior is integrated, bottom alignment is not preserved explicitly, and no visuals exist.
 - **Missing behavior checklist:**
   - [ ] Define explicit walk, stationary-shell, moving-shell, and dead transitions with idempotent result values.
   - [ ] Preserve bottom alignment when reducing height.
@@ -272,7 +272,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **SFML 3.1 requirements:** register only valid frame rectangles; mirror/orient with SFML 3.1 transforms while retaining floor alignment.
 - **Compile check:** compile Koopa, FlyingKoopa consumer compatibility, and focused checks under C++20/SFML 3.1.
 - **Runtime check:** assert walk→stationary shell, left/right kick, moving-shell reversal, repeated contacts, bottom alignment, score once, and terminal dead/removal signal.
-- **Visual check:** capture walk, stationary shell, and moving shell in both directions at 32-pixel world scale.
+- **Visual check:** capture walk, stationary shell, and moving shell in both directions at 64-pixel world scale.
 - **Gameplay check:** in integrated runtime, stomp, kick from each side, hit a wall, hit one enemy, and be hit by a moving shell; each result occurs once with safe owner cleanup.
 - **Definition of Done:** no ambiguous/arbitrary direction remains, state transitions and outcomes are tested, visuals are correct, P2 integration passes, and all five dimensions link evidence.
 - **Suggested commit:** `person3: complete Koopa shell state contract`
@@ -300,7 +300,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Contracts provided / consumed:** provides capabilities/results via `CON-P2-P3-PLAYER-ENEMY`, lifecycle via `CON-P2-P3-ENEMY-REMOVAL`, score facts via `CON-P1-P4-SCORE-COINS-LIVES`; consumes animation contract.
 - **Group5 reference:** none is required beyond optional comparison of interaction order. **Do not copy:** raw owners, map tuning, 64-pixel assumptions, or chatbot/LLM components.
 - **Implementation/integration notes:** keep ordinary deterministic state logic local. Do not label or implement it as special AI. P2 decides when gravity policy switches based on the P3-exposed state.
-- **SFML 3.1 requirements:** current texture/rect/transform API only; make wing and spike silhouettes readable at 32-pixel scale.
+- **SFML 3.1 requirements:** current texture/rect/transform API only; make wing and spike silhouettes readable at 64-pixel scale.
 - **Compile check:** syntax-check both enemy pairs and focused test with Koopa/base dependencies under C++20/SFML 3.1.
 - **Runtime check:** assert sine motion bounds, first wing-loss, transition to Koopa behavior, repeated stomp safety, Heriss top-contact capability, wall reversal, and lifecycle signals.
 - **Visual check:** capture FlyingKoopa with/without wings and Heriss walking in both directions; verify hitbox/art alignment.
@@ -321,7 +321,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
   - [ ] Expose value/owned-request outputs for Bowser fire and slam effects and Petey spike attacks under the P2/P3 contact contract; never retain P2/player pointers.
   - [ ] Define vulnerable/harmful windows, damage reception, terminal death, one-shot score/completion outcome, and repeated-hit suppression.
   - [ ] Complete jump-slam landing reset and Petey emerge/retract/pipe-relative contact states.
-  - [ ] Register required idle/walk/attack/hurt/dead/emerge visuals and align 64/48-pixel hitboxes to 32-pixel tiles.
+  - [ ] Register required idle/walk/attack/hurt/dead/emerge visuals and align current boss hitboxes to 64-pixel tiles.
   - [ ] Verify P2 adopts/materializes attack requests with `std::unique_ptr`, resolves world/player contact, and cleans them up.
 - **Exact target files:** `include/Entities/Enemies/Bowser.hpp`, `src/Entities/Enemies/Bowser.cpp`, `include/Entities/Enemies/PeteyPiranha.hpp`, `src/Entities/Enemies/PeteyPiranha.cpp`, `tests/P3BossContracts.cpp`. Add a P3-owned attack-result/value header under `include/Entities/Enemies/` only if the existing boss headers cannot express the handoff without duplication; do not add a new class until the contract is approved.
 - **Allowed edit files:** exact target files; any proposed new P3 value header must be recorded on the master board before creation.
@@ -351,7 +351,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
   - [ ] Load the agreed Mario/Luigi texture using the approved `DEC-ASSET-ROOT` result or a temporary injected/readiness surface that does not hard-code a competing root.
   - [ ] Construct `AnimationComponent` once per player and register the agreed small/big/fire idle, walk, jump, and transition keys required by reachable states.
   - [ ] Choose animation from movement, grounded/jumping, direction, power state, damage/transform state; call `play` once per update.
-  - [ ] Scale/origin the sprite to match the 32x32 or 32x64 hitbox while preserving feet and horizontal facing.
+  - [ ] Scale/origin the sprite to match the 64x64 or 64x128 hitbox while preserving feet and horizontal facing.
   - [ ] Expose texture/animation initialization failure without warning every frame.
   - [ ] Verify Mario and Luigi use their intended atlas regions and remain distinguishable in 1P and 2P.
 - **Exact target files:** `include/Entities/Players/PlayerManager.hpp`, `src/Entities/Players/PlayerManager.cpp`, `include/Entities/Players/Mario.hpp`, `src/Entities/Players/Mario.cpp`, `include/Entities/Players/Luigi.hpp`, `src/Entities/Players/Luigi.cpp`, `tests/P3PlayerVisualContracts.cpp`.
@@ -365,7 +365,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **SFML 3.1 requirements:** use `sf::IntRect({x,y},{w,h})`/other valid SFML 3.1 forms, `sf::Texture::loadFromFile`, and current sprite transform APIs; do not use SFML 2 constructors.
 - **Compile check:** syntax-check all six target production translation units plus the focused check against installed SFML 3.1.
 - **Runtime check:** construct/destroy both players repeatedly; switch small/big/fire, idle/walk/jump/direction states; assert no missing-key flood and stable texture/component lifetime.
-- **Visual check:** capture both characters standing, moving, jumping, and in each reachable power state against a contrasting background at 32-pixel tile scale; verify feet do not jump when frame/form changes.
+- **Visual check:** capture both characters standing, moving, jumping, and in each reachable power state against a contrasting background at 64-pixel tile scale; verify feet do not jump when frame/form changes.
 - **Gameplay check:** in the first vertical slice, select each character (and both in 2P), enter a level, move/jump, take damage, and remain visible/correctly oriented.
 - **Definition of Done:** both players load or fail explicitly, every reachable state has a registered visual, scaling aligns with hitboxes, 1P/2P visual checks pass, and all five completion dimensions link evidence.
 - **Suggested commit:** `person3: render and animate Mario and Luigi`
@@ -390,7 +390,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Read-only dependencies:** `include/src/Physics/PhysicsEngine.*` (`canGrow`), block views/collision order in `LevelManager.*`, P4 Block interfaces, P1 death event contract.
 - **Do not implement:** a second physics query, P2 block traversal, P4 block eligibility, P1 lives/death transition, reset/respawn policy (`P3-PLAYER-RESET-001`), fire projectile behavior (`P3-FIRE-001`), or direct UserData mutation.
 - **Dependencies:** `P3-FOUNDATION-001`; safe-growth integration consumes a P2-provided clearance result. The internal state machine can land before P2 integration.
-- **Contracts provided / consumed:** provides player state/capabilities and proposed feet-anchored growth bounds under `CON-P2-P3-PLAYER-ENEMY` and `CON-P2-P3-PLAYER-ITEM`; consumes P2's clearance result, `CON-P1-P3-PLAYER-OWNERSHIP`, and the still-open `DEC-BLOCK-ACTOR-ELIGIBILITY` only for later external use.
+- **Contracts provided / consumed:** provides player state/capabilities and proposed feet-anchored growth bounds under `CON-P2-P3-PLAYER-ENEMY` and `CON-P2-P3-PLAYER-ITEM`; consumes P2's clearance result, `CON-P1-P3-PLAYER-OWNERSHIP`, and the resolved `DEC-BLOCK-ACTOR-ELIGIBILITY` rule for later external use.
 - **Group5 reference:** none is necessary for Group4's power-state rules. **Do not copy:** Group5 health/owner architecture or direct UserData mutation.
 - **Implementation/integration notes:** P2 should perform clearance against its current block set and pass a decision/result; P3 applies or defers the form transition. Do not let P3 cache a block vector or PhysicsEngine pointer.
 - **SFML 3.1 requirements:** state logic is headless; any flash/visibility integration uses current SFML 3.1 sprite color APIs through the visual task.
@@ -439,13 +439,13 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **Owner:** Person 3.
 - **Priority / requirement / status:** P0; `REQUIRED_BY_PLAN`; `BLOCKED`. `STATUS_CHANGED_SINCE_AUDIT: NO`.
 - **Purpose:** make map and block-spawned items produce one deterministic gameplay outcome, participate safely in the world, render visibly, and hand session facts to P1/P4 without direct coupling.
-- **Exact current behavior:** `PowerUpObject` has `name`, `exist`, empty collision hooks, and visible-only-if-existing render. `Item` adds an integer value. Coin is 16x24; static coins do nothing until a missing runtime collection call, popped coins move up/down and self-expire after 0.5 seconds, and `onCollect` only clears `exist`. Mushroom is 32x32, walks right using its own MovementComponent, reverses only if its hook is called, ignores the `popped` argument, applies `setBig(true)`, and deactivates. P2 owns/removes items and P4's fixed callback can spawn Coin/Mushroom, but P2 has no player/item or item/block loop. No item initializes art.
+- **Exact current behavior:** `PowerUpObject` has `name`, `exist`, empty collision hooks, and visible-only-if-existing render. `Item` adds an integer value. Coin currently uses a 54x64 hitbox; static coins do nothing until a missing runtime collection call, popped coins move up/down and self-expire after 0.5 seconds, and `onCollect` only clears `exist`. Mushroom is 64x64, walks right using its own MovementComponent, reverses only if its hook is called, ignores the `popped` argument, applies `setBig(true)`, and deactivates. P2 owns/removes items and P4's callback can spawn Coin/Mushroom, but P2 has no player/item or item/block loop. No item initializes art.
 - **Missing behavior checklist:**
   - [ ] Define a typed, one-shot collection result for coin count/score, growth request, and no-op/denied growth; never mutate UserData/HUD directly.
   - [ ] Make static/popped Coin lifecycles and values explicit; collection/expiry must not double-award.
   - [ ] Complete Mushroom emergence from a block, gravity/block motion capability, wall reversal, and collection state while leaving orchestration to P2.
   - [ ] Reuse the canonical player growth path from `P3-PLAYER-STATE-001`, including denied/deferred growth semantics.
-  - [ ] Register Coin/Mushroom visuals/animations and align them to 32-pixel world tiles.
+  - [ ] Register Coin/Mushroom visuals/animations and align them to 64-pixel world tiles.
   - [ ] Prove raw block-spawn callback payload is adopted immediately by P2 and never retained/owned by P3/P4.
 - **Exact target files:** `include/Objects/Items/PowerUpObject.hpp`, `src/Objects/Items/PowerUpObject.cpp`, `include/Objects/Items/Item.hpp`, `src/Objects/Items/Item.cpp`, `include/Objects/Items/Coin.hpp`, `src/Objects/Items/Coin.cpp`, `include/Objects/Items/Mushroom.hpp`, `src/Objects/Items/Mushroom.cpp`, `include/Objects/Items/PlayerBuff.hpp`, `src/Objects/Items/PlayerBuff.cpp`, `include/Entities/Players/PlayerManager.hpp`, `src/Entities/Players/PlayerManager.cpp`, `tests/P3ItemContracts.cpp`.
 - **Allowed edit files:** exact target files only after blockers clear.
@@ -458,7 +458,7 @@ Completion dimensions: `SOURCE_DONE=NO`, `INTEGRATION_DONE=NO`, `RUNTIME_TESTED=
 - **SFML 3.1 requirements:** valid texture/rect APIs, stable texture lifetime, correct sprite scaling; no SFML 2 test syntax.
 - **Compile check:** compile all item production units, PlayerManager consumer, and focused tests under C++20/SFML 3.1.
 - **Runtime check:** static coin, popped coin timeout, coin collect-vs-expire race, Mushroom emerge/walk/reverse, open/blocked growth, repeated collect, inactive update/render, and ownership handoff all assert exactly-once behavior.
-- **Visual check:** capture static/popped Coin and emerging/walking Mushroom against 32-pixel blocks; verify no clipping or half-scale art.
+- **Visual check:** capture static/popped Coin and emerging/walking Mushroom against 64-pixel blocks; verify no clipping or half-scale art.
 - **Gameplay check:** collect a map Coin, a CoinBlock Coin, and a MushroomBlock Mushroom; each updates the agreed session/HUD value once, Mushroom interacts with blocks, and P2 removes it safely.
 - **Definition of Done:** collection outcomes are typed/once-only, world behavior and art are integrated, no direct P1/P4/P2 ownership coupling was added, and every completion dimension has evidence.
 - **Suggested commit:** `person3: complete item collection behavior`
@@ -601,7 +601,7 @@ When a P3 check proves that a P1/P2/P4 file must change:
 - [ ] P2's 27 runtime checks still pass, including Rocket target lifetime, inactive cleanup, same-frame inactive Block exclusion, normal Brick, and BrickFragment lifecycle.
 - [ ] Direct production syntax passes C++20/SFML 3.1.0; no SFML 2 API is introduced.
 - [ ] 1P and 2P contact/reset/input checks pass under the approved decisions.
-- [ ] Visual captures show hitbox/art alignment at `TILE_SIZE=32` and no invisible required entity/item.
+- [ ] Visual captures show hitbox/art alignment at `CELL_SIZE=64` and no invisible required entity/item.
 - [ ] No Group5 chatbot/LLM/Ollama/ChatUI source or architecture entered Group4.
 
 ## 11. Final Person 3 Definition of Done

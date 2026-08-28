@@ -100,7 +100,7 @@ Never edit or inspect map image contents as part of a P1 task. Never implement t
 | World extent in pixels and camera clamp inputs | P2 | `P1-CAMERA-001` | `CON-P1-P2-WORLD-EXTENT`, `CON-P1-P2-CAMERA`; narrow/wide-world checks |
 | Once-only affected-player death notification with safe frame timing | P2 | `P1-DEATH-001`, `P1-EVENT-001` | `CON-P1-P2-DEATH`; repeated-frame suppression test |
 | Once-only completion notification after correct WinFlag anchor handling | P2 | `P1-WIN-001`, `P1-EVENT-001` | `CON-P1-P2-COMPLETION`; completion idempotence test |
-| Mario/Luigi construction and stable reset API | P3 | `P1-SELECT-001`, `P1-GAME-001`, `P1-DEATH-001` | `CON-P1-P3-PLAYER-OWNERSHIP`, `CON-P1-P3-PLAYER-RESET`; 1P/2P lifetime and reset checks |
+| Mario/Luigi construction and stable reset API | P3 | `P1-SELECT-001`, `P1-GAME-001`, `P1-DEATH-001` | `CON-P1-P3-PLAYER-OWNERSHIP`, `CON-P1-P3-PLAYER-RESET`; 1P lifetime and reset checks |
 | Score/coin/lives storage semantics and HUD projection | P4 | `P1-EVENT-001`, `P1-DEATH-001`, `P1-WIN-001` | `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-HUD-DATA` |
 | Audio event names and non-owning invocation surface | P4 | `P1-EVENT-001`, menu/game states | `CON-P1-P4-AUDIO-EVENTS`; missing-asset behavior does not crash flow |
 | Save/load schema, P4 event-to-save timing, progression/unlock rules | P4 | later `P1-MENU-001`/`P1-SELECT-001` restoration plus `P1-EVENT-001` result handling | `CON-P1-P4-PERSISTENCE`, `CON-P1-P4-PROGRESSION`; `DEC-PERSISTENCE` recorded; P0 death/win still emit semantic events while it is open |
@@ -251,22 +251,22 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`; exactly nine identities are `REQUIRED_BY_TEAM`; ownership is `IMPLIED_BY_CURRENT_GROUP4_DESIGN`
 - **Current status:** BLOCKED
-- **Purpose:** Produce one stable session choice for 1P/2P characters and one valid world/level, then create the production player owner selected by the recorded ownership decision.
+- **Purpose:** Produce one stable 1P character choice and one valid world/level, then create the production player owner selected by the recorded ownership decision.
 - **Exact current behavior:** `MenuCharacterSelectionState`, `MenuWorldState`, and `MenuLevelState` are empty. No production owner exists for selected Mario/Luigi objects. P2 only borrows `PlayerManager*`.
-- **Missing behavior checklist:** [ ] 1P/2P choice; [ ] Mario/Luigi choice per active slot; [ ] prevent invalid duplicate/slot state as product rules require; [ ] world 1-3 list; [ ] level 1-3 list; [ ] locked-level behavior; [ ] exact nine-level identity validation; [ ] back/cancel; [ ] construct players through P3-approved surface; [ ] unique owner established by `DEC-PLAYER-OWNER`; [ ] stable borrowed view for P2; [ ] preserve session/progression values.
+- **Missing behavior checklist:** [ ] 1P choice; [ ] Mario/Luigi choice; [ ] world 1-3 list; [ ] level 1-3 list; [ ] locked-level behavior; [ ] exact nine-level identity validation; [ ] back/cancel; [ ] construct one player through P3-approved surface; [ ] unique owner established by `DEC-PLAYER-OWNER`; [ ] stable borrowed view for P2; [ ] preserve session/progression values.
 - **Exact target files:** header/source pairs for `MenuCharacterSelectionState`, `MenuWorldState`, `MenuLevelState`; P1 State/MyApp context only under their own tasks; planned P1 contract test.
 - **Allowed edit files:** exact P1 targets only.
 - **Read-only dependency files:** P3 `EntityFactory.*`, Mario/Luigi/PlayerManager headers; P2 stage/LevelManager headers; P4 `UserData.*` and GUI.
 - **Do not implement:** player classes/factory, LevelManager, stage wrappers, map validation/editing, progression storage, GUI widgets, or a fallback raw-pointer owner.
-- **Dependencies:** `P1-STATE-001`; OPEN `DEC-PLAYER-OWNER`; `P3-FACTORY-001`; `P4-GUI-001`; `CON-P1-P4-GUI`; P4's unblocked in-memory progression provider checklist. `P1-MENU-001` and durable persistence are later integrations, not first-slice selection blockers.
+- **Dependencies:** `P1-STATE-001`; `P3-FACTORY-001`; `P4-GUI-001`; `CON-P1-P4-GUI`; P4's unblocked in-memory progression provider checklist. `P1-MENU-001` and durable persistence are later integrations, not first-slice selection blockers.
 - **Contracts provided:** P1 side of `CON-P1-P3-PLAYER-OWNERSHIP`, `CON-P1-P2-ACTIVE-LEVEL`, `CON-P1-P4-PROGRESSION`, and the selection action vocabulary in `CON-P1-P4-GUI`.
 - **Contracts consumed:** P3 player construction/type mapping; P4 unlock/profile data and GUI value actions.
 - **Group5 reference if useful:** character/menu behavior is reference-only; Group4's final matrix and unique ownership control.
 - **Do-not-copy warning:** do not copy Group5 player raw-pointer vectors, level ownership, map paths, or chatbot selection UI.
-- **Implementation notes:** recommended default remains P1 GameState/session owns `std::unique_ptr<PlayerManager>` while P2 borrows views, but this is not authorized until `DEC-PLAYER-OWNER` is CLOSED. Represent level identity as bounded values, not file paths.
+- **Implementation notes:** P1 GameState/session owns `std::unique_ptr<PlayerManager>` while P2 borrows a view. Represent level identity as bounded values, not file paths.
 - **SFML 3.1 notes:** consume P4 UI events via its SFML 3-compatible interface; no legacy event fields.
 - **Compile checks:** syntax check all six selection files against P3/P4 public headers; compile a construction/lifetime contract check after P3 surface lands.
-- **Runtime checks:** all supported 1P/2P choices; owner survives menu-to-GameState transition; P2 view invalidated before owner destruction; locked and unlocked selection; bounds reject world/level 0 or 4.
+- **Runtime checks:** both supported characters in 1P; owner survives menu-to-GameState transition; P2 view is invalidated before owner destruction; locked and unlocked selection; bounds reject world/level 0 or 4.
 - **Visual checks:** both player slots and selected character distinguishable; three worlds and three levels presented; locked choices readable and keyboard reachable.
 - **Gameplay checks:** each of the nine identities routes to the corresponding stage request; no map contents are inspected by this task.
 - **Definition of done:** decision is recorded, ownership has no raw owner, nine identities route correctly, progression filtering and all lifetime checks pass, and dimensions are evidenced independently.
@@ -288,7 +288,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Allowed edit files:** exact target files; other P1 surfaces only in their own cards.
 - **Read-only dependency files:** P2 `LevelManager.*` and stage headers; P3 player headers; P4 GUI/HUD/UserData/Audio headers.
 - **Do not implement:** stage loading internals/path fallback, map parsing, physics, player internals, block/entity rendering internals, HUD, audio, persistence, or cross-owner resets.
-- **Dependencies:** `P1-APP-001`, `P1-STATE-001`, `P1-SELECT-001`, `P1-EVENT-001`; P2 active-level/load contracts; P3 ownership; OPEN `DEC-PLAYER-OWNER` and `DEC-ASSET-ROOT` via P2 load task.
+- **Dependencies:** `P1-APP-001`, `P1-STATE-001`, `P1-SELECT-001`, `P1-EVENT-001`; P2 active-level/load contracts; resolved P3 ownership and asset-root decisions via their implementation tasks.
 - **Contracts provided:** runtime-owner side of `CON-P1-P2-ACTIVE-LEVEL`, `CON-P1-P3-PLAYER-OWNERSHIP`; state-consumer side of death/completion/HUD/audio contracts.
 - **Contracts consumed:** `CON-P1-P2-LEVEL-LOAD`, P2 update/render/callback interfaces, P3 player surface, P4 HUD/audio/UserData surface.
 - **Group5 reference if useful:** update/render sequencing may be compared; Group4 ownership and callbacks remain authoritative.
@@ -348,7 +348,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Allowed edit files:** exact P1 targets only.
 - **Read-only dependency files:** P2 LevelManager/hazard/physics; P3 PlayerManager; P4 UserData/HUD/persistence/GUI.
 - **Do not implement:** pit/enemy/hazard detection, Player reset internals, UserData mutation internals/serialization, HUD, or an implicit policy chosen in code.
-- **Dependencies:** `P1-GAME-001`, `P1-EVENT-001`, `P4-GUI-001`; OPEN `DEC-MULTIPLAYER-DEATH` and `DEC-RESPAWN`; `CON-P1-P2-DEATH`, `CON-P1-P3-PLAYER-RESET`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-GUI`.
+- **Dependencies:** `P1-GAME-001`, `P1-EVENT-001`, `P4-GUI-001`; approved 1P death/respawn rules; `CON-P1-P2-DEATH`, `CON-P1-P3-PLAYER-RESET`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-GUI`.
 - **Contracts provided:** deferred state-flow/lives consumer portions of `CON-P1-P2-DEATH`, `CON-P1-P3-PLAYER-RESET`, and stable semantic outcomes for later P4 HUD/persistence consumption.
 - **Contracts consumed:** affected-player event from P2; reset from P3; current in-memory lives API and `CON-P1-P4-GUI` value actions from P4. Durable persistence is not a P0 blocker.
 - **Group5 reference if useful:** pit threshold and death-menu behavior are technique references only; Group4 decisions control multiplayer and ownership.
@@ -408,7 +408,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Allowed edit files:** exact P1 targets only.
 - **Read-only dependency files:** P2 LevelManager; P3 PlayerManager; P4 GUI/Audio/UserData/persistence.
 - **Do not implement:** P2 runtime pause internals, entity-specific timer edits, GUI widgets, audio internals, persistence policy, or a separate restart implementation from death flow.
-- **Dependencies:** `P1-STATE-001`, `P1-GAME-001`; restart semantics aligned with OPEN `DEC-RESPAWN` and `DEC-PERSISTENCE` where save timing is affected.
+- **Dependencies:** `P1-STATE-001`, `P1-GAME-001`; restart semantics aligned with the resolved respawn and persistence decisions where save timing is affected.
 - **Contracts provided:** application pause/update gate; restart/teardown timing for active-level/player ownership contracts.
 - **Contracts consumed:** P4 menu/audio UI and the approved P2/P3 reload/reset behavior.
 - **Group5 reference if useful:** menu choices may be reference-only; no architecture is copied.

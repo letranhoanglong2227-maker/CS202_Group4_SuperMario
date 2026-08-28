@@ -7,11 +7,11 @@ The critical path is the shortest production-shaped route from the current Brick
 The first vertical slice exits only when a production launch can:
 
 1. enter the P1 state flow;
-2. select a valid 1P or approved 2P session;
-3. retain stable player owners under approved `DEC-PLAYER-OWNER` (P1 is the recommended default, not a current fact);
+2. select a valid 1P session;
+3. retain one stable P1-owned player under approved `DEC-PLAYER-OWNER`;
 4. create one P1-owned active level and pass borrowed player views to P2;
 5. report stage load success/failure explicitly;
-6. render a loaded world and visible player at 32-pixel world scale;
+6. render a loaded world and visible player at the adopted 64-pixel world scale;
 7. move and collide using the preserved P2 Block/runtime ownership foundation;
 8. execute representative enemy, item, Block, and hazard behavior;
 9. clamp the camera and world bounds to dynamic map extent;
@@ -55,7 +55,7 @@ flowchart LR
   IT[P3-ITEM-001 provider checklist] --> CI[P2-CONTACT-ITEM-001]
   G --> CE
   G --> CI
-  D3[DEC-MULTIPLAYER-DEATH + DEC-RESPAWN] --> R[P3-PLAYER-RESET-001]
+  D3[Approved death/respawn rules] --> R[P3-PLAYER-RESET-001]
   D3 --> PIT[P2-PIT-001]
   E --> PIT
   PIT --> DF[P1-DEATH-001]
@@ -75,7 +75,7 @@ flowchart LR
   WIN --> VS
 ```
 
-The diagram shows gating, not file ownership. P2 owns world detection/orchestration, P3 owns entity behavior, P4 owns animation/block presentation, and P1 owns state-transition sequencing. Selected-player session ownership remains pending `DEC-PLAYER-OWNER`.
+The diagram shows gating, not file ownership. P2 owns world detection/orchestration, P3 owns entity behavior, P4 owns animation/block presentation, and P1 owns state-transition sequencing. The current release is 1P-only; CloudPlatform is deferred and is not part of the graph.
 
 ## 4. Ordered waves
 
@@ -85,11 +85,11 @@ No source merge is required for this wave.
 
 | Gate | Unblocks | Required outcome |
 |---|---|---|
-| `DEC-PLAYER-OWNER` | P1 selection/GameState, P3 factory/reset | Explicit runtime owner and borrow/rebind lifetime |
-| `DEC-ASSET-ROOT` | P2 load and P4 package path | One launch/package-relative read-only runtime asset policy |
-| `DEC-MULTIPLAYER-DEATH` + `DEC-RESPAWN` | P2 pit/death consumer, P3 reset, P1 death | Affected-player, lives, reset/reload, and Game Over policy |
+| Approved `DEC-PLAYER-OWNER` | P1 selection/GameState, P3 factory/reset | One P1-owned player and explicit borrow/rebind lifetime |
+| Approved `DEC-ASSET-ROOT` | P2 load and P4 package path | One launch/package-relative read-only runtime asset policy |
+| Approved death/respawn decisions | P2 pit/death consumer, P3 reset, P1 death | 1P life, fatal spawn reset, nonfatal power-loss behavior, and Game Over policy |
 
-The other four decisions can remain open through the basic slice if their affected behavior is isolated: block actor eligibility beyond the already-tested normal Brick, Cloud semantics, WinFlag animation polish, and durable persistence. The slice uses audited in-memory UserData fields and emits stable downstream events; it does not claim persistence complete. The required WinFlag base-anchor correction is not optional.
+The remaining approved rules are consumed by their respective implementations: typed block actor eligibility, animation-gated WinFlag completion, and versioned persistence. CloudPlatform is explicitly deferred and must not be wired in this slice. The required WinFlag base-anchor correction is not optional.
 
 ### Wave 1 — parallel contract-safe foundations
 
@@ -106,12 +106,12 @@ These may proceed concurrently because their primary files do not overlap, subje
 | `P3-PLAYER-STATE-001` | safe size/power/damage transition behavior |
 | `P3-GOOMBA-001` | P3 semantic contact result and visible internal state |
 | `P4-ANIMATION-001` | stable entity-facing animation behavior and failure check |
-| `P4-BLOCK-SIZE-001` | one 32×32 Block visual/physics invariant API |
+| `P4-BLOCK-SIZE-001` | one 64×64 Block visual/physics invariant API |
 | `P4-GUI-001` | `CON-P1-P4-GUI` value-action surface plus minimum visible/keyboard-operable selection, death, and win controls without P1 state ownership |
 
 `P3-PLAYER-VISUAL-001` may begin after the small P4 animation surface is agreed; its implementation can run in parallel with other Wave 1 work.
 
-Also run the explicitly unblocked in-memory provider checklist inside still-`BLOCKED` `P4-PERSISTENCE-001`: validate the exact nine IDs, safe default/current/unlocked snapshots, all eight successors plus terminal `W3_LV3`, and duplicate-completion idempotence. Land that provider evidence before `P1-SELECT-001` or `P1-WIN-001` integrates `CON-P1-P4-PROGRESSION`; the parent P4 card remains `BLOCKED` for durable I/O while `DEC-PERSISTENCE` is open.
+Also run the explicitly unblocked in-memory provider checklist inside `P4-PERSISTENCE-001`: validate the exact nine IDs, safe default/current/unlocked snapshots, all eight successors plus terminal `W3_LV3`, and duplicate-completion idempotence. Land that provider evidence before `P1-SELECT-001` or `P1-WIN-001` integrates `CON-P1-P4-PROGRESSION`; durable I/O still requires implementation and validation.
 
 ### Wave 2 — ownership, factory, and load providers
 
@@ -186,7 +186,7 @@ Exit gate:
 - Run all 25 P0 cards' applicable checks and record `S/I/R/V/G`.
 - Re-run the 27 baseline runtime checks.
 - Run SFML 3.1 syntax/compile/link for production and registered slice tests.
-- Perform 1P visual/gameplay verification and approved 2P verification if 2P is in the first-slice decision profile.
+- Perform 1P visual/gameplay verification. 2P verification is out of the current release scope.
 - Triage failures back to existing task, contract, decision, or `KNOWN_MAP_EDIT_ITEM`; do not create map-specific code.
 
 Only then may the 25 P0 task cards be `DONE` and the team claim a complete first vertical slice.
@@ -241,7 +241,7 @@ Pause the affected merge lane and keep the task `BLOCKED` or return it to `IN_PR
 - a collision produces duplicate score, life, death, completion, or spawn outcomes;
 - the 27 verified runtime checks regress;
 - a Block becomes collidable after same-frame deactivation;
-- 16×16 art is claimed visually correct against a 32×32 hitbox without verification;
+- 16×16 art is claimed visually correct against a 64×64 hitbox without verification;
 - an SFML 2 API enters required source/tests;
 - an engine change special-cases one map rather than fixing shared behavior;
 - a Group5 raw-owner/chatbot/LLM pattern enters Group4.

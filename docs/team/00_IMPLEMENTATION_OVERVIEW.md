@@ -27,7 +27,7 @@ No post-audit production-source change was present when these plans were generat
 - Deterministic enemy movement, contacts, state machines, and boss behavior are normal gameplay and remain in scope.
 - Group4 retains unique-ownership runtime architecture: one `std::unique_ptr` owner for map/runtime objects and non-owning typed views. Never regress to Group5 raw-pointer ownership.
 - Runtime ownership, implementation ownership, integration responsibility, and test responsibility are separate axes.
-- The map architecture is dynamic width, exactly 30 image rows, two logical layers of 15 rows each, and `TILE_SIZE=32`.
+- The adopted Group5-compatible map sketches are dynamic width, 45 image rows, and `CELL_SIZE=64`; P2 parses the first two 15-row runtime bands and ignores the final legacy band.
 - Known map-data defects are user-owned `KNOWN_MAP_EDIT_ITEM`s. These plans contain engine readiness and per-level validation, not map-pixel editing tasks.
 
 ## 3. Canonical record counts
@@ -98,7 +98,7 @@ Priority does not override ownership, contract gates, or open decisions. A P0 ta
 
 ## 7. First complete vertical slice
 
-The first vertical slice must use production paths and the contracted Group4 ownership model; selected-player ownership follows the still-open `DEC-PLAYER-OWNER`:
+The first vertical slice must use production paths and the contracted Group4 ownership model; selected-player ownership follows the resolved `DEC-PLAYER-OWNER`:
 
 ```text
 production main / MyApp

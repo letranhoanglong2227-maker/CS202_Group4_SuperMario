@@ -36,14 +36,14 @@ Remaining P4 tasks: 11 total; 5 READY; 6 BLOCKED; 3 P0; 6 P1; 2 P2; 0 P3. Frozen
 
 - `AnimationComponent` binds borrowed sprite/texture references, registers keyed frame vectors, switches immediately to the first frame, and loops on a single interval. It logs duplicate/missing keys, swallows duplicate registration errors, drops surplus `dt`, and has no focused test or stable P3-facing failure contract.
 - `Block::isExist()` is public and is consumed successfully by P2. `Core/Constants.hpp` contains the corrected shared collision-side values. These are frozen facts, not new tasks.
-- P2 currently calls virtual `GameObject::setSize({32,32})` for one-tile blocks. `Block::setSizeBlock` can scale a sprite after a non-empty texture rectangle exists, but it is not the method P2 calls. Current 16x16 block frames therefore do not have a proven invariant that visual size equals the 32x32 physics tile.
+- P2 currently supplies a 64x64 one-tile size. `LevelManager` now calls `Block::setSizeBlock`, but visual proof across every terrain/block frame is still missing. Current 16x16 atlas frames therefore still need P4 verification that visual size equals the 64x64 physics tile.
 - Normal Brick bottom-hit behavior is current and tested: one eligible collision call from below makes it inactive once, spawns four real `BrickFragment` objects, and P2 immediately adopts/removes them through its `std::unique_ptr` runtime. Do not reopen or rewrite that path without new evidence.
 - `BrickFragment::setPosition` now updates sprite/position through the common API; four fragments animate/move and mark themselves inactive after falling past the current fixed cutoff. Its implementation and P2 handoff/lifecycle are frozen at the tested scope.
 - `CoinBlock` spawns `Coin(position - {0,32}, true)`, decrements a positive count, bounces, and switches to Empty. `MushroomBlock` spawns `Mushroom(position - {0,32}, true)` once and bounces. Preserve those corrected popped/offset facts. The CoinBlock interactive test still uses SFML 2 syntax and is not valid SFML 3.1 runtime evidence; MushroomBlock syntax passes but was not run interactively.
 - P2's parser exposes variants for coin Brick and Mushroom/1-Up/Star block markers, but P2 currently constructs generic `Brick` or `MushroomBlock` without forwarding the variant. Special/payload Brick and variant behavior remain P4 implementation, with P2 mapping and P3 payload dependencies.
 - `CloudBlock`, `AudioSystem`, `GUI`, `LevelGUI`, and `LeaderboardState` are empty shells.
 - `UserData` currently stores name, lives, score, coins, current/unlocked world/level, and character in memory. It supports score/coins/lives mutations, a 100-coin life conversion, nonnegative lives, session reset, and monotonic unlock updates. It has no validation boundary, serialization, load/save error surface, or persisted file.
-- Audio and font assets exist; `SaveData/.gitkeep` exists; expected `LeaderBoard.csv` is missing. `TextureBlockManager` currently loads `../assets/textures/Items_Blocks.png`, while P2 stages use another assumed asset path. `DEC-ASSET-ROOT` is OPEN.
+- Audio and font assets exist; `SaveData/.gitkeep` exists; expected `LeaderBoard.csv` is missing. `TextureBlockManager` currently loads `../assets/textures/Items_Blocks.png`, while P2 stages use another assumed asset path. `DEC-ASSET-ROOT` is resolved and the shared resolver remains to be implemented.
 - `CMakeLists.txt` requires C++20 but FetchContent pins SFML 3.0.0. Direct audit syntax against installed SFML 3.1 passed for all production translation units. The full build stops earlier in FreeType `windres` because workspace paths contain spaces.
 - No map PNG was opened, parsed, scanned, or edited for this plan. Map-data work remains user-owned. Exactly nine identities, `W1_LV1` through `W3_LV3`, remain the team requirement.
 - Group5 is reference-only. Its LLM/Ollama/chatbot feature is excluded, and its raw-pointer architecture must not be copied.
@@ -55,16 +55,16 @@ Remaining P4 tasks: 11 total; 5 READY; 6 BLOCKED; 3 P0; 6 P1; 2 P2; 0 P3. Frozen
 | 0A | `BASE-P4-BRICK-001` | DONE | P0 | Frozen normal-Brick scope; downstream tasks do not rewrite it |
 | 0B | `BASE-P4-FRAGMENT-001`, `BASE-P4-BLOCK-INTEGRATION-001` | DONE | P1 | Frozen fragment/correction scopes; downstream tasks add only missing behavior/evidence |
 | 1 | `P4-ANIMATION-001` entity-facing animation contract | READY | P0 | Can start; finish with P3 consumer evidence |
-| 2 | `P4-BLOCK-SIZE-001` 32x32 block visual invariant | READY | P0 | Can start against existing P2 size call; finish with runtime render evidence |
+| 2 | `P4-BLOCK-SIZE-001` 64x64 block visual invariant | READY | P0 | Can start against existing P2 size call; finish with runtime render evidence |
 | 3 | `P4-GUI-001` reusable GUI controls | READY | P0 | Minimum production selection/death/win controls block the first slice; no state logic ownership transfer |
 | 4 | `P4-QUESTION-BLOCK-001` Coin/Mushroom block validation | READY | P1 | Preserve spawn facts; finish with corrected SFML 3.1 checks and P2 adoption |
-| 5 | `P4-AUDIO-001` AudioSystem | READY | P1 | Core can start; final paths consume OPEN `DEC-ASSET-ROOT` and P1 events |
+| 5 | `P4-AUDIO-001` AudioSystem | READY | P1 | Core can start; final paths consume resolved asset policy and P1 events |
 | 6 | `P4-PAYLOAD-BLOCK-001` special Brick and block variants | BLOCKED | P1 | `DEC-BLOCK-ACTOR-ELIGIBILITY`, P2 variant forwarding, P3 payload APIs |
-| 7 | `P4-CLOUD-001` CloudBlock behavior | BLOCKED | P1 | OPEN `DEC-CLOUD-SEMANTICS`; P2 currently maps marker to MovingBlock |
+| 7 | `P4-CLOUD-001` CloudBlock behavior | DEFERRED | P1 | CloudPlatform/CloudBlock is out of the current release scope |
 | 8 | `P4-HUD-001` gameplay HUD | BLOCKED | P1 | P1 event/data contract and closed multiplayer lives semantics |
-| 9 | `P4-PERSISTENCE-001` UserData save/load/progression | BLOCKED | P1 | OPEN `DEC-PERSISTENCE`, `DEC-RESPAWN`, and profile implications of multiplayer policy |
+| 9 | `P4-PERSISTENCE-001` UserData save/load/progression | BLOCKED | P1 | Approved persistence policy; implementation, schema, and P1 event integration remain |
 | 10 | `P4-LEADERBOARD-001` leaderboard CSV/state | BLOCKED | P2 | Persistence schema, P1 State/GUI integration |
-| 11 | `P4-PACKAGE-001` SFML 3.1 build/release/assets | BLOCKED | P2 | OPEN `DEC-ASSET-ROOT`; production flow and all required runtime tasks |
+| 11 | `P4-PACKAGE-001` SFML 3.1 build/release/assets | BLOCKED | P2 | Resolved asset policy; production flow and all required runtime tasks |
 
 A recommended default in a decision card is not authorization. Change a BLOCKED card to READY only after its decision/provider evidence is recorded in `01_MASTER_TASK_BOARD.md` and reflected here.
 
@@ -104,7 +104,7 @@ Never implement the excluded Group5 chatbot/LLM feature. Runtime adoption/test a
 |---|---|---|---|
 | Animation keys, frame sets, action changes, sprite/texture lifetime | P3 | `P4-ANIMATION-001` | `CON-P3-P4-ANIMATION`; one player and enemy animate visibly without missing-key spam |
 | Collision side and actor/power eligibility context | P2 + P3, human policy | `P4-QUESTION-BLOCK-001`, `P4-PAYLOAD-BLOCK-001`, `P4-CLOUD-001` | `CON-P2-P4-BLOCK-COLLISION`; CLOSED `DEC-BLOCK-ACTOR-ELIGIBILITY` |
-| P2's 32x32 physics size call and block construction timing | P2 | `P4-BLOCK-SIZE-001` | `CON-P2-P4-BLOCK-VISUAL-SIZE`; render/physics rectangle equality check |
+| P2's 64x64 physics size call and block construction timing | P2 | `P4-BLOCK-SIZE-001` | `CON-P2-P4-BLOCK-VISUAL-SIZE`; render/physics rectangle equality check |
 | Immediate raw callback adoption into `std::unique_ptr`, inactive cleanup, no same-frame recollision | P2 | question/payload/fragment regression | `CON-P2-P4-SPAWN-HANDOFF`, `CON-P2-P4-BLOCK-LIFECYCLE`; 27-check suite |
 | Forwarded map variant value without map-pixel work in P4 | P2 | `P4-PAYLOAD-BLOCK-001` | `CON-P2-P4-BLOCK-VARIANTS`; constructor table check |
 | Coin/Mushroom/1-Up/Star payload construction and behavior | P3 | `P4-PAYLOAD-BLOCK-001`, `P4-QUESTION-BLOCK-001` | spawn type/position/ownership checks; no P4 item implementation |
@@ -118,7 +118,7 @@ Never implement the excluded Group5 chatbot/LLM feature. Runtime adoption/test a
 | P4 output | Consumers | Guarantee |
 |---|---|---|
 | Deterministic animation component contract | P3 entities, P4 blocks | Borrowed sprite/texture lifetimes are explicit; switching applies frame zero; invalid input has a testable policy |
-| Block visual-size synchronization | P2 runtime/camera, players | 16x16 source frames render at the exact P2-supplied world size, normally 32x32, without changing physics size |
+| Block visual-size synchronization | P2 runtime/camera, players | 16x16 source frames render at the exact P2-supplied world size, currently 64x64, without changing physics size |
 | Block reaction/lifecycle and payload trigger behavior | P2 collision/runtime | Frozen normal Brick remains once-only; active/empty/inactive state and callback timing are explicit |
 | Spawned payload object at agreed position/state | P2 owner, P3 behavior | P4 creates through P3 API and immediately hands off through P2 callback; P4 retains no owning raw pointer |
 | Variant-aware P4 constructor/behavior surface | P2 mapping | Unknown variant fails safely; no pixel decoding in P4 |
@@ -202,11 +202,11 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **Current status:** DONE
 - **Purpose:** Prevent stale findings from reopening corrected shared block boundaries.
 - **Exact current behavior:** collision sides come from `Core/Constants.hpp`; `Block::isExist()` is public; CoinBlock constructs `Coin(..., true)` one tile above; MushroomBlock constructs `Mushroom(..., true)` one tile above.
-- **Missing behavior checklist:** [x] one shared collision definition; [x] public lifecycle query; [x] popped Coin state; [x] 32-pixel vertical spawn offset. Full payload collection/variant/visual verification remains in other cards.
+- **Missing behavior checklist:** [x] one shared collision definition; [x] public lifecycle query; [x] popped Coin state; [x] one-cell vertical spawn offset through `MapFormat::TILE_SIZE`. Full payload collection/variant/visual verification remains in other cards.
 - **Exact target files:** `include/Core/Constants.hpp`; `include/Objects/Blocks/Block.hpp`; CoinBlock and MushroomBlock source.
 - **Allowed edit files:** none under this card; overlapping tasks preserve these exact facts.
 - **Read-only dependency files:** P2 Physics/LevelManager; P3 Coin/Mushroom APIs.
-- **Do not implement:** P2 adoption, P3 item behavior, variants, actor policy, or 32x32 sprite scaling.
+- **Do not implement:** P2 adoption, P3 item behavior, variants, actor policy, or 64x64 sprite scaling.
 - **Dependencies:** satisfied at audited source/integration boundary.
 - **Contracts provided:** baseline portions of `CON-P2-P4-BLOCK-COLLISION`, `CON-P2-P4-BLOCK-LIFECYCLE`, `CON-P2-P4-SPAWN-HANDOFF`.
 - **Contracts consumed:** P2 collision/adoption; P3 popped item constructors.
@@ -252,25 +252,25 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **Suggested commit message:** `person4: stabilize animation playback contract`
 - **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
 
-### P4-BLOCK-SIZE-001 — 32x32 block visual invariant
+### P4-BLOCK-SIZE-001 — 64x64 block visual invariant
 
 - **Task ID:** `P4-BLOCK-SIZE-001`
-- **Title:** Synchronize Block visual size with 32x32 physics size
+- **Title:** Synchronize Block visual size with 64x64 physics size
 - **Owner:** Person 4
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN` and `IMPLIED_BY_CURRENT_GROUP4_DESIGN`
 - **Current status:** READY
-- **Purpose:** Ensure each block sprite occupies the P2-supplied world rectangle, normally one 32x32 tile, without changing collision ownership.
+- **Purpose:** Ensure each block sprite occupies the P2-supplied world rectangle, currently one 64x64 tile, without changing collision ownership.
 - **Exact current behavior:** block frames are usually 16x16; P2 calls virtual `GameObject::setSize`, which updates size/hitbox only; `Block::setSizeBlock` scales only when called after a valid texture rectangle and is currently unused by P2 construction.
 - **Missing behavior checklist:** [ ] P2's existing size call reaches P4 visual sync; [ ] sprite scale derives from current nonzero frame rect; [ ] animation frame changes preserve world size; [ ] hitbox remains exactly P2-supplied; [ ] zero/empty rect safe; [ ] multi-tile SolidBlock policy explicit; [ ] no double scale; [ ] all P4 block types checked.
 - **Exact target files:** `include/Objects/Blocks/Block.hpp`; `src/Objects/Blocks/Block.cpp`; P4 block files only if their frame initialization order requires a minimal fix; planned block test.
 - **Allowed edit files:** P4 block targets only; no P2 call-site edit.
 - **Read-only dependency files:** P3 `GameObject.*`; P2 `LevelManager.cpp`, Physics, map format; `Constants.hpp` frozen.
 - **Do not implement:** P2 map dimensions/constructor changes, physics resizing, texture coordinates, camera, or map-specific exceptions.
-- **Dependencies:** existing P2 32x32 construction call; `CON-P2-P4-BLOCK-VISUAL-SIZE`.
+- **Dependencies:** existing P2 64x64 construction call; `CON-P2-P4-BLOCK-VISUAL-SIZE`.
 - **Contracts provided:** P4 side of `CON-P2-P4-BLOCK-VISUAL-SIZE`.
 - **Contracts consumed:** P2 supplies authoritative world size after construction; P4 animation supplies active frame rect.
-- **Group5 reference if useful:** visual tile size may be compared only; Group4 `TILE_SIZE=32` is authoritative.
+- **Group5 reference if useful:** reuse the 64-pixel world scale and frame table only; Group4 ownership and SFML 3.1 APIs remain authoritative.
 - **Do-not-copy warning:** no fixed Group5 dimensions beyond Group4 contract, no P2 edits, no raw texture ownership.
 - **Implementation notes:** reuse virtual `setSize` rather than adding a second required call if the existing override can cover the seam. Keep one source of truth: physics/world size; visual scale follows it.
 - **SFML 3.1 notes:** use `sf::Vector2f` scale/texture-rect APIs as in SFML 3.1; verify negative/zero rect dimensions defensively.
@@ -292,7 +292,7 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **Current status:** READY
 - **Purpose:** Turn current source behavior into SFML 3.1-tested, once-only/finite payload block contracts without reopening corrected spawn facts.
 - **Exact current behavior:** CoinBlock validates positive count, spawns a popped Coin one tile above, decrements/counts down, bounces, then renders Empty; MushroomBlock spawns a popped Mushroom one tile above once, bounces, and renders Empty. `maxBounceHeight` is unused; original Y is lazily captured; no valid end-to-end test exists.
-- **Missing behavior checklist:** [ ] SFML 3.1 test modernization; [ ] original-position capture robust to update/set order; [ ] finite bounce returns exactly to origin; [ ] repeat hit blocked during bounce; [ ] empty state never respawns; [ ] multi-coin count exactly N; [ ] null callback safe; [ ] P2 immediate adoption verified; [ ] P3 popped payload state verified; [ ] active/empty animation and 32x32 visual proof.
+- **Missing behavior checklist:** [ ] SFML 3.1 test modernization; [ ] original-position capture robust to update/set order; [ ] finite bounce returns exactly to origin; [ ] repeat hit blocked during bounce; [ ] empty state never respawns; [ ] multi-coin count exactly N; [ ] null callback safe; [ ] P2 immediate adoption verified; [ ] P3 popped payload state verified; [ ] active/empty animation and 64x64 visual proof.
 - **Exact target files:** CoinBlock and MushroomBlock header/source; `tests/TestCoinBlock.cpp`; `tests/TestMushroomBlock.cpp` only as needed; planned `tests/Person4BlockContracts.cpp`.
 - **Allowed edit files:** exact P4 block/test targets; preserve baseline facts.
 - **Read-only dependency files:** P2 LevelManager/Physics; P3 Coin/Mushroom; P4 Block/Animation under their own tasks.
@@ -306,7 +306,7 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **SFML 3.1 notes:** update legacy TestCoinBlock to `sf::VideoMode({})`, optional event polling, event type queries, and SFML 3 rectangle/view APIs.
 - **Compile checks:** syntax check both block translations and all touched tests against SFML 3.1.
 - **Runtime checks:** N=1 and N>1 CoinBlock; Mushroom once; repeat/simultaneous calls; null callback; bounce completion across varied `dt`; P2 adoption/removal.
-- **Visual checks:** active animation, bounce, Empty frame, popped item origin, exact 32x32 sprite/world alignment.
+- **Visual checks:** active animation, bounce, Empty frame, popped item origin, exact 64x64 sprite/world alignment.
 - **Gameplay checks:** one base coin and mushroom interaction in vertical slice; collection outcome belongs to P2/P3/P1/P4 HUD seam.
 - **Definition of done:** modern tests run, spawn corrections remain intact, lifecycle/handoff and visual/gameplay checks pass, and all dimensions cite evidence.
 - **Suggested commit message:** `person4: validate coin and mushroom block behavior`
@@ -357,7 +357,7 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **Allowed edit files:** exact P4 targets only.
 - **Read-only dependency files:** P2 MovingBlock/MapManager/LevelManager/Physics; P3 player/enemies; P4 Block/Animation.
 - **Do not implement:** MovingBlock, map palette/decoding, physics engine, player collision logic, or silent semantics.
-- **Dependencies:** OPEN `DEC-CLOUD-SEMANTICS`; block-size/animation contracts; P2 mapping/collision provider after decision.
+- **Dependencies:** CloudPlatform is deferred; block-size/animation contracts remain applicable to supported blocks only.
 - **Contracts provided:** approved CloudBlock side of `CON-P2-P4-BLOCK-COLLISION`, `CON-P2-P4-BLOCK-LIFECYCLE`, and visual-size contract.
 - **Contracts consumed:** P2 construction/collision/motion boundary; P3 actor bounds.
 - **Group5 reference if useful:** visual/collision feel may be reference-only; it cannot resolve the human decision.
@@ -477,7 +477,7 @@ These outputs implement the canonical `CON-*` cards named below. P4 must not uni
 - **Allowed edit files:** exact targets; no generated personal save committed.
 - **Read-only dependency files:** P1 states/Mediator; P3 players; P2 stages; P4 HUD/Leaderboard/GUI.
 - **Do not implement:** P1 semantic event definitions/state flow, multiplayer death policy, player reset, leaderboard UI, map progression inference, external database, or a new dependency. P4 may map the stable P1 events to save timing only after `DEC-PERSISTENCE` approves that mapping.
-- **Dependencies:** the in-memory nine-stage provider checklist may proceed immediately under the workflow's unblocked-child rule and must land before `P1-SELECT-001`/`P1-WIN-001` integration. The full durable card remains blocked by OPEN `DEC-PERSISTENCE`, `DEC-RESPAWN`, and relevant `DEC-MULTIPLAYER-DEATH`; it uses `CON-P1-P4-PERSISTENCE`, `CON-P1-P4-PROGRESSION`, and `CON-P1-P4-SCORE-COINS-LIVES`.
+- **Dependencies:** the in-memory nine-stage provider checklist may proceed immediately and must land before `P1-SELECT-001`/`P1-WIN-001` integration. Durable implementation uses the resolved persistence, respawn, and 1P lives rules with `CON-P1-P4-PERSISTENCE`, `CON-P1-P4-PROGRESSION`, and `CON-P1-P4-SCORE-COINS-LIVES`.
 - **Contracts provided:** validated data/schema/I/O side of persistence, progression, and score/coins/lives contracts.
 - **Contracts consumed:** P1 supplies stable semantic session events and explicit load/save requests where UI needs them; P4 applies the approved event-to-save timing to its own UserData/profile state.
 - **Group5 reference if useful:** fields/CSV technique may be reference-only; Group4 decisions/schema govern.
@@ -578,7 +578,7 @@ Every touched translation unit receives a direct `g++ -std=c++20 -fsyntax-only` 
 ## 10. Integration checks
 
 1. **Frozen block regression:** rerun P2's 27-check suite after every Block/Animation change. Normal Brick still becomes inactive once, creates four P4 fragments, and P2 adopts/removes them; shared constants/lifecycle stay unchanged.
-2. **Visual-size seam:** P2's existing world-size call makes every P4 block sprite match the collision rectangle, normally 32x32, without a P2-specific helper call.
+2. **Visual-size seam:** P2's existing world-size call makes every P4 block sprite match the collision rectangle, currently 64x64, without a P2-specific helper call.
 3. **Animation seam:** P3 supplies keys/frames and owns sprite/texture; P4 component switches/times frames deterministically with no ownership or missing-key spam.
 4. **Payload seam:** after decisions/contracts, P2 supplies actor context + variant, P4 selects/triggers behavior once, P3 creates/implements payload, and P2 adopts it immediately. P4 never parses pixels or retains the raw callback pointer.
 5. **Cloud seam:** exactly one approved object results from a cloud marker; P4 CloudBlock and P2 MovingBlock roles do not overlap silently.
@@ -598,7 +598,7 @@ Person 4 is complete only when all of the following are true:
 - All 11 remaining P4 cards are DONE, and the three frozen baseline cards remain DONE with their regression evidence. Required work is not hidden as DEFERRED or EXCLUDED.
 - Every P4-owned production file in Section 1 remains accounted for. MovingBlock stays P2-owned; P3 items stay P3-owned; all non-Leaderboard states stay P1-owned.
 - Normal Brick, four real BrickFragments, corrected constants/public lifecycle, popped Coin state, Mushroom one-tile offset, P2 immediate unique ownership, inactive cleanup, and same-frame exclusion are preserved.
-- Animation is deterministic and consumed visibly by P3; every P4 block visual matches its P2 world/physics size, normally 32x32.
+- Animation is deterministic and consumed visibly by P3; every P4 block visual matches its P2 world/physics size, currently 64x64.
 - Base question blocks, approved special/payload variants, and approved CloudBlock semantics pass compile/runtime/visual/gameplay checks without P4 map parsing or P2/P3 implementation.
 - Audio, GUI, HUD, UserData persistence/progression, Leaderboard, and packaging integrate through the canonical P1/P4 contracts and recorded human decisions.
 - `DEC-BLOCK-ACTOR-ELIGIBILITY`, `DEC-CLOUD-SEMANTICS`, `DEC-ASSET-ROOT`, and `DEC-PERSISTENCE` are CLOSED before dependent acceptance; `DEC-MULTIPLAYER-DEATH` and `DEC-RESPAWN` are also CLOSED where lives/session reset are consumed. No recommended default was silently implemented.
