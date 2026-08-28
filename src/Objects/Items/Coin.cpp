@@ -1,11 +1,12 @@
 #include "Objects/Items/Coin.hpp"
+#include "Core/Constants.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 
 Coin::Coin(const sf::Vector2f& pos, bool popped)
     : Item("Coin", 100), isPoppedFromBlock(popped), initialY(pos.y) {
     setPosition(pos);
     hitbox.setPosition(pos);
-    hitbox.setSize(sf::Vector2f(16.f, 24.f));
+    hitbox.setSize({CELL_SIZE - 10.f, CELL_SIZE});
     size = hitbox.getSize();
 }
 

@@ -6,7 +6,9 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -24,6 +26,8 @@ class LevelManager {
 public:
     using LevelCallback = std::function<void()>;
     using PlayerCallback = std::function<void(PlayerManager&)>;
+    using ProjectileTargetResolver =
+        std::function<std::optional<sf::Vector2f>()>;
 
     LevelManager();
     virtual ~LevelManager() = default;
@@ -39,9 +43,16 @@ public:
     void addEntity(std::unique_ptr<GameObject> entity,
                    bool participatesInGenericPhysics = false,
                    bool participatesInBlockCollisions = false);
-    void update(float dt);
-    void render(sf::RenderTarget* target);
+    void spawnRocket(sf::Vector2f position,
+                     ProjectileTargetResolver targetResolver,
+                     float speed = 140.f, float lifetime = 8.f);
+    void spawnRocket(sf::Vector2f position, sf::Vector2f velocity,
+                     float lifetime = 8.f);
+    virtual void update(float dt);
+    virtual void render(sf::RenderTarget* target);
     void clear();
+    bool isLoaded() const noexcept;
+    std::optional<sf::FloatRect> getWorldBounds() const noexcept;
     const MapManager& getMapManager() const noexcept;
     const std::vector<std::unique_ptr<GameObject>>& getEntities() const noexcept;
     const std::vector<Block*>& getBlocks() const noexcept;
@@ -50,13 +61,30 @@ public:
 
 protected:
     virtual void onMapLoaded() {}
+    Enemy* addStageEnemy(std::string_view type, sf::Vector2f position);
+    Enemy* addStageEnemy(std::string_view type, sf::Vector2f position,
+                         float patrolLeft, float patrolRight);
+    void addStageMovingBlock(sf::Vector2f position,
+                             std::string_view textureName,
+                             float speed = 100.f, float distance = 300.f);
+    const std::vector<PlayerManager*>& getPlayers() const noexcept;
 
 private:
+    struct PatrolBinding {
+        Enemy* enemy;
+        float left;
+        float right;
+    };
+
     void constructSpawn(const MapSpawnInfo& spawn);
     void registerEntity(GameObject& entity);
     void flushPendingEntities();
     void rebuildViews();
     void removeInactiveEntities();
+    void enforceStagePatrols();
+    void resolveProjectileWorldCollisions();
+    bool damagePlayer(PlayerManager& player, int amount);
+    void killPlayer(PlayerManager& player);
     PlayerManager* findPlayer(int playerId) const;
 
     MapManager mapManager;
@@ -66,6 +94,7 @@ private:
     std::vector<Block*> blocks;
     std::vector<Enemy*> enemies;
     std::vector<Enemy*> physicsEnemies;
+    std::vector<PatrolBinding> stagePatrols;
     std::vector<PowerUpObject*> powerUps;
     std::vector<Lava*> lavaHazards;
     std::vector<Bullet*> bullets;
@@ -76,6 +105,9 @@ private:
     std::vector<PlayerManager*> players;
     LevelCallback levelCompletedCallback;
     PlayerCallback playerDeathCallback;
+    bool completionPending{false};
+    bool completionEmitted{false};
+    bool loaded{false};
     bool updating{false};
 };
 

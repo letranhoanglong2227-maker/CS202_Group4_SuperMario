@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Heriss.hpp"
+#include "Core/Constants.hpp"
 
 Heriss::Heriss(const sf::Vector2f& pos)
     : Enemy() {
@@ -8,7 +9,7 @@ Heriss::Heriss(const sf::Vector2f& pos)
     setSpeed(55.f);
 
     setPosition(pos);
-    hitbox.setSize(sf::Vector2f(32.f, 32.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 

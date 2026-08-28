@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "Levels/Managers/LevelManager.hpp"
-class W1_LV1 : public ConfiguredLevel {
-public: explicit W1_LV1(const std::vector<PlayerManager*>& p = {}) : ConfiguredLevel(1, 1, p) {}
-};
 
+class W1_LV1 : public ConfiguredLevel {
+public:
+    explicit W1_LV1(const std::vector<PlayerManager*>& players = {});
+};

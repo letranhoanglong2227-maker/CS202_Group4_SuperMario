@@ -1,4 +1,5 @@
 #include "Objects/Blocks/MushroomBlock.hpp"
+#include "Levels/Managers/MapManager.hpp"
 #include "Objects/Items/Mushroom.hpp"
 
 MushroomBlock::MushroomBlock(std::function<void(GameObject*)> spawnCallback)
@@ -34,7 +35,10 @@ void MushroomBlock::reactToCollision(int collidedSide) {
         if (!isEmpty && !isBouncing) {
             
             if (onSpawnItem) {
-                Mushroom* newMushroom = new Mushroom({this->position.x, this->position.y - 32.f}, true); 
+                Mushroom* newMushroom = new Mushroom(
+                    {this->position.x,
+                     this->position.y - MapFormat::TILE_SIZE},
+                    true);
                 onSpawnItem(newMushroom);
             }
 

@@ -13,6 +13,13 @@ Rocket::Rocket(sf::Vector2f pos, TargetResolver resolver, float moveSpeed,
     shape.setPosition(pos);
     shape.setSize(getSize());
     shape.setFillColor(sf::Color(235, 235, 235));
+    active = activeLifetime > 0.f;
+}
+
+Rocket::Rocket(sf::Vector2f pos, sf::Vector2f initialVelocity,
+               float activeLifetime)
+    : Rocket(pos, TargetResolver{}, 0.f, activeLifetime) {
+    velocity = initialVelocity;
 }
 
 void Rocket::setTargetResolver(TargetResolver resolver) {
@@ -35,7 +42,7 @@ void Rocket::update(float dt) {
         }
         sf::Vector2f offset = *targetPosition - getCenter();
         const float length = std::sqrt(offset.x * offset.x + offset.y * offset.y);
-        if (length > 0.001f) velocity = offset / length * speed;
+        velocity = length > 0.001f ? offset / length * speed : sf::Vector2f{};
     }
     setPosition(getPosition() + velocity * dt);
     shape.setPosition(getPosition());
@@ -48,4 +55,27 @@ void Rocket::render(sf::RenderTarget* renderTarget) {
 bool Rocket::isActive() const noexcept { return active; }
 
 void Rocket::deactivate() noexcept { active = false; }
+
+bool Rocket::deactivateOnWorldCollision(
+    const sf::FloatRect& obstacle) noexcept {
+    if (!active || !hitbox.getGlobalBounds().findIntersection(obstacle)) {
+        return false;
+    }
+    deactivate();
+    return true;
+}
+
+bool Rocket::cullOutside(const sf::FloatRect& worldBounds,
+                         float margin) noexcept {
+    if (!active) return false;
+    const float safeMargin = std::max(0.f, margin);
+    const sf::FloatRect paddedWorld(
+        {worldBounds.position.x - safeMargin,
+         worldBounds.position.y - safeMargin},
+        {worldBounds.size.x + 2.f * safeMargin,
+         worldBounds.size.y + 2.f * safeMargin});
+    if (paddedWorld.findIntersection(hitbox.getGlobalBounds())) return false;
+    deactivate();
+    return true;
+}
 

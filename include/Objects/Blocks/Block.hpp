@@ -30,7 +30,11 @@ private:
     inline static sf::Texture blocksTexture;
 public:
     static bool setupTexture(){
-        bool loadOk = blocksTexture.loadFromFile("../assets/textures/Items_Blocks.png");
+        bool loadOk = blocksTexture.loadFromFile("assets/textures/Items_Blocks.png");
+        if (!loadOk) {
+            loadOk = blocksTexture.loadFromFile(
+                "../assets/textures/Items_Blocks.png");
+        }
         if(loadOk){
             std::cout << "File loaded!...\n";
         } else

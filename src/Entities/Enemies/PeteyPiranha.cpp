@@ -1,4 +1,5 @@
 #include "Entities/Enemies/PeteyPiranha.hpp"
+#include "Core/Constants.hpp"
 
 PeteyPiranha::PeteyPiranha(const sf::Vector2f& pos)
     : Enemy(), baseY(pos.y) {
@@ -7,7 +8,7 @@ PeteyPiranha::PeteyPiranha(const sf::Vector2f& pos)
     setPointsValue(2500);
 
     setPosition(pos);
-    hitbox.setSize(sf::Vector2f(48.f, 64.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE * 1.5f});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
@@ -51,7 +52,7 @@ void PeteyPiranha::update(float dt) {
     }
 
     if (emerged) {
-        position.y = baseY - 48.f;
+        position.y = baseY - CELL_SIZE * 1.5f;
     } else {
         position.y = baseY;
     }

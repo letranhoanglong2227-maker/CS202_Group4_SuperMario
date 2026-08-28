@@ -1,4 +1,5 @@
 #include "Objects/Items/Mushroom.hpp"
+#include "Core/Constants.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 
 Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
@@ -6,7 +7,7 @@ Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
     (void)popped;
     setPosition(pos);
     hitbox.setPosition(pos);
-    hitbox.setSize(sf::Vector2f(32.f, 32.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE});
     size = hitbox.getSize();
     movementComponent = std::make_unique<MovementComponent>(60.f, 500.f, 0.f);
 }

@@ -1,18 +1,22 @@
 #pragma once
+#include "Core/Constants.hpp"
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace MapFormat {
-inline constexpr float TILE_SIZE = 32.f;
+inline constexpr float TILE_SIZE = CELL_SIZE;
 inline constexpr unsigned int LOGICAL_MAP_HEIGHT = 15;
 inline constexpr unsigned int MAP_LAYER_COUNT = 2;
 inline constexpr unsigned int REQUIRED_MAP_HEIGHT =
     LOGICAL_MAP_HEIGHT * MAP_LAYER_COUNT;
+// Group5 sketches store an extra legacy band after the object and actor bands.
+inline constexpr unsigned int GROUP5_MAP_HEIGHT = LOGICAL_MAP_HEIGHT * 3;
 }
 
 enum class MapObjectType {
@@ -57,7 +61,7 @@ struct MapDiagnostic {
 
 class MapManager {
 public:
-  MapManager(float gridSize = 32.f);
+  MapManager(float gridSize = MapFormat::TILE_SIZE);
 
   bool loadFromImage(const std::string &filename);
   bool loadMap(const std::string& filename);
@@ -66,11 +70,12 @@ public:
   const std::vector<MapSpawnInfo>& getSpawns() const noexcept;
   const std::vector<MapDiagnostic>& getDiagnostics() const noexcept;
   unsigned int getMapWidth() const noexcept;
+  std::optional<sf::FloatRect> getWorldBounds() const noexcept;
   const std::string& getLastError() const noexcept;
 
   const std::vector<sf::FloatRect> &getSolidBlocks() const;
   std::vector<sf::FloatRect> getNearbyBlocks(const sf::FloatRect &entityHitbox,
-                                             float radius = 64.f) const;
+                                             float radius = 2.f * MapFormat::TILE_SIZE) const;
   const sf::Vector2f &getSpawnPoint()
       const; // Đại diện cho điểm spawn của Player 1 (để tương thích ngược)
   const sf::Vector2f &getSpawnPointP1() const;

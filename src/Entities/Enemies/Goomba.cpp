@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Goomba.hpp"
+#include "Core/Constants.hpp"
 
 Goomba::Goomba(const sf::Vector2f& pos)
     : Enemy() {
@@ -8,7 +9,7 @@ Goomba::Goomba(const sf::Vector2f& pos)
     setSpeed(50.f);
 
     setPosition(pos);
-    hitbox.setSize(sf::Vector2f(32.f, 32.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
@@ -20,7 +21,7 @@ void Goomba::onStomped() {
     isSquished = true;
     setStomped(true);
     setDamage(0);
-    hitbox.setSize(sf::Vector2f(32.f, 16.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE * 0.5f});
 }
 
 void Goomba::updateAnimation(float dt) {

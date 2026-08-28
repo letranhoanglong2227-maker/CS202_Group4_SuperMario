@@ -49,8 +49,9 @@ sf::Vector2f toWorldPosition(unsigned int x, unsigned int localY) {
 }
 }
 
-MapManager::MapManager(float gridSize) 
-    : gridSize(gridSize <= 0.f ? 32.f : gridSize), spawnPointP1{0.f, 0.f}, spawnPointP2{0.f, 0.f} {}
+MapManager::MapManager(float gridSize)
+    : gridSize(gridSize <= 0.f ? MapFormat::TILE_SIZE : gridSize),
+      spawnPointP1{0.f, 0.f}, spawnPointP2{0.f, 0.f} {}
 
 bool MapManager::loadFromImage(const std::string& filename) {
     sf::Image image;
@@ -195,10 +196,12 @@ bool MapManager::loadMap(const std::string& filename) {
         std::cerr << "MapManager: " << lastError << '\n';
         return false;
     }
-    if (size.y != MapFormat::REQUIRED_MAP_HEIGHT) {
+    if (size.y != MapFormat::REQUIRED_MAP_HEIGHT &&
+        size.y != MapFormat::GROUP5_MAP_HEIGHT) {
         std::ostringstream message;
         message << "Invalid map height for " << filename << ": expected "
-                << MapFormat::REQUIRED_MAP_HEIGHT << ", got " << size.y;
+                << MapFormat::REQUIRED_MAP_HEIGHT << " or "
+                << MapFormat::GROUP5_MAP_HEIGHT << ", got " << size.y;
         lastError = message.str();
         std::cerr << "MapManager: " << lastError << '\n';
         return false;
@@ -227,6 +230,14 @@ const std::vector<MapDiagnostic>& MapManager::getDiagnostics() const noexcept {
 
 unsigned int MapManager::getMapWidth() const noexcept {
     return mapWidth;
+}
+
+std::optional<sf::FloatRect> MapManager::getWorldBounds() const noexcept {
+    if (mapWidth == 0) return std::nullopt;
+    return sf::FloatRect(
+        {0.f, 0.f},
+        {static_cast<float>(mapWidth) * gridSize,
+         static_cast<float>(MapFormat::LOGICAL_MAP_HEIGHT) * gridSize});
 }
 
 const std::string& MapManager::getLastError() const noexcept {

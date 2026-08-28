@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Bowser.hpp"
+#include "Core/Constants.hpp"
 
 Bowser::Bowser(const sf::Vector2f& pos)
     : Enemy() {
@@ -8,7 +9,7 @@ Bowser::Bowser(const sf::Vector2f& pos)
     setSpeed(40.f);
 
     setPosition(pos);
-    hitbox.setSize(sf::Vector2f(64.f, 64.f));
+    hitbox.setSize({2.f * CELL_SIZE, 140.f});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 

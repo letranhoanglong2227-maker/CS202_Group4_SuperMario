@@ -1,4 +1,5 @@
 ﻿#include "Objects/Environment/Lava.hpp"
+#include "Entities/Players/PlayerManager.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include <algorithm>
 #include <cmath>
@@ -20,5 +21,11 @@ void Lava::update(float dt) {
 
 void Lava::render(sf::RenderTarget* target) {
     if (target) target->draw(shape);
+}
+
+bool Lava::applyTo(PlayerManager& player) const {
+    if (player.isDead()) return false;
+    player.takeDamage(player.getHealth());
+    return player.isDead();
 }
 

@@ -9,11 +9,11 @@ Block::Block() : animationComponent(entitySprite, TextureBlockManager::getBlocks
 
 void Block::setSizeBlock(const sf::Vector2f& sz) {
     GameObject::setSize(sz);
-    if (entitySprite.getTextureRect().size.x > 0 && entitySprite.getTextureRect().size.y > 0) {
-        float scaleX = sz.x / static_cast<float>(entitySprite.getTextureRect().size.x);
-        float scaleY = sz.y / static_cast<float>(entitySprite.getTextureRect().size.y);
-        entitySprite.setScale(sf::Vector2f(scaleX, scaleY));
-    }
+    sf::Vector2i frameSize = entitySprite.getTextureRect().size;
+    if (frameSize.x <= 0 || frameSize.y <= 0) frameSize = {16, 16};
+    entitySprite.setScale(
+        {sz.x / static_cast<float>(frameSize.x),
+         sz.y / static_cast<float>(frameSize.y)});
 }
 
 Block::~Block(){}

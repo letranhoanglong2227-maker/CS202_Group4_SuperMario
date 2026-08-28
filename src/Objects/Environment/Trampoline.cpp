@@ -1,4 +1,5 @@
 ﻿#include "Objects/Environment/Trampoline.hpp"
+#include "Core/Constants.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include <algorithm>
 
@@ -17,7 +18,9 @@ void Trampoline::initSpritesSheet() {
 }
 
 void Trampoline::reactToCollision(int side) {
-    if (side == 1) compressionTimer = 0.12f;
+    if (side == COLLISION_TOP && compressionTimer <= 0.f) {
+        compressionTimer = 0.12f;
+    }
 }
 
 void Trampoline::update(float dt) {

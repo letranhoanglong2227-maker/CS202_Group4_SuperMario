@@ -32,6 +32,7 @@ CMakeSettings.json
 
 # CMake build outputs
 /build/
+/build-*/
 /out/
 CMakeFiles/
 CMakeCache.txt

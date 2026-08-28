@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Koopa.hpp"
+#include "Core/Constants.hpp"
 
 Koopa::Koopa(const sf::Vector2f& pos)
     : Enemy() {
@@ -8,7 +9,7 @@ Koopa::Koopa(const sf::Vector2f& pos)
     setSpeed(60.f);
 
     setPosition(pos);
-    hitbox.setSize(sf::Vector2f(32.f, 48.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE * 1.5f});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
@@ -35,7 +36,7 @@ void Koopa::onStomped() {
     if (!inShell) {
         inShell = true;
         setStomped(true);
-        hitbox.setSize(sf::Vector2f(32.f, 32.f));
+        hitbox.setSize({CELL_SIZE, 56.f});
         setSpeed(0.f);
     } else if (!shellKicked) {
         kickShell(true);

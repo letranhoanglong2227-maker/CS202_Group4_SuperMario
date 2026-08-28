@@ -19,6 +19,7 @@
 #include "Objects/Items/PowerUpObject.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <utility>
 
 LevelManager::LevelManager() : physicsEngine(980.f) {}
@@ -35,6 +36,7 @@ bool LevelManager::load(const std::string& mapPath,
     }
     flushPendingEntities();
     onMapLoaded();
+    loaded = true;
     return true;
 }
 
@@ -73,6 +75,18 @@ void LevelManager::addEntity(std::unique_ptr<GameObject> entity,
     entities.push_back(std::move(entity));
 }
 
+void LevelManager::spawnRocket(sf::Vector2f position,
+                               ProjectileTargetResolver targetResolver,
+                               float speed, float lifetime) {
+    addEntity(std::make_unique<Rocket>(position, std::move(targetResolver),
+                                       speed, lifetime));
+}
+
+void LevelManager::spawnRocket(sf::Vector2f position, sf::Vector2f velocity,
+                               float lifetime) {
+    addEntity(std::make_unique<Rocket>(position, velocity, lifetime));
+}
+
 void LevelManager::update(float dt) {
     if (dt <= 0.f) return;
     updating = true;
@@ -83,6 +97,13 @@ void LevelManager::update(float dt) {
         if (player && !player->isDead()) {
             player->update(dt);
             physicsEngine.step(*player, blocks, dt);
+            const auto worldBounds = getWorldBounds();
+            if (worldBounds && player->hitbox.getGlobalBounds().position.y >
+                                   worldBounds->position.y +
+                                       worldBounds->size.y +
+                                       MapFormat::TILE_SIZE) {
+                killPlayer(*player);
+            }
         }
     }
     for (Enemy* enemy : physicsEnemies) {
@@ -90,46 +111,43 @@ void LevelManager::update(float dt) {
             physicsEngine.step(*enemy, blocks, dt);
         }
     }
+    enforceStagePatrols();
+    resolveProjectileWorldCollisions();
 
     for (PlayerManager* player : players) {
         if (!player || player->isDead()) continue;
         for (Lava* lava : lavaHazards) {
             if (lava && player->hitbox.getGlobalBounds().findIntersection(
                             lava->hitbox.getGlobalBounds())) {
-                player->takeDamage(player->getHealth());
-                if (playerDeathCallback) playerDeathCallback(*player);
+                if (lava->applyTo(*player) && playerDeathCallback) {
+                    playerDeathCallback(*player);
+                }
+                break;
             }
         }
+        if (player->isDead()) continue;
         for (Bullet* bullet : bullets) {
             if (bullet && bullet->isActive() &&
                 player->hitbox.getGlobalBounds().findIntersection(
                     bullet->hitbox.getGlobalBounds())) {
                 bullet->deactivate();
-                player->takeDamage(1);
-                if (player->isDead() && playerDeathCallback) {
-                    playerDeathCallback(*player);
-                }
+                damagePlayer(*player, 1);
             }
         }
+        if (player->isDead()) continue;
         for (Rocket* rocket : rockets) {
             if (rocket && rocket->isActive() &&
                 player->hitbox.getGlobalBounds().findIntersection(
                     rocket->hitbox.getGlobalBounds())) {
                 rocket->deactivate();
-                player->takeDamage(1);
-                if (player->isDead() && playerDeathCallback) {
-                    playerDeathCallback(*player);
-                }
+                damagePlayer(*player, 1);
             }
         }
+        if (player->isDead()) continue;
         for (WinFlag* flag : winFlags) {
             if (flag && player->hitbox.getGlobalBounds().findIntersection(
                             flag->hitbox.getGlobalBounds())) {
-                const bool wasActivated = flag->isActivated();
                 flag->activate();
-                if (!wasActivated && levelCompletedCallback) {
-                    levelCompletedCallback();
-                }
             }
         }
     }
@@ -137,6 +155,12 @@ void LevelManager::update(float dt) {
     flushPendingEntities();
 
     removeInactiveEntities();
+    if (completionPending && !completionEmitted && levelCompletedCallback) {
+        completionPending = false;
+        completionEmitted = true;
+        const LevelCallback callback = levelCompletedCallback;
+        callback();
+    }
 }
 
 void LevelManager::render(sf::RenderTarget* target) {
@@ -155,6 +179,7 @@ void LevelManager::clear() {
     blocks.clear();
     enemies.clear();
     physicsEnemies.clear();
+    stagePatrols.clear();
     powerUps.clear();
     lavaHazards.clear();
     bullets.clear();
@@ -162,13 +187,64 @@ void LevelManager::clear() {
     winFlags.clear();
     genericPhysicsParticipants.clear();
     blockCollisionParticipants.clear();
+    completionPending = false;
+    completionEmitted = false;
+    loaded = false;
 }
 
+bool LevelManager::isLoaded() const noexcept { return loaded; }
+std::optional<sf::FloatRect> LevelManager::getWorldBounds() const noexcept {
+    if (!loaded) return std::nullopt;
+    return mapManager.getWorldBounds();
+}
 const MapManager& LevelManager::getMapManager() const noexcept { return mapManager; }
 const std::vector<std::unique_ptr<GameObject>>& LevelManager::getEntities() const noexcept { return entities; }
 const std::vector<Block*>& LevelManager::getBlocks() const noexcept { return blocks; }
 const std::vector<Enemy*>& LevelManager::getEnemies() const noexcept { return enemies; }
 const std::vector<Enemy*>& LevelManager::getPhysicsEnemies() const noexcept { return physicsEnemies; }
+
+Enemy* LevelManager::addStageEnemy(std::string_view type,
+                                   sf::Vector2f position) {
+    std::unique_ptr<Enemy> enemy =
+        EntityFactory::createEnemy(std::string(type), position);
+    if (!enemy) return nullptr;
+
+    Enemy* view = enemy.get();
+    const bool genericPhysics = type != "FlyingKoopa" &&
+                                type != "PeteyPiranha";
+    addEntity(std::move(enemy), genericPhysics);
+    if (type == "Goomba" || type == "Koopa") {
+        view->setFacingRight(true);
+        stagePatrols.push_back({view, 32.f, 13416.f});
+    }
+    return view;
+}
+
+Enemy* LevelManager::addStageEnemy(std::string_view type,
+                                   sf::Vector2f position,
+                                   float patrolLeft, float patrolRight) {
+    Enemy* enemy = addStageEnemy(type, position);
+    if (!enemy || patrolLeft > patrolRight) return enemy;
+
+    std::erase_if(stagePatrols, [enemy](const PatrolBinding& patrol) {
+        return patrol.enemy == enemy;
+    });
+    enemy->setFacingRight(true);
+    stagePatrols.push_back({enemy, patrolLeft, patrolRight});
+    return enemy;
+}
+
+void LevelManager::addStageMovingBlock(sf::Vector2f position,
+                                       std::string_view textureName,
+                                       float speed, float distance) {
+    addEntity(std::make_unique<MovingBlock>(
+                  position, 1, distance, speed, textureName),
+              false, true);
+}
+
+const std::vector<PlayerManager*>& LevelManager::getPlayers() const noexcept {
+    return players;
+}
 
 void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
     std::unique_ptr<GameObject> object;
@@ -210,11 +286,15 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
     case MapObjectType::CloudPlatform:
         object = std::make_unique<MovingBlock>(spawnInfo.position,
                                                spawnInfo.widthInTiles,
-                                               sf::Vector2f{96.f, 0.f},
+                                               sf::Vector2f{
+                                                   3.f * MapFormat::TILE_SIZE,
+                                                   0.f},
                                                std::max(20.f, spawnInfo.parameter * 20.f));
         break;
     case MapObjectType::WinFlag:
-        object = std::make_unique<WinFlag>(spawnInfo.position);
+        object = std::make_unique<WinFlag>(spawnInfo.position, [this] {
+            if (loaded && !completionEmitted) completionPending = true;
+        });
         break;
     case MapObjectType::Coin:
         object = EntityFactory::createItem("Coin", spawnInfo.position);
@@ -252,8 +332,14 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
     if (!object) return;
     object->setPosition(spawnInfo.position);
     if (object->getSize().x <= 0.f || object->getSize().y <= 0.f) {
-        object->setSize({static_cast<float>(spawnInfo.widthInTiles) * MapFormat::TILE_SIZE,
-                         static_cast<float>(spawnInfo.heightInTiles) * MapFormat::TILE_SIZE});
+        const sf::Vector2f mapSize{
+            static_cast<float>(spawnInfo.widthInTiles) * MapFormat::TILE_SIZE,
+            static_cast<float>(spawnInfo.heightInTiles) * MapFormat::TILE_SIZE};
+        if (auto* block = dynamic_cast<Block*>(object.get())) {
+            block->setSizeBlock(mapSize);
+        } else {
+            object->setSize(mapSize);
+        }
     }
     const bool participatesInBlockCollisions =
         dynamic_cast<Block*>(object.get()) != nullptr;
@@ -314,10 +400,71 @@ void LevelManager::removeInactiveEntities() {
             if (remove) {
                 genericPhysicsParticipants.erase(entity.get());
                 blockCollisionParticipants.erase(entity.get());
+                std::erase_if(stagePatrols,
+                    [&entity](const PatrolBinding& patrol) {
+                        return patrol.enemy == entity.get();
+                    });
             }
             return remove;
         }), entities.end());
     rebuildViews();
+}
+
+void LevelManager::enforceStagePatrols() {
+    for (const PatrolBinding& patrol : stagePatrols) {
+        if (!patrol.enemy || patrol.enemy->isDead()) continue;
+
+        sf::Vector2f position = patrol.enemy->getPosition();
+        if (position.x <= patrol.left) {
+            position.x = patrol.left;
+            patrol.enemy->setFacingRight(true);
+        } else if (position.x >= patrol.right) {
+            position.x = patrol.right;
+            patrol.enemy->setFacingRight(false);
+        }
+        patrol.enemy->setPosition(position);
+    }
+}
+
+void LevelManager::resolveProjectileWorldCollisions() {
+    const auto worldBounds = getWorldBounds();
+    const auto resolve = [this, &worldBounds](auto& projectile) {
+        if (worldBounds && projectile.cullOutside(
+                               *worldBounds, MapFormat::TILE_SIZE)) {
+            return;
+        }
+        const sf::FloatRect bounds = projectile.hitbox.getGlobalBounds();
+
+        // ponytail: current projectile counts are tiny; replace the existing
+        // linear nearby-block query with a spatial index if profiling says so.
+        for (Block* block : physicsEngine.queryNearbyBlocks(bounds, blocks, 1)) {
+            if (block && block->isExist() && projectile.deactivateOnWorldCollision(
+                                                  block->hitbox.getGlobalBounds())) {
+                return;
+            }
+        }
+    };
+
+    for (Bullet* bullet : bullets) {
+        if (bullet && bullet->isActive()) resolve(*bullet);
+    }
+    for (Rocket* rocket : rockets) {
+        if (rocket && rocket->isActive()) resolve(*rocket);
+    }
+}
+
+bool LevelManager::damagePlayer(PlayerManager& player, int amount) {
+    if (player.isDead()) return true;
+    player.takeDamage(amount);
+    if (!player.isDead()) return false;
+    if (playerDeathCallback) playerDeathCallback(player);
+    return true;
+}
+
+void LevelManager::killPlayer(PlayerManager& player) {
+    if (player.isDead()) return;
+    player.setDead(true);
+    if (playerDeathCallback) playerDeathCallback(player);
 }
 
 PlayerManager* LevelManager::findPlayer(int playerId) const {
@@ -332,8 +479,11 @@ ConfiguredLevel::ConfiguredLevel(unsigned int worldNumber,
                                  unsigned int levelNumber,
                                  const std::vector<PlayerManager*>& activePlayers)
     : world(worldNumber), level(levelNumber),
-      mapPath("assets/levels/LevelSketch_W" + std::to_string(worldNumber) +
+      mapPath("assets/textures/LevelSketch_W" + std::to_string(worldNumber) +
               "_LV" + std::to_string(levelNumber) + ".png") {
+    // ponytail: supports source-root and one-level build launches; use a
+    // packaged asset root if binaries are nested more deeply later.
+    if (!std::filesystem::exists(mapPath)) mapPath = "../" + mapPath;
     load(mapPath, activePlayers);
 }
 

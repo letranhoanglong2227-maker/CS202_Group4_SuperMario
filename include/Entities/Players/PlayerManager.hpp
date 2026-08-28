@@ -19,6 +19,7 @@ protected:
 
     bool isTransforming{ false };
     float transformationTimer{ 0.f };
+    bool horizontalControlsInverted{ false };
 
     std::vector<std::unique_ptr<PlayerBuff>> buffs;
 
@@ -37,6 +38,9 @@ public:
 
     bool isImmortal() const;
     void setImmortal(bool val, float duration = 2.0f);
+
+    bool areHorizontalControlsInverted() const noexcept;
+    void setHorizontalControlsInverted(bool inverted) noexcept;
 
     void addBuff(std::unique_ptr<PlayerBuff> buff);
     void removeBuff(const std::string& type);

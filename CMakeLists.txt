@@ -11,20 +11,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 # ==============================================================================
-# TỰ ĐỘNG TẢI & TÍCH HỢP SFML 3.0 VIA FETCHCONTENT
+# DÙNG SFML 3.1 ĐÃ CÀI, TỰ ĐỘNG TẢI NẾU CHƯA CÓ
 # ==============================================================================
-include(FetchContent)
+set(SFML_STATIC_LIBRARIES ON)
+find_package(SFML 3.1 COMPONENTS Graphics Audio Window System CONFIG QUIET)
 
-# Tắt build các phần không cần thiết của SFML để tăng tốc độ biên dịch
-set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+if(NOT SFML_FOUND)
+    include(FetchContent)
 
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG        3.0.0 # Tải chính xác bản SFML 3.0.0 Stable
-)
-FetchContent_MakeAvailable(SFML)
+    # Tắt build các phần không cần thiết của SFML để tăng tốc độ biên dịch
+    set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SFML_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        SFML
+        GIT_REPOSITORY https://github.com/SFML/SFML.git
+        GIT_TAG        3.1.0
+    )
+    FetchContent_MakeAvailable(SFML)
+endif()
 # ==============================================================================
 
 # Gather source files
@@ -55,12 +60,30 @@ else()
     target_compile_options(SuperMario PRIVATE -Wall -Wextra)
 endif()
 
-# Copy SFML DLLs to executable directory after build
-if(WIN32)
-    add_custom_command(TARGET SuperMario POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${SFML_DIR}/../../../bin"
-        $<TARGET_FILE_DIR:SuperMario>
-    )
+set(PERSON2_TEST_SOURCES ${SOURCES})
+list(FILTER PERSON2_TEST_SOURCES EXCLUDE REGEX "[/\\\\]main\\.cpp$")
+add_executable(Person2RuntimeContracts
+    tests/Person2RuntimeContracts.cpp
+    ${PERSON2_TEST_SOURCES}
+)
+target_include_directories(Person2RuntimeContracts PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(Person2RuntimeContracts PRIVATE
+    SFML::Graphics
+    SFML::Audio
+    SFML::Window
+    SFML::System
+)
+if(MSVC)
+    target_compile_options(Person2RuntimeContracts PRIVATE /W4)
+else()
+    target_compile_options(Person2RuntimeContracts PRIVATE -Wall -Wextra)
 endif()
+
+enable_testing()
+add_test(NAME Person2RuntimeContracts COMMAND Person2RuntimeContracts)
+set_tests_properties(Person2RuntimeContracts PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
 

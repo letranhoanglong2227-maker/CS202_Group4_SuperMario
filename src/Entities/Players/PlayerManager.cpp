@@ -1,10 +1,11 @@
 #include "Entities/Players/PlayerManager.hpp"
+#include "Core/Constants.hpp"
 #include <SFML/Window/Keyboard.hpp>
 #include <algorithm>
 
 PlayerManager::PlayerManager(int pId, const std::string& name)
     : Character(name), playerId(pId) {
-    hitbox.setSize(sf::Vector2f(32.f, 32.f));
+    hitbox.setSize({CELL_SIZE, CELL_SIZE});
     size = hitbox.getSize();
     movementComponent = std::make_unique<MovementComponent>(200.f, 1000.f, 800.f);
 }
@@ -49,6 +50,14 @@ void PlayerManager::setImmortal(bool val, float duration) {
     isFlashing = val;
 }
 
+bool PlayerManager::areHorizontalControlsInverted() const noexcept {
+    return horizontalControlsInverted;
+}
+
+void PlayerManager::setHorizontalControlsInverted(bool inverted) noexcept {
+    horizontalControlsInverted = inverted;
+}
+
 void PlayerManager::addBuff(std::unique_ptr<PlayerBuff> buff) {
     if (!buff) return;
     buff->apply(this);
@@ -70,9 +79,9 @@ void PlayerManager::removeBuff(const std::string& type) {
 
 void PlayerManager::updateHitboxSize() {
     if (is_big || is_fire) {
-        hitbox.setSize(sf::Vector2f(32.f, 64.f));
+        hitbox.setSize({CELL_SIZE, 2.f * CELL_SIZE});
     } else {
-        hitbox.setSize(sf::Vector2f(32.f, 32.f));
+        hitbox.setSize({CELL_SIZE, CELL_SIZE});
     }
     size = hitbox.getSize();
 }
@@ -80,13 +89,16 @@ void PlayerManager::updateHitboxSize() {
 void PlayerManager::handleInput(float dt) {
     if (dead || isTransforming) return;
 
+    const float leftDirection = horizontalControlsInverted ? 1.f : -1.f;
+    const float rightDirection = -leftDirection;
+
     if (playerId == 1) {
         // Player 1 controls: A/D to move, W/J to jump
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-            move(-1.f, 0.f, dt);
+            move(leftDirection, 0.f, dt);
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-            move(1.f, 0.f, dt);
+            move(rightDirection, 0.f, dt);
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J)) {
             jump();
@@ -94,10 +106,10 @@ void PlayerManager::handleInput(float dt) {
     } else {
         // Player 2 controls: Left/Right to move, Up/Numpad1 to jump
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-            move(-1.f, 0.f, dt);
+            move(leftDirection, 0.f, dt);
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-            move(1.f, 0.f, dt);
+            move(rightDirection, 0.f, dt);
         }
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Numpad1)) {
             jump();

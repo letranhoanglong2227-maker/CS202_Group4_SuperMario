@@ -1,4 +1,5 @@
 #include "Objects/Blocks/CoinBlock.hpp"
+#include "Levels/Managers/MapManager.hpp"
 #include "Objects/Items/Coin.hpp"
 
 CoinBlock::CoinBlock(int count, std::function<void(GameObject*)> spawnCallback)
@@ -46,7 +47,10 @@ void CoinBlock::reactToCollision(int collidedSide) {
             
             // Spawn Coin
             if (onSpawnItem) {
-                Coin* newCoin = new Coin({this->position.x, this->position.y - 32.f}, true); 
+                Coin* newCoin = new Coin(
+                    {this->position.x,
+                     this->position.y - MapFormat::TILE_SIZE},
+                    true);
                 onSpawnItem(newCoin);
             }
 
