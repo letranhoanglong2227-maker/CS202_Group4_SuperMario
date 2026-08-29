@@ -13,6 +13,12 @@ PeteyPiranha::PeteyPiranha(const sf::Vector2f& pos)
     size = hitbox.getSize();
 
     movementComponent = std::make_unique<MovementComponent>(0.f, 0.f, 0.f);
+
+    entitySprite.setScale({2.0f, 2.0f});
+    if (animationComponent) {
+        animationComponent->addAnimation("emerged", { sf::IntRect({205, 37}, {16, 24}), sf::IntRect({222, 37}, {16, 24}) });
+        animationComponent->addAnimation("retracted", { sf::IntRect({205, 37}, {16, 24}) });
+    }
 }
 
 bool PeteyPiranha::isEmerged() const {
