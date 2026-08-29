@@ -8,6 +8,16 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
     hitbox.setPosition(pos);
     hitbox.setSize({CELL_SIZE - 10.f, CELL_SIZE});
     size = hitbox.getSize();
+
+    entitySprite.setScale({2.0f, 2.0f});
+    if (animationComponent) {
+        animationComponent->addAnimation("spin", { 
+            sf::IntRect({70, 38}, {10, 14}),
+            sf::IntRect({81, 38}, {10, 14}),
+            sf::IntRect({92, 38}, {10, 14}),
+            sf::IntRect({81, 38}, {10, 14})
+        });
+    }
 }
 
 void Coin::onCollect(PlayerManager* player) {
@@ -36,5 +46,9 @@ void Coin::update(float dt) {
         entitySprite.setPosition(position);
     } else {
         PowerUpObject::update(dt);
+    }
+
+    if (animationComponent) {
+        animationComponent->play("spin", dt);
     }
 }

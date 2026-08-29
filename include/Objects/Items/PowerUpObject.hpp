@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Core/GameObject.hpp"
+#include "Components/AnimationComponent.hpp"
 #include <string>
+#include <memory>
 
 class Enemy;
 class Block;
@@ -10,6 +12,7 @@ class PowerUpObject : public GameObject {
 protected:
     std::string name;
     bool exist{ true };
+    std::unique_ptr<AnimationComponent> animationComponent;
 
 public:
     PowerUpObject(const std::string& name = "PowerUp");
@@ -25,4 +28,27 @@ public:
 
     void update(float dt) override;
     void render(sf::RenderTarget* target) override;
+};
+
+class TextureItemManager {
+private:
+    inline static sf::Texture itemTexture;
+
+public:
+    static bool setupTexture() {
+        if (!itemTexture.loadFromFile("assets/textures/Items_Blocks.png")) {
+            if (!itemTexture.loadFromFile("../assets/textures/Items_Blocks.png")) {
+                if (!itemTexture.loadFromFile("../../assets/textures/Items_Blocks.png")) {
+                    std::cout << "Item Texture not found!...\n";
+                    return false;
+                }
+            }
+        }
+        std::cout << "Item Texture loaded!...\n";
+        return true;
+    }
+
+    static sf::Texture& getItemTexture() {
+        return itemTexture;
+    }
 };

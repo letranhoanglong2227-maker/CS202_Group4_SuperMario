@@ -2,6 +2,11 @@
 
 Character::Character(const std::string& name)
     : LivingEntity(), characterName(name) {
+    animationComponent = std::make_unique<AnimationComponent>(
+        entitySprite, 
+        TexturePlayerManager::getPlayerTexture(), 
+        0.1f
+    );
 }
 
 const std::string& Character::getCharacterName() const {

@@ -2,6 +2,7 @@
 
 #include "Entities/Base/LivingEntity.hpp"
 #include <string>
+#include <iostream>
 
 class Character : public LivingEntity {
 protected:
@@ -24,4 +25,26 @@ public:
     void setGrounded(bool g);
 
     virtual void jump();
+};
+
+class TexturePlayerManager {
+private:
+    inline static sf::Texture playerTexture;
+public:
+    static bool setupTexture() {
+        bool loadOk = playerTexture.loadFromFile("assets/textures/Mario_Luigi.png");
+        if (!loadOk) {
+            loadOk = playerTexture.loadFromFile("../assets/textures/Mario_Luigi.png");
+        }
+        if (loadOk) {
+            std::cout << "Player Texture loaded!...\n";
+        } else {
+            std::cout << "Player Texture not found!...\n";
+        }
+        return loadOk;
+    }
+
+    static sf::Texture& getPlayerTexture() {
+        return playerTexture;
+    }
 };

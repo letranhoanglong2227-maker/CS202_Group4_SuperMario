@@ -10,6 +10,11 @@ Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     size = hitbox.getSize();
     movementComponent = std::make_unique<MovementComponent>(60.f, 500.f, 0.f);
+    
+    entitySprite.setScale({2.0f, 2.0f});
+    if (animationComponent) {
+        animationComponent->addAnimation("idle", { sf::IntRect({2, 2}, {16, 16}) });
+    }
 }
 
 void Mushroom::onCollect(PlayerManager* player) {
@@ -37,5 +42,9 @@ void Mushroom::update(float dt) {
         position += movementComponent->getVelocity() * dt;
         hitbox.setPosition(position);
         entitySprite.setPosition(position);
+    }
+    
+    if (animationComponent) {
+        animationComponent->play("idle", dt);
     }
 }

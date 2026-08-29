@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entities/Base/LivingEntity.hpp"
+#include <iostream>
 
 class Enemy : public LivingEntity {
 protected:
@@ -27,4 +28,27 @@ public:
 
     virtual void reverseDirection();
     virtual void onStomped();
+    virtual void reactToCollision(int collidedSide);
+};
+
+class TextureEnemyManager {
+private:
+    inline static sf::Texture enemyTexture;
+public:
+    static bool setupTexture() {
+        bool loadOk = enemyTexture.loadFromFile("assets/textures/Enemies.png");
+        if (!loadOk) {
+            loadOk = enemyTexture.loadFromFile("../assets/textures/Enemies.png");
+        }
+        if (loadOk) {
+            std::cout << "Enemy Texture loaded!...\n";
+        } else {
+            std::cout << "Enemy Texture not found!...\n";
+        }
+        return loadOk;
+    }
+
+    static sf::Texture& getEnemyTexture() {
+        return enemyTexture;
+    }
 };

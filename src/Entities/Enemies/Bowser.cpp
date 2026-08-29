@@ -14,6 +14,14 @@ Bowser::Bowser(const sf::Vector2f& pos)
     size = hitbox.getSize();
 
     movementComponent = std::make_unique<MovementComponent>(40.f, 400.f, 0.f);
+
+    // Initial scale
+    entitySprite.setScale({2.0f, 2.0f});
+
+    if (animationComponent) {
+        animationComponent->addAnimation("walk", { sf::IntRect({1, 186}, {32, 35}), sf::IntRect({34, 186}, {32, 35}) });
+        animationComponent->addAnimation("breathe_fire", { sf::IntRect({100, 186}, {32, 35}), sf::IntRect({133, 186}, {32, 35}), sf::IntRect({166, 186}, {32, 35}), sf::IntRect({199, 186}, {32, 35}) });
+    }
 }
 
 bool Bowser::isBreathingFire() const {

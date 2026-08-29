@@ -2,6 +2,11 @@
 
 Enemy::Enemy()
     : LivingEntity() {
+    animationComponent = std::make_unique<AnimationComponent>(
+        entitySprite, 
+        TextureEnemyManager::getEnemyTexture(), 
+        0.15f
+    );
 }
 
 bool Enemy::isFacingRight() const {
@@ -43,4 +48,8 @@ void Enemy::reverseDirection() {
 void Enemy::onStomped() {
     stomped = true;
     takeDamage(health);
+}
+
+void Enemy::reactToCollision(int collidedSide) {
+    (void)collidedSide;
 }

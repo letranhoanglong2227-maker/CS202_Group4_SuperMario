@@ -1,5 +1,6 @@
 #include "Entities/Enemies/Goomba.hpp"
 #include "Core/Constants.hpp"
+#include <cmath>
 
 Goomba::Goomba(const sf::Vector2f& pos)
     : Enemy() {
@@ -7,13 +8,21 @@ Goomba::Goomba(const sf::Vector2f& pos)
     setDamage(1);
     setPointsValue(100);
     setSpeed(50.f);
-
+    
     setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
-    movementComponent = std::make_unique<MovementComponent>(50.f, 400.f, 0.f);
+    movementComponent = std::make_unique<MovementComponent>(50.f, 200.f, 0.f);
+
+    // Initial scale
+    entitySprite.setScale({2.0f, 2.0f});
+
+    if (animationComponent) {
+        animationComponent->addAnimation("walk", { sf::IntRect({1, 45}, {16, 16}), sf::IntRect({18, 45}, {16, 16}) });
+        animationComponent->addAnimation("squish", { sf::IntRect({35, 53}, {16, 8}) });
+    }
 }
 
 void Goomba::onStomped() {
@@ -27,8 +36,8 @@ void Goomba::onStomped() {
 void Goomba::updateAnimation(float dt) {
     (void)dt;
     if (animationComponent) {
-        if (isSquished) {
-            animationComponent->play("squished", dt);
+        if (stomped) {
+            animationComponent->play("squish", dt);
         } else {
             animationComponent->play("walk", dt);
         }
@@ -39,8 +48,9 @@ void Goomba::update(float dt) {
     if (dead) return;
 
     if (isSquished) {
+        updateAnimation(dt);
         squishTimer += dt;
-        if (squishTimer >= 0.5f) {
+        if (squishTimer >= 1.0f) {
             setDead(true);
         }
         return;

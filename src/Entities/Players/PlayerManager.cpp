@@ -100,7 +100,9 @@ void PlayerManager::handleInput(float dt) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
             move(rightDirection, 0.f, dt);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || 
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::J) || 
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
             jump();
         }
     } else {

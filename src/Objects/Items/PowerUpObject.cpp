@@ -2,6 +2,11 @@
 
 PowerUpObject::PowerUpObject(const std::string& n)
     : GameObject(), name(n) {
+    animationComponent = std::make_unique<AnimationComponent>(
+        entitySprite, 
+        TextureItemManager::getItemTexture(), 
+        0.1f
+    );
 }
 
 const std::string& PowerUpObject::getName() const {
