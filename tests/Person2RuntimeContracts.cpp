@@ -96,12 +96,25 @@ int main() {
         block.update(1.f);
         const bool movedRight = nearlyEqual(block.getPosition().x, 10.f) &&
                                 nearlyEqual(block.getPosition().y, 0.f);
-        block.update(0.01f);
         block.update(1.f);
-        passed &= check(movedRight &&
-                            nearlyEqual(block.getPosition().x, 10.f) &&
-                            nearlyEqual(block.getPosition().y, 10.f),
-                        "ported MovingBlock follows the Group5 square path");
+        const bool movedDownWithoutCornerPause =
+            nearlyEqual(block.getPosition().x, 10.f) &&
+            nearlyEqual(block.getPosition().y, 10.f);
+        block.update(2.f);
+        passed &= check(movedRight && movedDownWithoutCornerPause &&
+                            nearlyEqual(block.getPosition().x, 0.f) &&
+                            nearlyEqual(block.getPosition().y, 0.f) &&
+                            nearlyEqual(block.getFrameDelta().x, -10.f) &&
+                            nearlyEqual(block.getFrameDelta().y, -10.f),
+                        "ported MovingBlock consumes full dt around the Group5 square path");
+
+        block.update(4.f);
+        passed &= check(
+                            nearlyEqual(block.getPosition().x, 0.f) &&
+                            nearlyEqual(block.getPosition().y, 0.f) &&
+                            nearlyEqual(block.getFrameDelta().x, 0.f) &&
+                            nearlyEqual(block.getFrameDelta().y, 0.f),
+                        "MovingBlock square path remains stable after a full-loop dt");
     }
 
     {
@@ -123,18 +136,18 @@ int main() {
             "Pipe collider preserves two-tile width and clamped height");
 
         MovingBlock horizontal({}, 1, {10.f, 0.f}, 20.f);
-        horizontal.update(1.f);
+        horizontal.update(0.5f);
         const bool reachedHorizontalEnd =
             nearlyEqual(horizontal.getPosition().x, 10.f) &&
             nearlyEqual(horizontal.getFrameDelta().x, 10.f);
-        horizontal.update(1.f);
+        horizontal.update(0.5f);
 
         MovingBlock vertical({}, 1, {0.f, -10.f}, 20.f);
-        vertical.update(1.f);
+        vertical.update(0.5f);
         const bool reachedVerticalEnd =
             nearlyEqual(vertical.getPosition().y, -10.f) &&
             nearlyEqual(vertical.getFrameDelta().y, -10.f);
-        vertical.update(1.f);
+        vertical.update(0.5f);
         passed &= check(reachedHorizontalEnd && reachedVerticalEnd &&
                             nearlyEqual(horizontal.getPosition().x, 0.f) &&
                             nearlyEqual(vertical.getPosition().y, 0.f),
@@ -183,6 +196,106 @@ int main() {
         passed &= check(collision.wallHit &&
                             nearlyEqual(actor.getPosition().x, 32.f),
                         "wall collision resolves on X axis");
+    }
+
+    {
+        PhysicsEngine physics(0.f);
+        TestEnemy actor({-1000.f, 700.f});
+        MovementComponent* movement = actor.getMovementComponent();
+        const sf::FloatRect world({64.f, 0.f}, {640.f, 600.f});
+        const float rightEdge = world.position.x + world.size.x -
+                                actor.hitbox.getGlobalBounds().size.x;
+
+        movement->setVelocity(-400.f, 123.f);
+        physics.enforceHorizontalBounds(actor, world);
+        const bool leftOverflowResolved =
+            nearlyEqual(actor.getPosition().x, world.position.x) &&
+            nearlyEqual(actor.getPosition().y, 700.f) &&
+            nearlyEqual(movement->getVelocity().x, 0.f) &&
+            nearlyEqual(movement->getVelocity().y, 123.f);
+
+        actor.setPosition({world.position.x + world.size.x + 1000.f, 700.f});
+        movement->setVelocity(400.f, 123.f);
+        physics.enforceHorizontalBounds(actor, world);
+        const bool rightOverflowResolved =
+            nearlyEqual(actor.getPosition().x, rightEdge) &&
+            nearlyEqual(actor.getPosition().y, 700.f) &&
+            nearlyEqual(movement->getVelocity().x, 0.f) &&
+            nearlyEqual(movement->getVelocity().y, 123.f);
+
+        actor.setPosition({world.position.x, 700.f});
+        movement->setVelocity(-50.f, 123.f);
+        physics.enforceHorizontalBounds(actor, world);
+        const bool exactEdgeStopsOutwardMotion =
+            nearlyEqual(movement->getVelocity().x, 0.f);
+
+        movement->setVelocity(50.f, 123.f);
+        physics.enforceHorizontalBounds(actor, world);
+        const bool leftEdgeKeepsInwardMotion =
+            nearlyEqual(movement->getVelocity().x, 50.f);
+
+        actor.setPosition({rightEdge, 700.f});
+        movement->setVelocity(-50.f, 123.f);
+        physics.enforceHorizontalBounds(actor, world);
+        const bool rightEdgeKeepsInwardMotion =
+            nearlyEqual(movement->getVelocity().x, -50.f);
+
+        passed &= check(leftOverflowResolved && rightOverflowResolved &&
+                            exactEdgeStopsOutwardMotion &&
+                            leftEdgeKeepsInwardMotion &&
+                            rightEdgeKeepsInwardMotion,
+                        "horizontal world bounds resolve both edges without clamping Y");
+
+        const sf::FloatRect smallerThanActor(
+            {25.f, 0.f}, {16.f, 600.f});
+        actor.setPosition({100.f, 700.f});
+        movement->setVelocity(-50.f, 123.f);
+        physics.enforceHorizontalBounds(actor, smallerThanActor);
+        passed &= check(nearlyEqual(actor.getPosition().x, 25.f) &&
+                            nearlyEqual(movement->getVelocity().x, 0.f),
+                        "horizontal bounds handle worlds narrower than the hitbox");
+    }
+
+    {
+        const sf::FloatRect target({64.f, 64.f}, {64.f, 64.f});
+        const auto classify = [&target](sf::Vector2f previous,
+                                        sf::Vector2f current) {
+            return PhysicsEngine::classifyAabbContact(
+                sf::FloatRect(previous, {32.f, 32.f}),
+                sf::FloatRect(current, {32.f, 32.f}), target);
+        };
+
+        const bool sidesAreStable =
+            classify({64.f, 20.f}, {64.f, 40.f}) ==
+                AabbContactSide::Bottom &&
+            classify({64.f, 140.f}, {64.f, 112.f}) ==
+                AabbContactSide::Top &&
+            classify({20.f, 64.f}, {40.f, 64.f}) ==
+                AabbContactSide::Right &&
+            classify({140.f, 64.f}, {112.f, 64.f}) ==
+                AabbContactSide::Left &&
+            classify({0.f, 0.f}, {1.f, 1.f}) == AabbContactSide::None;
+
+        // Both axes enter at the same time. Horizontal is the safe fallback:
+        // an ambiguous corner must not be reported as a stomp.
+        const bool cornerIsNotFalseStomp =
+            classify({16.f, 16.f}, {40.f, 40.f}) ==
+            AabbContactSide::Right;
+        passed &= check(sidesAreStable && cornerIsNotFalseStomp,
+                        "AABB contact classification uses motion and avoids false corner stomps");
+    }
+
+    {
+        PhysicsEngine physics(0.f);
+        const sf::FloatRect smallPlayer({64.f, 64.f}, {64.f, 64.f});
+        const sf::Vector2f poweredSize{64.f, 128.f};
+        const std::vector<sf::FloatRect> clearBlocks{
+            sf::FloatRect({256.f, 0.f}, {64.f, 64.f})};
+        const std::vector<sf::FloatRect> lowCeiling{
+            sf::FloatRect({64.f, 0.f}, {64.f, 32.f})};
+        passed &= check(physics.canGrow(smallPlayer, poweredSize, clearBlocks) &&
+                            !physics.canGrow(smallPlayer, poweredSize, lowCeiling),
+                        "safe growth preserves feet and rejects a low ceiling");
     }
 
     {
@@ -246,7 +359,9 @@ int main() {
                 bullet = candidate;
             }
         }
-        passed &= check(bullet != nullptr, "queued Bullet is registered once");
+        passed &= check(bullet && nearlyEqual(bullet->getPosition().x, 96.f) &&
+                            nearlyEqual(bullet->getPosition().y, 48.f),
+                        "queued Bullet is registered once without a birth-frame update");
         if (bullet) bullet->deactivate();
         level.update(0.01f);
         passed &= check(level.getEntities().size() == 1,
@@ -348,6 +463,27 @@ int main() {
             });
         passed &= check(rocketRemoved,
                         "production Rocket spawn is owned and removed on Block hit");
+    }
+
+    {
+        LevelManager level;
+        level.addEntity(std::make_unique<TestBlock>(
+                            sf::Vector2f{96.f, 64.f},
+                            sf::Vector2f{32.f, 64.f}),
+                        false, true);
+        level.addEntity(std::make_unique<Bullet>(
+            sf::Vector2f{0.f, 64.f}, sf::Vector2f{2000.f, 0.f}, 1.f));
+        level.spawnRocket({0.f, 80.f}, sf::Vector2f{2000.f, 0.f}, 1.f);
+        level.update(0.1f);
+
+        const bool fastProjectilesRemoved = std::none_of(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<Bullet*>(entity.get()) != nullptr ||
+                       dynamic_cast<Rocket*>(entity.get()) != nullptr;
+            });
+        passed &= check(fastProjectilesRemoved,
+                        "swept AABB removes fast Bullet and Rocket crossing a Block");
     }
 
     {
@@ -631,6 +767,50 @@ int main() {
                             nearlyEqual((*bowser)->getSize().x, 128.f) &&
                             nearlyEqual((*bowser)->getSize().y, 140.f),
                         "W3_LV3 adds the Group5 Bowser on the 64px map");
+    }
+
+    {
+        Mario widePlayer;
+        Mario narrowPlayer;
+        ConfiguredLevel wideLevel(1, 1, {&widePlayer});
+        ConfiguredLevel narrowLevel(3, 3, {&narrowPlayer});
+        const auto wideBounds = wideLevel.getWorldBounds();
+        const auto narrowBounds = narrowLevel.getWorldBounds();
+
+        if (wideBounds) {
+            widePlayer.setPosition(
+                {wideBounds->position.x + wideBounds->size.x -
+                     widePlayer.hitbox.getGlobalBounds().size.x - 1.f,
+                 -256.f});
+        }
+        if (narrowBounds) {
+            narrowPlayer.setPosition(
+                {narrowBounds->position.x + narrowBounds->size.x -
+                     narrowPlayer.hitbox.getGlobalBounds().size.x - 1.f,
+                 -256.f});
+        }
+        widePlayer.getMovementComponent()->setVelocity(200.f, 0.f);
+        narrowPlayer.getMovementComponent()->setVelocity(200.f, 0.f);
+        wideLevel.update(0.05f);
+        narrowLevel.update(0.05f);
+
+        const auto atRightEdge = [](const Mario& player,
+                                    const sf::FloatRect& bounds) {
+            const sf::FloatRect playerBounds = player.hitbox.getGlobalBounds();
+            return nearlyEqual(playerBounds.position.x,
+                               bounds.position.x + bounds.size.x -
+                                   playerBounds.size.x) &&
+                   nearlyEqual(player.getMovementComponent()->getVelocity().x,
+                               0.f);
+        };
+        passed &= check(wideBounds && narrowBounds &&
+                            nearlyEqual(wideBounds->size.x,
+                                        211.f * MapFormat::TILE_SIZE) &&
+                            nearlyEqual(narrowBounds->size.x,
+                                        25.f * MapFormat::TILE_SIZE) &&
+                            atRightEdge(widePlayer, *wideBounds) &&
+                            atRightEdge(narrowPlayer, *narrowBounds),
+                        "loaded levels clamp same-frame overshoot at their dynamic widths");
     }
 
     {
