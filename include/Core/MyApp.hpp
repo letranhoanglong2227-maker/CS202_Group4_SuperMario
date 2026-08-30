@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+
+#include "States/Base/State.hpp"
 
 #include <SFML/Graphics/RenderWindow.hpp>
 
@@ -9,9 +11,9 @@ public:
 
 private:
     void processEvents();
-    void update();
+    void update(float deltaSeconds);
     void render();
 
     sf::RenderWindow window;
+    StateStack states;
 };
-
