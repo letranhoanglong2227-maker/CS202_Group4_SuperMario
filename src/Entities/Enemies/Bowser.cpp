@@ -48,35 +48,62 @@ void Bowser::takeDamage(int amount) {
     }
 }
 
+bool Bowser::hasPendingProjectile() const {
+    return pendingProjectile.has_value();
+}
+
+std::optional<ProjectileSpawnRequest> Bowser::consumePendingProjectile() {
+    auto res = pendingProjectile;
+    pendingProjectile = std::nullopt;
+    return res;
+}
+
+EnemyContactOutcome Bowser::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+    (void)collisionSide;
+    (void)horizontalDirection;
+    if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    
+    player.takeDamage(damage);
+    return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
+}
+
 void Bowser::updateAnimation(float dt) {
     (void)dt;
     if (animationComponent) {
         if (breathingFire) {
             animationComponent->play("breathe_fire", dt);
         } else {
-            animationComponent->play("walk", dt);
+            animationComponent->play("walk", dt); // or jump_slam if you add one later
         }
     }
 }
 
 void Bowser::update(float dt) {
-    if (dead) return;
-
-    attackTimer += dt;
-    if (attackTimer >= 3.0f) {
-        attackTimer = 0.f;
-        if (rand() % 2 == 0) {
-            breatheFire();
-        } else {
-            jumpSlam();
-        }
+    if (dead) {
+        pendingProjectile = std::nullopt;
+        return;
     }
 
-    if (breathingFire) {
-        fireTimer += dt;
-        if (fireTimer >= 1.0f) {
-            breathingFire = false;
+    attackTimer += dt;
+    if (attackTimer >= 5.0f) {
+        attackTimer = 0.f;
+        breathingFire = false;
+        jumpingSlam = false;
+    } else if (attackTimer >= 2.0f && attackTimer < 3.5f) {
+        if (!breathingFire) {
+            breathingFire = true;
+            float dirX = facingRight ? 1.f : -1.f;
+            pendingProjectile = ProjectileSpawnRequest{
+                "BowserFire", 
+                {position.x + (dirX > 0 ? size.x : -32.f), position.y + 32.f}, 
+                {dirX, 0.f}, 
+                350.f, 
+                damage
+            };
         }
+    } else if (attackTimer >= 3.5f && !jumpingSlam) {
+        breathingFire = false;
+        jumpSlam();
     }
 
     float dirX = facingRight ? 1.f : -1.f;

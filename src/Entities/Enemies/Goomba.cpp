@@ -25,12 +25,25 @@ Goomba::Goomba(const sf::Vector2f& pos)
     }
 }
 
+EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+    if (dead || isSquished) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    
+    if (collisionSide == 1 || collisionSide == 0) { // Top collision
+        onStomped();
+        return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, false};
+    }
+    
+    player.takeDamage(damage);
+    return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
+}
+
 void Goomba::onStomped() {
     if (isSquished) return;
     isSquished = true;
     setStomped(true);
     setDamage(0);
     hitbox.setSize({CELL_SIZE, CELL_SIZE * 0.5f});
+    position.y += CELL_SIZE * 0.5f; // Anchor feet
 }
 
 void Goomba::updateAnimation(float dt) {

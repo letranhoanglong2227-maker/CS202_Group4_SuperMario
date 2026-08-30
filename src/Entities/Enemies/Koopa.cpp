@@ -20,8 +20,42 @@ Koopa::Koopa(const sf::Vector2f& pos)
 
     if (animationComponent) {
         animationComponent->addAnimation("walk", { sf::IntRect({52, 37}, {16, 24}), sf::IntRect({69, 38}, {16, 23}) });
-        animationComponent->addAnimation("squish", { sf::IntRect({188, 45}, {16, 14}) });
+        animationComponent->addAnimation("shell", { sf::IntRect({188, 45}, {16, 14}) });
     }
+}
+
+EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+    if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    
+    bool isTop = (collisionSide == 1 || collisionSide == 0);
+    
+    if (!inShell) {
+        if (isTop) {
+            onStomped();
+            return EnemyContactOutcome{EnemyContactResult::EnemyStomped, 200, -500.f, false};
+        } else {
+            player.takeDamage(damage);
+            return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
+        }
+    } else {
+        if (!shellKicked) {
+            float kickDir = (horizontalDirection == 0.f) ? (player.getPosition().x < position.x ? 1.f : -1.f) : horizontalDirection;
+            kickShell(kickDir > 0.f);
+            return EnemyContactOutcome{EnemyContactResult::ShellKicked, 100, isTop ? -500.f : 0.f, false};
+        } else {
+            if (isTop) {
+                shellKicked = false;
+                setSpeed(0.f);
+                return EnemyContactOutcome{EnemyContactResult::ShellStopped, 100, -500.f, false};
+            } else {
+                if (!player.isImmortal()) {
+                    player.takeDamage(damage);
+                    return EnemyContactOutcome{EnemyContactResult::HazardousShell, 0, 0.f, false};
+                }
+            }
+        }
+    }
+    return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
 }
 
 bool Koopa::isInShell() const {
@@ -44,12 +78,11 @@ void Koopa::onStomped() {
     if (!inShell) {
         inShell = true;
         setStomped(true);
-        hitbox.setSize({CELL_SIZE, 56.f});
+        float oldH = size.y;
+        hitbox.setSize({CELL_SIZE, CELL_SIZE * 0.875f}); // 56.f
+        size = hitbox.getSize();
+        position.y += (oldH - size.y);
         setSpeed(0.f);
-    } else if (!shellKicked) {
-        kickShell(true);
-    } else {
-        setDead(true);
     }
 }
 
@@ -57,7 +90,7 @@ void Koopa::updateAnimation(float dt) {
     (void)dt;
     if (animationComponent) {
         if (stomped || inShell) {
-            animationComponent->play("squish", dt);
+            animationComponent->play("shell", dt);
         } else {
             animationComponent->play("walk", dt);
         }

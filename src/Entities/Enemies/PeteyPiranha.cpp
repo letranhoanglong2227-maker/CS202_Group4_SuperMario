@@ -33,6 +33,25 @@ void PeteyPiranha::retract() {
     emerged = false;
 }
 
+bool PeteyPiranha::hasPendingProjectile() const {
+    return pendingProjectile.has_value();
+}
+
+std::optional<ProjectileSpawnRequest> PeteyPiranha::consumePendingProjectile() {
+    auto res = pendingProjectile;
+    pendingProjectile = std::nullopt;
+    return res;
+}
+
+EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+    (void)collisionSide;
+    (void)horizontalDirection;
+    if (dead || !emerged) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    
+    player.takeDamage(damage);
+    return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
+}
+
 void PeteyPiranha::takeDamage(int amount) {
     health -= amount;
     if (health <= 0) {
@@ -49,16 +68,31 @@ void PeteyPiranha::updateAnimation(float dt) {
 }
 
 void PeteyPiranha::update(float dt) {
-    if (dead) return;
+    if (dead) {
+        pendingProjectile = std::nullopt;
+        return;
+    }
 
     emergeTimer += dt;
     if (emergeTimer >= 2.5f) {
         emergeTimer = 0.f;
         emerged = !emerged;
+        hasShot = false; // Reset shot flag when toggling state
     }
 
     if (emerged) {
         position.y = baseY - CELL_SIZE * 1.5f;
+        // Shoot spike when fully emerged (e.g. after 1 second of emerging)
+        if (emergeTimer >= 1.0f && !hasShot) {
+            hasShot = true;
+            pendingProjectile = ProjectileSpawnRequest{
+                "PeteySpike",
+                {position.x + size.x / 2.f, position.y + 16.f},
+                {0.f, -1.f}, // shoot upwards
+                250.f,
+                damage
+            };
+        }
     } else {
         position.y = baseY;
     }

@@ -1,12 +1,26 @@
 #include "Entities/Base/Enemy.hpp"
 
-Enemy::Enemy()
-    : LivingEntity() {
+Enemy::Enemy() : LivingEntity("Enemy") {
     animationComponent = std::make_unique<AnimationComponent>(
         entitySprite, 
         TextureEnemyManager::getEnemyTexture(), 
         0.15f
     );
+}
+
+EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+    if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    
+    // Default implementation:
+    // If stomped from top (enemy's top) or player's bottom
+    if (collisionSide == 1 || collisionSide == 0) {
+        onStomped();
+        return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, true};
+    }
+    
+    // Side collision
+    player.takeDamage(damage);
+    return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
 
 bool Enemy::isFacingRight() const {

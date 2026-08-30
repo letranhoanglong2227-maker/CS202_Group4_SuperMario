@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Entities/Base/LivingEntity.hpp"
+#include "Entities/Players/PlayerManager.hpp"
+#include "Entities/Base/EnemyContactOutcome.hpp"
 #include <iostream>
 
 class Enemy : public LivingEntity {
@@ -13,6 +15,8 @@ protected:
 public:
     Enemy();
     virtual ~Enemy() = default;
+
+    virtual EnemyContactOutcome handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection = 0.f);
 
     bool isFacingRight() const;
     void setFacingRight(bool right);

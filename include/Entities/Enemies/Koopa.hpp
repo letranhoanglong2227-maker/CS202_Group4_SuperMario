@@ -12,6 +12,8 @@ public:
     Koopa(const sf::Vector2f& pos = { 0.f, 0.f });
     ~Koopa() override = default;
 
+    EnemyContactOutcome handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection = 0.f) override;
+
     bool isInShell() const;
     bool isShellKicked() const;
     void kickShell(bool toRight);
