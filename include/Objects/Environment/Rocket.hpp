@@ -20,11 +20,13 @@ public:
     bool deactivateOnWorldCollision(const sf::FloatRect& obstacle) noexcept;
     bool cullOutside(const sf::FloatRect& worldBounds,
                      float margin = 0.f) noexcept;
+    sf::FloatRect getPreviousBounds() const noexcept;
 private:
     TargetResolver targetResolver;
     float speed;
     float lifetime;
     sf::Vector2f velocity{};
+    sf::FloatRect previousBounds;
     sf::RectangleShape shape;
     bool active{true};
 };

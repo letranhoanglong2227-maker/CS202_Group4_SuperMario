@@ -21,16 +21,16 @@ Status values are limited to `DONE`, `READY`, `IN_PROGRESS`, `BLOCKED`, `TESTING
 | `include/Levels/Stages/W3_LV1.hpp`; `src/Levels/Stages/W3_LV1.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W3-LV1` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
 | `include/Levels/Stages/W3_LV2.hpp`; `src/Levels/Stages/W3_LV2.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W3-LV2` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
 | `include/Levels/Stages/W3_LV3.hpp`; `src/Levels/Stages/W3_LV3.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W3-LV3` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
-| `include/Objects/Environment/Pipe.hpp`; `src/Objects/Environment/Pipe.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001` | `READY` | YES | NO | NO | NO | NO |
-| `include/Objects/Environment/Lava.hpp`; `src/Objects/Environment/Lava.cpp` | `TASK` | `P2-LAVA-001` | `READY` | NO | NO | NO | NO | NO |
-| `include/Objects/Environment/Trampoline.hpp`; `src/Objects/Environment/Trampoline.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001` | `READY` | YES | NO | NO | NO | NO |
-| `include/Objects/Blocks/MovingBlock.hpp`; `src/Objects/Blocks/MovingBlock.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001`, `P2-VARIANT-WIRE-001` | `READY` | YES | NO | NO | NO | NO |
-| `include/Objects/Environment/Cannon.hpp`; `src/Objects/Environment/Cannon.cpp` | `TASK` plus frozen lifecycle | `P2-PROJECTILE-001`, `BASE-P2-OWNERSHIP-001` | `READY` | PARTIAL | PARTIAL | YES (lifecycle) | NO | NO |
-| `include/Objects/Environment/Bullet.hpp`; `src/Objects/Environment/Bullet.cpp` | `TASK` plus frozen lifecycle | `P2-PROJECTILE-001`, `BASE-P2-OWNERSHIP-001` | `READY` | PARTIAL | PARTIAL | YES (lifecycle) | NO | NO |
-| `include/Objects/Environment/Rocket.hpp`; `src/Objects/Environment/Rocket.cpp` | `TASK` plus frozen lifetime | `P2-PROJECTILE-001`, `BASE-P2-ROCKET-001` | `READY` | PARTIAL | NO (no production source) | YES (lifetime) | NO | NO |
-| `include/Objects/Environment/WinFlag.hpp`; `src/Objects/Environment/WinFlag.cpp` | `TASK` | `P2-WINFLAG-001` | `READY` | PARTIAL | PARTIAL | PARTIAL | NO | NO |
+| `include/Objects/Environment/Pipe.hpp`; `src/Objects/Environment/Pipe.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001` | `DONE` | YES | YES | YES | NO | NO |
+| `include/Objects/Environment/Lava.hpp`; `src/Objects/Environment/Lava.cpp` | `TASK` | `P2-LAVA-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
+| `include/Objects/Environment/Trampoline.hpp`; `src/Objects/Environment/Trampoline.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001` | `DONE` | YES | YES | YES | NO | NO |
+| `include/Objects/Blocks/MovingBlock.hpp`; `src/Objects/Blocks/MovingBlock.cpp` | `TASK` (verify; preserve if green) | `P2-ENV-001`, `P2-VARIANT-WIRE-001` | `DONE` | YES | YES | YES | NO | NO |
+| `include/Objects/Environment/Cannon.hpp`; `src/Objects/Environment/Cannon.cpp` | `TASK` plus frozen lifecycle | `P2-PROJECTILE-001`, `BASE-P2-OWNERSHIP-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
+| `include/Objects/Environment/Bullet.hpp`; `src/Objects/Environment/Bullet.cpp` | `TASK` plus frozen lifecycle | `P2-PROJECTILE-001`, `BASE-P2-OWNERSHIP-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
+| `include/Objects/Environment/Rocket.hpp`; `src/Objects/Environment/Rocket.cpp` | `TASK` plus frozen lifetime | `P2-PROJECTILE-001`, `BASE-P2-ROCKET-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
+| `include/Objects/Environment/WinFlag.hpp`; `src/Objects/Environment/WinFlag.cpp` | `TASK` | `P2-WINFLAG-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
 
-Summary: 13 remaining P2 implementation tasks (`5 READY`, `8 BLOCKED`), 4 frozen P2 baseline cards (`DONE`), and 9 separate level-validation entries. No owned production file is unaccounted for. There are no P2-owned production files classified `NO_CHANGE`, `DEFERRED`, or `EXCLUDED`; preservation-only components are explicitly tied to a task or verified baseline.
+Summary: 7 P2 implementation tasks are `DONE`, 6 remaining tasks are `BLOCKED`, 4 frozen P2 baseline cards remain `DONE`, and 9 separate level-validation entries remain tracked. No owned production file is unaccounted for. There are no P2-owned production files classified `NO_CHANGE`, `DEFERRED`, or `EXCLUDED`; preservation-only components are explicitly tied to a task or verified baseline.
 
 ## 2. Exact current baseline
 
@@ -50,14 +50,14 @@ Summary: 13 remaining P2 implementation tasks (`5 READY`, `8 BLOCKED`), 4 frozen
 
 | Order | Task | Priority | Status | Parallel class | Hard dependency / unblock condition |
 |---:|---|---|---|---|---|
-| 1 | `P2-EXTENT-001` | P0 | `READY` | `READY_INDEPENDENT` | Existing parser width/layout contract |
-| 2 | `P2-LAVA-001` | P0 | `READY` | `READY_WITH_STABLE_CONTRACT` | Existing fatal/nonfatal player state and death callback |
-| 3 | `P2-WINFLAG-001` | P0 | `READY` | `READY_INDEPENDENT` | Base-anchor rule is fixed; polish decision is nonblocking |
-| 4 | `P2-ENV-001` | P1 | `READY` | `READY_WITH_STABLE_CONTRACT` | Existing physics/Block contracts; exclude unresolved Cloud marker mapping |
-| 5 | `P2-PROJECTILE-001` | P1 | `READY` | `READY_WITH_STABLE_CONTRACT` | Preserve frozen ownership/target lifetime; generic spawn source can be defined |
+| 1 | `P2-EXTENT-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P1 camera/gameplay consumption is downstream |
+| 2 | `P2-LAVA-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P1 death transition is downstream |
+| 3 | `P2-WINFLAG-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P1 win transition is downstream |
+| 4 | `P2-ENV-001` | P1 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; visual/gameplay acceptance remains downstream |
+| 5 | `P2-PROJECTILE-001` | P1 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P3 callers and gameplay acceptance are downstream |
 | 6 | `P2-LOAD-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `DEC-ASSET-ROOT`; then `CON-P1-P2-LEVEL-LOAD` |
-| 7 | `P2-BOUNDS-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P2-EXTENT-001`, `CON-P1-P2-WORLD-EXTENT` |
-| 8 | `P2-PIT-001` | P0 | `READY` | `READY_WITH_STABLE_CONTRACT` | `P2-EXTENT-001`, `CON-P1-P2-DEATH` |
+| 7 | `P2-BOUNDS-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; production visual/gameplay acceptance is downstream |
+| 8 | `P2-PIT-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P1/P3 fatal-respawn flow is downstream |
 | 9 | `P2-CLEANUP-001` | P1 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P2-EXTENT-001`, P3 lifecycle predicates, `CON-P2-P3-ENEMY-REMOVAL` |
 | 10 | `P2-CONTACT-ENEMY-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | P3 contact/result APIs, P1 event sink, `CON-P2-P3-PLAYER-ENEMY` |
 | 11 | `P2-CONTACT-ITEM-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | P3 collection/result APIs, P1 score sink, `CON-P2-P3-PLAYER-ITEM` |
@@ -132,14 +132,16 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 - Implementation commit: `419d03d` (`person2: integrate verified map runtime contracts`).
 - Fresh C++20/SFML 3.1 build: `SuperMario` and `Person2RuntimeContracts` both linked successfully.
-- Fresh CTest result: `1/1` passed. Direct runtime result: `57 PASS / 0 FAIL`; the original 27 ownership/lifecycle checks remain green.
+- Current CTest result: `1/1` passed. Direct runtime result after bounds/AABB/environment work: `64 PASS / 0 FAIL`; the original 27 ownership/lifecycle checks remain green.
+- Latest execution checkpoint (`build`, 2026-08-29): a fresh rebuild of `Person2RuntimeContracts`, its CTest run, and a fresh `SuperMario` link all completed successfully.
+- Non-blocking external warning: P4-owned `BrickFragment::reactToCollision(int)` intentionally performs no collision work and therefore does not use `collidedSide`. This is an `-Wunused-parameter` warning only; the BrickFragment lifecycle contract remains green and it is not a P2 blocker.
 - Source/runtime evidence is recorded below for extent, pit, Lava, environment contracts, projectile collision/culling, and WinFlag completion.
-- These cards are `TESTING`, not `DONE`: P1/P3/P4 production integration plus applicable visual/gameplay gates are still outstanding.
+- These seven cards are `DONE` for P2 source/runtime scope. P1/P3/P4 consumption and applicable visual/gameplay acceptance remain recorded independently and do not reopen the completed P2 providers.
 - All nine Group4 PNGs parse through the SFML 3.1 loader with zero unknown colors in the two runtime bands. This is load smoke evidence, not production render/gameplay acceptance.
 
 ### `P2-EXTENT-001` — Expose explicit dynamic world extent
 
-- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `DONE`.
 - **Purpose:** Make one authoritative pixel-world boundary available to physics, pit cleanup, and P1 camera code.
 - **Exact current behavior:** `MapManager::getWorldBounds()` derives an `sf::FloatRect` from parsed dynamic width and one 15-row gameplay band; `LevelManager::getWorldBounds()` exposes it only after a successful load. The runtime suite covers loaded/unloaded behavior and real map width.
 - **Missing checklist:** [x] value extent API; [x] dynamic pixel width; [x] one-band logical height; [x] readiness-aware exposure; [x] explicit units; [x] runtime checks; [ ] P1 camera consumes the value in the production flow; [ ] gameplay edge verification.
@@ -154,7 +156,7 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-LAVA-001` — Correct Lava fatal-death semantics
 
-- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `DONE`.
 - **Purpose:** Ensure Lava reports death only when the player actually reaches the agreed fatal state, once.
 - **Exact current behavior:** `Lava::applyTo` returns the actual fatal result. LevelManager emits death only for a dead player, breaks later hazard/contact processing, and preserves Big/Fire downgrade behavior.
 - **Missing checklist:** [x] fatal result; [x] callback only on death; [x] duplicate suppression; [x] later-contact exclusion; [x] powered downgrade; [x] focused small/Big/Fire checks; [ ] production death transition; [ ] visual/gameplay verification.
@@ -169,7 +171,7 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-WINFLAG-001` — Honor base-anchor markers and completion trigger
 
-- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN` plus `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN` plus `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `DONE`.
 - **Purpose:** Interpret the team's white marker as the flag base/activation anchor and preserve one-shot completion.
 - **Exact current behavior:** the parser coordinate is the base/activation anchor; WinFlag geometry extends upward, activation starts a bounded one-second slide, and its callback queues one deferred LevelManager completion only after the slide finishes.
 - **Missing checklist:** [x] base-anchor geometry; [x] upward collision/visual geometry; [x] bounded animation; [x] exactly-once deferred callback; [x] unready-level guard; [x] runtime math/timing checks; [ ] P1 production win transition; [ ] visual/gameplay verification.
@@ -184,9 +186,9 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-ENV-001` — Verify Pipe, Trampoline, and MovingBlock integration
 
-- **Owner / priority / requirement / status:** Person 2; P1; `REQUIRED_BY_PLAN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P1; `REQUIRED_BY_PLAN`; `DONE`.
 - **Purpose:** Turn source-only/historical evidence for three implemented environment components into current focused contract evidence.
-- **Exact current behavior:** Pipe dimensions, Trampoline per-player launch, MovingBlock endpoint clamping and carry delta are registered through the existing P2/P4 physics path and covered by focused runtime checks. CloudPlatform remains excluded by decision.
+- **Exact current behavior:** Pipe dimensions and Trampoline per-player launch are registered through the existing P2/P4 physics path. MovingBlock consumes full frame distance through linear endpoints and every square-path corner without a pause, and exposes the net frame delta for rider carry. CloudPlatform remains excluded by decision.
 - **Missing checklist:** [x] Pipe dimensions/collision; [x] Trampoline launch/no shared debounce; [x] horizontal/vertical travel limits; [x] carry delta; [x] lifecycle/view registration; [x] tuning ceiling documented; [ ] production visual alignment; [ ] stand/launch/ride gameplay pass.
 - **Exact target files:** `include/Objects/Environment/Pipe.hpp`, `src/Objects/Environment/Pipe.cpp`, `include/Objects/Environment/Trampoline.hpp`, `src/Objects/Environment/Trampoline.cpp`, `include/Objects/Blocks/MovingBlock.hpp`, `src/Objects/Blocks/MovingBlock.cpp`, `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact target files only; make no production change if tests pass. **Read-only dependencies:** P3 movement/player APIs; P4 Block base; map PNGs. **Do not implement:** P4 `CloudBlock`, Cloud marker mapping, textures, camera, or map tuning.
@@ -199,9 +201,9 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-PROJECTILE-001` — Complete Cannon, Bullet, and Rocket production paths
 
-- **Owner / priority / requirement / status:** Person 2; P1; `REQUIRED_BY_PLAN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P1; `REQUIRED_BY_PLAN`; `DONE`.
 - **Purpose:** Preserve sound projectile ownership while making projectiles constructible, collidable, and bounded in the real runtime.
-- **Exact current behavior:** LevelManager exposes owned homing and straight Rocket spawn paths. Bullet/Rocket use configurable lifetimes, collide with Blocks, cull against map-derived extent, damage a player once, and leave ownership/views through deferred inactive cleanup.
+- **Exact current behavior:** LevelManager exposes owned homing and straight Rocket spawn paths. Cannon spawns through deferred unique ownership without a birth-frame update. Bullet/Rocket use configurable lifetimes, swept-AABB Block collision over the full frame path, map-derived extent culling, once-only player damage, and deferred inactive cleanup.
 - **Missing checklist:** [x] production Rocket entry points; [x] immediate unique ownership; [x] Block collision and extent culling; [x] once-only player damage/death; [x] hit/expiry/target-loss/off-world removal; [x] focused runtime checks; [ ] P3 boss/fire callers consume the spawn surface; [ ] production visual/gameplay verification.
 - **Exact target files:** `include/Objects/Environment/Cannon.hpp`, `src/Objects/Environment/Cannon.cpp`, `include/Objects/Environment/Bullet.hpp`, `src/Objects/Environment/Bullet.cpp`, `include/Objects/Environment/Rocket.hpp`, `src/Objects/Environment/Rocket.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets only. **Read-only dependencies:** P3 boss/player/fire files, P4 block files, P1 mediator/state. **Do not implement:** Bowser/Petey attacks, FireBuff shooting, projectile sprites/audio, or P3 internals.
@@ -229,22 +231,22 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-BOUNDS-001` — Enforce player/world horizontal bounds
 
-- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `READY`.
+- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `DONE`.
 - **Purpose:** Keep borrowed players inside the loaded dynamic-width world without substituting window-size constants.
-- **Exact current behavior:** dynamic width exists but no consumer clamps or collides players at the left/right map edges.
-- **Missing checklist:** [ ] consume valid extent; [ ] resolve left and right overflow with hitbox size; [ ] cancel outward velocity consistently; [ ] handle worlds narrower than viewport safely; [ ] avoid constraining vertical pit fall; [ ] test multiple widths and high-speed overshoot.
+- **Exact current behavior:** LevelManager consumes valid dynamic extent after player Block physics, clamps each active player to the legal left/right hitbox range, cancels only outward X velocity, and preserves Y for pit fall.
+- **Missing checklist:** [x] consume valid extent; [x] resolve left and right overflow with hitbox size; [x] cancel outward velocity consistently; [x] handle worlds narrower than viewport safely; [x] avoid constraining vertical pit fall; [x] test multiple widths and high-speed overshoot; [ ] visual no-jitter check; [ ] production gameplay edge pass.
 - **Exact target files:** `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets. **Read-only dependencies:** P3 `PlayerManager`/movement, P1 camera, map assets. **Do not implement:** `sf::View`, menu transitions, teleport/respawn, or hard-coded 800/1920 bounds.
 - **Dependencies:** the tested `P2-EXTENT-001` provider and `CON-P1-P2-WORLD-EXTENT` are available. **Provides:** bounded player world position. **Consumes:** hitbox and movement velocity.
 - **Group5 reference / do-not-copy:** adapt clamping against map width only; do not copy Group5 window/cell constants.
 - **Notes / SFML:** follow SFML 3.1 rectangle/vector APIs already used. Resolve once at the shared physics/runtime boundary rather than per player class.
 - **Checks:** compile; runtime left/right, exact-edge, overshoot, two dynamic widths, narrow world; visual verify no jitter; gameplay verify camera/player reach both legal edges.
-- **Completion dimensions:** `SOURCE_DONE=NO`; `INTEGRATION_DONE=NO`; `RUNTIME_TESTED=NO`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
+- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
 - **Definition of done:** every active borrowed player remains within the valid horizontal world and existing block physics stays green. **Suggested commit:** `p2: enforce map-derived player bounds`.
 
 ### `P2-PIT-001` — Detect map-derived pit falls and emit death once
 
-- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `TESTING`.
+- **Owner / priority / requirement / status:** Person 2; P0; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `DONE`.
 - **Purpose:** End unbounded falling using loaded-world data while leaving lives/respawn policy to P1/P4/P3.
 - **Exact current behavior:** after player movement/physics, LevelManager compares the hitbox against the loaded logical-world bottom plus one map cell, marks a fatal fall once, emits the borrowed-player callback once, and skips later same-frame contacts.
 - **Missing checklist:** [x] valid world bottom; [x] one-cell margin; [x] post-physics timing; [x] repeated-frame suppression through dead state; [x] later-contact exclusion; [x] no lives/state ownership; [ ] P1/P3 fatal reload/reset clears the attempt in production; [ ] gameplay verification.
@@ -276,7 +278,7 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 - **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `BLOCKED`.
 - **Purpose:** Connect P3 enemy/player behavior to P2's movement/contact order without moving behavior ownership.
-- **Exact current behavior:** P2 applies generic block physics to selected enemies and borrowed players but has no player/enemy loop. P3 exposes fragmented damage, stomp, and shell methods; no integrated result contract exists.
+- **Exact current behavior:** P2 applies generic block physics to selected enemies and borrowed players and now has a tested previous/current AABB side classifier, but no player/enemy loop consumes it. P3 exposes fragmented damage, stomp, and shell methods; no integrated result contract exists.
 - **Missing checklist:** [ ] agree typed contact result; [ ] broad-phase active pairs; [ ] classify stomp vs harmful side/bottom; [ ] invoke P3 once/contact; [ ] apply bounce/shell motion; [ ] respect invulnerability/dead state; [ ] suppress inactive entities later same frame; [ ] forward score/death outcome without owning it.
 - **Exact target files:** `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets. **Read-only dependencies:** every P3 player/enemy file, P1 mediator, P4 UserData/HUD. **Do not implement:** enemy state logic, scoring, animation, lives, boss attacks, or edit P3 to fit an ad hoc cast.
@@ -292,7 +294,7 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 - **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `BLOCKED`.
 - **Purpose:** Make P3 Coin/Mushroom/power-up objects collectible exactly once in the owned runtime.
-- **Exact current behavior:** LevelManager owns and removes inactive power-ups; it never calls `onCollect`. Coin and Mushroom provider behavior is partial and no score/coin event is integrated.
+- **Exact current behavior:** LevelManager owns and removes inactive power-ups; it never calls `onCollect`. The feet-anchored `canGrow` clearance primitive has a focused low-ceiling test, but Coin/Mushroom provider behavior is partial and no score/coin event is integrated.
 - **Missing checklist:** [ ] active 1P player/item overlap after movement; [ ] P3 typed collection outcome; [ ] one-shot deactivation; [ ] Mushroom/block world physics where contract requires; [ ] queue-safe removal; [ ] outcome forwarded to P1/P4 via owner contract.
 - **Exact target files:** `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets. **Read-only dependencies:** P3 item/player/buff files, P1 mediator, P4 UserData/HUD/block payloads. **Do not implement:** score amount, coin-to-life policy, buff internals, payload animation, HUD, or persistence.

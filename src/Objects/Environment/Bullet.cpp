@@ -1,5 +1,6 @@
 ﻿#include "Objects/Environment/Bullet.hpp"
 #include "Levels/Managers/MapManager.hpp"
+#include "Physics/PhysicsEngine.hpp"
 #include <algorithm>
 
 Bullet::Bullet(sf::Vector2f pos, sf::Vector2f initialVelocity,
@@ -8,12 +9,14 @@ Bullet::Bullet(sf::Vector2f pos, sf::Vector2f initialVelocity,
       lifetime(std::max(0.f, activeLifetime)), active(activeLifetime > 0.f) {
     setPosition(pos);
     setSize({MapFormat::TILE_SIZE * 0.5f, MapFormat::TILE_SIZE * 0.5f});
+    previousBounds = hitbox.getGlobalBounds();
     shape.setPosition(pos);
     shape.setFillColor(sf::Color(40, 40, 40));
 }
 
 void Bullet::update(float dt) {
     if (!active || dt <= 0.f) return;
+    previousBounds = hitbox.getGlobalBounds();
     setPosition(getPosition() + velocity * dt);
     shape.setPosition(getPosition());
     lifetime -= dt;
@@ -29,11 +32,16 @@ void Bullet::deactivate() noexcept { active = false; }
 
 bool Bullet::deactivateOnWorldCollision(
     const sf::FloatRect& obstacle) noexcept {
-    if (!active || !hitbox.getGlobalBounds().findIntersection(obstacle)) {
+    if (!active || !PhysicsEngine::sweptAabbIntersects(
+                       previousBounds, hitbox.getGlobalBounds(), obstacle)) {
         return false;
     }
     deactivate();
     return true;
+}
+
+sf::FloatRect Bullet::getPreviousBounds() const noexcept {
+    return previousBounds;
 }
 
 bool Bullet::cullOutside(const sf::FloatRect& worldBounds,

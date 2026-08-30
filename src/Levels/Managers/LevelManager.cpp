@@ -93,11 +93,14 @@ void LevelManager::update(float dt) {
     for (auto& entity : entities) {
         if (entity) entity->update(dt);
     }
+    const auto worldBounds = getWorldBounds();
     for (PlayerManager* player : players) {
         if (player && !player->isDead()) {
             player->update(dt);
             physicsEngine.step(*player, blocks, dt);
-            const auto worldBounds = getWorldBounds();
+            if (worldBounds) {
+                physicsEngine.enforceHorizontalBounds(*player, *worldBounds);
+            }
             if (worldBounds && player->hitbox.getGlobalBounds().position.y >
                                    worldBounds->position.y +
                                        worldBounds->size.y +
@@ -434,10 +437,22 @@ void LevelManager::resolveProjectileWorldCollisions() {
             return;
         }
         const sf::FloatRect bounds = projectile.hitbox.getGlobalBounds();
+        const sf::FloatRect previous = projectile.getPreviousBounds();
+        const float left = std::min(previous.position.x, bounds.position.x);
+        const float top = std::min(previous.position.y, bounds.position.y);
+        const float right = std::max(
+            previous.position.x + previous.size.x,
+            bounds.position.x + bounds.size.x);
+        const float bottom = std::max(
+            previous.position.y + previous.size.y,
+            bounds.position.y + bounds.size.y);
+        const sf::FloatRect motionBounds({left, top},
+                                         {right - left, bottom - top});
 
         // ponytail: current projectile counts are tiny; replace the existing
         // linear nearby-block query with a spatial index if profiling says so.
-        for (Block* block : physicsEngine.queryNearbyBlocks(bounds, blocks, 1)) {
+        for (Block* block :
+             physicsEngine.queryNearbyBlocks(motionBounds, blocks, 1)) {
             if (block && block->isExist() && projectile.deactivateOnWorldCollision(
                                                   block->hitbox.getGlobalBounds())) {
                 return;

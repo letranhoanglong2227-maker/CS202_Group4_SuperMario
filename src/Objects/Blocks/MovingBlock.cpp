@@ -62,38 +62,34 @@ MovingBlock::MovingBlock(sf::Vector2f pos, int widthInTiles,
 void MovingBlock::update(float dt) {
     const sf::Vector2f previous = getPosition();
     if (path == Path::SquareLoop && squareDistance > 0.f && dt > 0.f) {
-        sf::Vector2f movement{};
-        const sf::Vector2f offset = previous - origin;
-        const float step = speed * dt;
-        switch (squareDirection) {
-        case 0:
-            if (offset.x < squareDistance)
-                movement.x = std::min(step, squareDistance - offset.x);
-            else squareDirection = 1;
-            break;
-        case 1:
-            if (offset.y < squareDistance)
-                movement.y = std::min(step, squareDistance - offset.y);
-            else squareDirection = 2;
-            break;
-        case 2:
-            if (offset.x > 0.f)
-                movement.x = -std::min(step, offset.x);
-            else squareDirection = 3;
-            break;
-        default:
-            if (offset.y > 0.f)
-                movement.y = -std::min(step, offset.y);
-            else squareDirection = 0;
-            break;
+        const float perimeter = 4.f * squareDistance;
+        squareProgress = std::fmod(squareProgress + speed * dt, perimeter);
+
+        sf::Vector2f offset{};
+        if (squareProgress <= squareDistance) {
+            offset.x = squareProgress;
+        } else if (squareProgress <= 2.f * squareDistance) {
+            offset.x = squareDistance;
+            offset.y = squareProgress - squareDistance;
+        } else if (squareProgress <= 3.f * squareDistance) {
+            offset.x = 3.f * squareDistance - squareProgress;
+            offset.y = squareDistance;
+        } else {
+            offset.y = perimeter - squareProgress;
         }
-        setPosition(previous + movement);
+        setPosition(origin + offset);
     } else {
         const float distance = std::sqrt(travel.x * travel.x + travel.y * travel.y);
         if (distance > 0.f && dt > 0.f) {
-            progress += direction * speed * dt / distance;
-            if (progress >= 1.f) { progress = 1.f; direction = -1.f; }
-            if (progress <= 0.f) { progress = 0.f; direction = 1.f; }
+            float phase = direction > 0.f ? progress : 2.f - progress;
+            phase = std::fmod(phase + speed * dt / distance, 2.f);
+            if (phase <= 1.f) {
+                progress = phase;
+                direction = phase < 1.f ? 1.f : -1.f;
+            } else {
+                progress = 2.f - phase;
+                direction = -1.f;
+            }
             setPosition(origin + travel * progress);
         }
     }

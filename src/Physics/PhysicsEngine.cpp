@@ -7,6 +7,8 @@
 #include "Objects/Blocks/MovingBlock.hpp"
 #include "Objects/Environment/Trampoline.hpp"
 #include <algorithm>
+#include <limits>
+#include <utility>
 
 PhysicsEngine::PhysicsEngine(float gravityY) : gravity(gravityY) {}
 
@@ -17,45 +19,9 @@ void PhysicsEngine::applyGravity(MovementComponent& movementComponent, float dt)
     movementComponent.applyForce({0.f, gravity * clampedDt});
 }
 
-void PhysicsEngine::moveX(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt) {
-    hitbox.position.x += movement.getVelocity().x * dt;
-    for (const auto& block : blocks) {
-        if (auto intersect = hitbox.findIntersection(block)) {
-            // Đang đi sang phải
-            if (movement.getVelocity().x > 0.f) {
-                hitbox.position.x = block.position.x - hitbox.size.x;
-            } 
-            // Đang đi sang trái
-            else if (movement.getVelocity().x < 0.f) {
-                hitbox.position.x = block.position.x + block.size.x;
-            }
-            movement.setVelocity(0.f, movement.getVelocity().y);
-        }
-    }
-}
-
-void PhysicsEngine::moveY(sf::FloatRect& hitbox, MovementComponent& movement, const std::vector<sf::FloatRect>& blocks, float dt, CollisionInfo& info) {
-    hitbox.position.y += movement.getVelocity().y * dt;
-    info.grounded = false; // Reset grounded state
-
-    for (const auto& block : blocks) {
-        if (auto intersect = hitbox.findIntersection(block)) {
-            // Đang rơi xuống (chạm đất)
-            if (movement.getVelocity().y > 0.f) {
-                hitbox.position.y = block.position.y - hitbox.size.y;
-                info.grounded = true;
-            } 
-            // Đang nhảy lên (đụng trần)
-            else if (movement.getVelocity().y < 0.f) {
-                hitbox.position.y = block.position.y + block.size.y;
-                info.ceilHit = true;
-            }
-            movement.setVelocity(movement.getVelocity().x, 0.f);
-        }
-    }
-}
-
-bool PhysicsEngine::canGrow(const sf::FloatRect& currentHitbox, const sf::Vector2f& newSize, const std::vector<sf::FloatRect>& blocks) {
+bool PhysicsEngine::canGrow(const sf::FloatRect& currentHitbox,
+                            const sf::Vector2f& newSize,
+                            const std::vector<sf::FloatRect>& blocks) const {
     sf::FloatRect projectedHitbox = currentHitbox;
     projectedHitbox.position.y -= (newSize.y - currentHitbox.size.y);
     projectedHitbox.size = newSize;
@@ -66,6 +32,115 @@ bool PhysicsEngine::canGrow(const sf::FloatRect& currentHitbox, const sf::Vector
         }
     }
     return true;
+}
+
+AabbContactSide PhysicsEngine::classifyAabbContact(
+    const sf::FloatRect& previousBounds,
+    const sf::FloatRect& currentBounds,
+    const sf::FloatRect& otherBounds) {
+    const auto intersection = currentBounds.findIntersection(otherBounds);
+    if (!intersection) return AabbContactSide::None;
+
+    const sf::Vector2f delta =
+        currentBounds.position - previousBounds.position;
+    const float previousLeft = previousBounds.position.x;
+    const float previousRight = previousLeft + previousBounds.size.x;
+    const float previousTop = previousBounds.position.y;
+    const float previousBottom = previousTop + previousBounds.size.y;
+    const float otherLeft = otherBounds.position.x;
+    const float otherRight = otherLeft + otherBounds.size.x;
+    const float otherTop = otherBounds.position.y;
+    const float otherBottom = otherTop + otherBounds.size.y;
+
+    float xEntry = -1.f;
+    AabbContactSide xSide = AabbContactSide::None;
+    if (delta.x > 0.f && previousRight <= otherLeft) {
+        xEntry = (otherLeft - previousRight) / delta.x;
+        xSide = AabbContactSide::Right;
+    } else if (delta.x < 0.f && previousLeft >= otherRight) {
+        xEntry = (otherRight - previousLeft) / delta.x;
+        xSide = AabbContactSide::Left;
+    }
+
+    float yEntry = -1.f;
+    AabbContactSide ySide = AabbContactSide::None;
+    if (delta.y > 0.f && previousBottom <= otherTop) {
+        yEntry = (otherTop - previousBottom) / delta.y;
+        ySide = AabbContactSide::Bottom;
+    } else if (delta.y < 0.f && previousTop >= otherBottom) {
+        yEntry = (otherBottom - previousTop) / delta.y;
+        ySide = AabbContactSide::Top;
+    }
+
+    const bool validXEntry = xEntry >= 0.f && xEntry <= 1.f;
+    const bool validYEntry = yEntry >= 0.f && yEntry <= 1.f;
+    if (validXEntry || validYEntry) {
+        if (!validYEntry || (validXEntry && xEntry >= yEntry)) return xSide;
+        return ySide;
+    }
+
+    // Already-overlapping or stationary fallback: use minimum penetration,
+    // matching Group5's useful AABB idea without inheriting its ownership or
+    // collision-orchestration design. Horizontal wins a tie deliberately.
+    if (intersection->size.x <= intersection->size.y) {
+        const float currentCenterX =
+            currentBounds.position.x + currentBounds.size.x * 0.5f;
+        const float otherCenterX = otherLeft + otherBounds.size.x * 0.5f;
+        return currentCenterX < otherCenterX ? AabbContactSide::Right
+                                            : AabbContactSide::Left;
+    }
+
+    const float currentCenterY =
+        currentBounds.position.y + currentBounds.size.y * 0.5f;
+    const float otherCenterY = otherTop + otherBounds.size.y * 0.5f;
+    return currentCenterY < otherCenterY ? AabbContactSide::Bottom
+                                        : AabbContactSide::Top;
+}
+
+bool PhysicsEngine::sweptAabbIntersects(
+    const sf::FloatRect& previousBounds,
+    const sf::FloatRect& currentBounds,
+    const sf::FloatRect& otherBounds) noexcept {
+    if (previousBounds.findIntersection(otherBounds) ||
+        currentBounds.findIntersection(otherBounds)) {
+        return true;
+    }
+
+    const sf::Vector2f delta =
+        currentBounds.position - previousBounds.position;
+    const float infinity = std::numeric_limits<float>::infinity();
+
+    const auto axisTimes = [infinity](float movingMin, float movingMax,
+                                      float targetMin, float targetMax,
+                                      float movement) {
+        if (movement > 0.f) {
+            return std::pair{(targetMin - movingMax) / movement,
+                             (targetMax - movingMin) / movement};
+        }
+        if (movement < 0.f) {
+            return std::pair{(targetMax - movingMin) / movement,
+                             (targetMin - movingMax) / movement};
+        }
+        if (movingMax <= targetMin || movingMin >= targetMax) {
+            return std::pair{infinity, -infinity};
+        }
+        return std::pair{-infinity, infinity};
+    };
+
+    const auto [xEntry, xExit] = axisTimes(
+        previousBounds.position.x,
+        previousBounds.position.x + previousBounds.size.x,
+        otherBounds.position.x, otherBounds.position.x + otherBounds.size.x,
+        delta.x);
+    const auto [yEntry, yExit] = axisTimes(
+        previousBounds.position.y,
+        previousBounds.position.y + previousBounds.size.y,
+        otherBounds.position.y, otherBounds.position.y + otherBounds.size.y,
+        delta.y);
+
+    const float entryTime = std::max(xEntry, yEntry);
+    const float exitTime = std::min(xExit, yExit);
+    return entryTime <= exitTime && entryTime >= 0.f && entryTime <= 1.f;
 }
 
 std::vector<Block*> PhysicsEngine::queryNearbyBlocks(
@@ -152,4 +227,27 @@ CollisionInfo PhysicsEngine::step(LivingEntity& entity,
         character->setGrounded(info.grounded);
     }
     return info;
+}
+
+void PhysicsEngine::enforceHorizontalBounds(
+    LivingEntity& entity, const sf::FloatRect& worldBounds) const {
+    if (worldBounds.size.x <= 0.f) return;
+
+    const sf::FloatRect bounds = entity.hitbox.getGlobalBounds();
+    const float minX = worldBounds.position.x;
+    const float maxX =
+        minX + std::max(0.f, worldBounds.size.x - bounds.size.x);
+    const float resolvedX = std::clamp(bounds.position.x, minX, maxX);
+
+    if (MovementComponent* movement = entity.getMovementComponent()) {
+        const sf::Vector2f velocity = movement->getVelocity();
+        if ((resolvedX <= minX && velocity.x < 0.f) ||
+            (resolvedX >= maxX && velocity.x > 0.f)) {
+            movement->setVelocity(0.f, velocity.y);
+        }
+    }
+
+    if (resolvedX != bounds.position.x) {
+        entity.setPosition({resolvedX, bounds.position.y});
+    }
 }

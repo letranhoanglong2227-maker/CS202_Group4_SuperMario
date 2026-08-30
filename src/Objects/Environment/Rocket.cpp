@@ -1,5 +1,6 @@
 ﻿#include "Objects/Environment/Rocket.hpp"
 #include "Levels/Managers/MapManager.hpp"
+#include "Physics/PhysicsEngine.hpp"
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -10,6 +11,7 @@ Rocket::Rocket(sf::Vector2f pos, TargetResolver resolver, float moveSpeed,
       lifetime(std::max(0.f, activeLifetime)) {
     setPosition(pos);
     setSize({MapFormat::TILE_SIZE, MapFormat::TILE_SIZE * 0.5f});
+    previousBounds = hitbox.getGlobalBounds();
     shape.setPosition(pos);
     shape.setSize(getSize());
     shape.setFillColor(sf::Color(235, 235, 235));
@@ -28,6 +30,7 @@ void Rocket::setTargetResolver(TargetResolver resolver) {
 
 void Rocket::update(float dt) {
     if (!active || dt <= 0.f) return;
+    previousBounds = hitbox.getGlobalBounds();
     lifetime -= dt;
     if (lifetime <= 0.f) {
         deactivate();
@@ -58,11 +61,16 @@ void Rocket::deactivate() noexcept { active = false; }
 
 bool Rocket::deactivateOnWorldCollision(
     const sf::FloatRect& obstacle) noexcept {
-    if (!active || !hitbox.getGlobalBounds().findIntersection(obstacle)) {
+    if (!active || !PhysicsEngine::sweptAabbIntersects(
+                       previousBounds, hitbox.getGlobalBounds(), obstacle)) {
         return false;
     }
     deactivate();
     return true;
+}
+
+sf::FloatRect Rocket::getPreviousBounds() const noexcept {
+    return previousBounds;
 }
 
 bool Rocket::cullOutside(const sf::FloatRect& worldBounds,

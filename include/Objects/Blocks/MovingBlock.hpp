@@ -26,7 +26,7 @@ private:
     float progress{0.f};
     float direction{1.f};
     float squareDistance{0.f};
-    unsigned int squareDirection{0};
+    float squareProgress{0.f};
     Path path{Path::LinearPingPong};
     bool textured{false};
 };
