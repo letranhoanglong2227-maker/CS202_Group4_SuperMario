@@ -21,7 +21,7 @@ Contract status vocabulary:
 - **Output:** a ready-or-failed active level capable of one update/render per frame.
 - **Call direction:** P1 constructs/configures → P2 level; P1 calls update/render; P2 calls registered events back to P1.
 - **Timing:** inject players and callbacks before load/update. Queue state replacement and level destruction until after `LevelManager::update` returns.
-- **Current interface / missing behavior:** Level types and update/render exist; P1 `GameState` is empty and `ConfiguredLevel` hides load success.
+- **Current interface / missing behavior:** P1 `GameState` owns injected player/level objects, rebinds the borrowed player view, validates `isLoaded()` plus world extent, invokes update/render once, and detaches callbacks/views before teardown. The production selection-to-stage construction route and packaged P2 load provider remain missing.
 - **Failure behavior:** Failed load produces a non-running level state plus diagnostic; P1 shows a safe error/returns to selection. Never update an empty failed world as though it loaded.
 - **Status:** `PARTIAL`.
 - **Dependent tasks:** `P1-SELECT-001`, `P1-GAME-001`, `P2-LOAD-001`, `P2-NINE-LEVEL-001`.
@@ -36,7 +36,7 @@ Contract status vocabulary:
 - **Output:** explicit success/failure and diagnostic; on success, valid world extent and spawn/runtime registry.
 - **Call direction:** P1 requests → P2 loads → P1 queries/receives result.
 - **Timing:** once during state activation/reload, before the first gameplay update or camera query.
-- **Current interface / missing behavior:** `LevelManager::load` returns `bool` and MapManager has an error; `ConfiguredLevel` constructs `assets/levels/...`, discards the `bool`, and all named PNGs are under `assets/textures` at audit.
+- **Current interface / missing behavior:** `LevelManager::load` returns `bool`, `isLoaded()` and MapManager's retained error are queryable, and P1 suppresses runtime update/render on failure. `ConfiguredLevel` still builds a relative `assets/textures/...` path with a one-level fallback; the shared executable-adjacent resolver and production error screen/return route remain missing.
 - **Failure behavior:** Clear partial runtime, retain diagnostic, report false, do not call gameplay callbacks, and let P1 transition safely.
 - **Status:** `DEFINED_PENDING_IMPLEMENTATION`; `DEC-ASSET-ROOT` is resolved.
 - **Dependent tasks:** `P2-LOAD-001`, `P1-GAME-001`, `P2-NINE-LEVEL-001`, `P4-PACKAGE-001`.
@@ -51,9 +51,9 @@ Contract status vocabulary:
 - **Output:** pixel-space world rectangle (or width/height values) with origin and explicit validity.
 - **Call direction:** consumers query P2 after successful load.
 - **Timing:** compute once per load; never derive from window size or a hard-coded level width.
-- **Current interface / missing behavior:** tile width exists; there is no explicit pixel rectangle/height/validity surface and no consumer.
+- **Current interface / missing behavior:** P2 exposes an optional map-derived pixel rectangle from loaded state; P1 camera and P2 bounds/pit/cleanup consume it. Visual acceptance remains.
 - **Failure behavior:** invalid/unloaded query returns no extent or an explicit invalid state, never zero masquerading as a valid tiny world.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `IMPLEMENTED_PENDING_VISUAL_ACCEPTANCE`.
 - **Dependent tasks:** `P2-EXTENT-001`, `P2-BOUNDS-001`, `P2-PIT-001`, `P2-CLEANUP-001`, `P1-CAMERA-001`.
 
 ### CON-P1-P2-CAMERA — follow and clamp responsibility
@@ -66,9 +66,9 @@ Contract status vocabulary:
 - **Output:** clamped gameplay view plus restoration of the default/UI view.
 - **Call direction:** P1 queries P2 extent, computes view, sets window view, calls P2 render, then restores UI view.
 - **Timing:** after player/world update and before world render each frame.
-- **Current interface / missing behavior:** no P1 camera; P2 currently exposes only width in tiles.
+- **Current interface / missing behavior:** P1 queries P2's optional pixel rectangle, follows the owned 1P hitbox center, applies the clamped world view for P2 render, and restores the exact prior view. P4 HUD overlay and gameplay visual acceptance remain.
 - **Failure behavior:** on failed load use safe default view and no gameplay render; if world is smaller than viewport, center it without negative/out-of-world drift.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `IMPLEMENTED_PENDING_VISUAL_ACCEPTANCE`.
 - **Dependent tasks:** `P2-EXTENT-001`, `P1-CAMERA-001`, `P1-GAME-001`.
 
 ### CON-P1-P2-DEATH — exactly-once player death event
@@ -81,9 +81,9 @@ Contract status vocabulary:
 - **Output:** one queued death event per affected player occurrence.
 - **Call direction:** P2 callback → P1 queues session mutation and transition.
 - **Timing:** after movement/contact detection and before cleanup. P2 filters that player from later same-frame interactions and emits at most once for the death occurrence; P1 applies destructive state changes only after `LevelManager::update` returns. P2-owned object cleanup uses its separate off-world policy, not this player-death threshold contract.
-- **Current interface / missing behavior:** callback exists; pit/enemy paths are absent, Lava can notify without actual death, and P1 has no consumer.
+- **Current interface / missing behavior:** P2 pit, Lava, and harmful-contact paths emit the affected player once; P1 queues and flushes that typed event after level update and clears the callback on teardown. P4 lives storage plus P1 reset/DeathMenu/Game Over transitions remain.
 - **Failure behavior:** duplicate contacts in one frame do not decrement lives repeatedly; a callback must not fire when a powered player merely downgrades and remains alive. A fatal event spends exactly one 1P session life; a nonfatal power downgrade emits no death event.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`; 2P is out of scope for this release.
+- **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`; 2P is out of scope for this release.
 - **Dependent tasks:** `P2-PIT-001`, `P2-LAVA-001`, `P2-CONTACT-ENEMY-001`, `P1-DEATH-001`, `P3-PLAYER-RESET-001`, `P4-PERSISTENCE-001`.
 
 ### CON-P1-P2-COMPLETION — exactly-once level completion
@@ -96,9 +96,9 @@ Contract status vocabulary:
 - **Output:** one completion event for the current stage identity.
 - **Call direction:** P2 callback → P1 queues win/progression transition.
 - **Timing:** during level update; state replacement occurs only after update returns. A valid contact starts the finite flag animation, and completion is emitted once after the animation finishes; a bounded animation failure path must not stall progression forever.
-- **Current interface / missing behavior:** one-shot callback exists; P1 consumer is absent and Group4 treats the base marker as the top.
+- **Current interface / missing behavior:** P2's one-shot completion callback is bound by P1 and queues the validated current stage after update. P4 progression plus P1 WinMenu/next/final transitions remain.
 - **Failure behavior:** repeated overlap cannot duplicate score/unlock/save; invalid/failed stage cannot complete.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-WINFLAG-001`, `P1-GAME-001`, `P1-WIN-001`, `P4-PERSISTENCE-001`.
 
 ## P1 ↔ P3 contracts
@@ -113,9 +113,9 @@ Contract status vocabulary:
 - **Output:** stable owner collection plus temporary `std::vector<PlayerManager*>` view.
 - **Call direction:** the approved session owner requests P3 factory creation and passes borrowed views to P2; after a successful load, P2 applies actor-layer spawn positions to those borrowed players.
 - **Timing:** construct stable player owners before active-level load; apply spawn positions during successful P2 load/reload; rebind views on replacement; destroy only after active-level update/destruction is safe.
-- **Current interface / missing behavior:** P3 factory can return player `unique_ptr`; no approved production session owner exists.
+- **Current interface / missing behavior:** P3 factory can return a player `unique_ptr`; injected P1 `GameState` is the tested runtime owner and clears P2's borrowed view before level-then-player destruction. The production selection state still does not construct/transfer that owner.
 - **Failure behavior:** unknown player type fails explicitly; no null entry is passed to P2; the single-player construction rolls back safely.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `PARTIAL`.
 - **Dependent tasks:** `P1-SELECT-001`, `P1-GAME-001`, `P3-FACTORY-001`, `P3-PLAYER-RESET-001`.
 
 ### CON-P1-P3-PLAYER-RESET — reset/reconstruct after death or restart
@@ -160,7 +160,7 @@ Contract status vocabulary:
 - **Output:** deterministic result such as stomped, harmful, shell-kicked, enemy-defeated, player-damaged, bounce, score value.
 - **Call direction:** P2 classifies → invokes P3 behavior → applies physical response → emits P1 event.
 - **Timing:** after movement/block resolution, before inactive cleanup; at most one semantic resolution per contact pair/frame.
-- **Current interface / missing behavior:** P2 consumes P3's common typed result after relative-motion AABB classification and exposes score/death callbacks; P1 callback-to-event binding plus visual/gameplay acceptance remain.
+- **Current interface / missing behavior:** P2 consumes P3's common typed result after relative-motion AABB classification; P1 binds its score/death callbacks into the post-update mediator. P4 data consumers and visual/gameplay acceptance remain.
 - **Failure behavior:** ambiguous contact uses a documented harmful/default result, never both stomp and damage; invulnerability and dead/inactive filters apply first.
 - **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-CONTACT-ENEMY-001`, `P3-GOOMBA-001`, `P3-KOOPA-001`, `P3-AIR-HERISS-001`, `P3-BOSS-001`, `P1-EVENT-001`.
@@ -175,7 +175,7 @@ Contract status vocabulary:
 - **Output:** exactly one item effect/outcome, inactive transition, and optional score/coin/power event. A denied growth clearance returns `not consumed/not applied`: player size/power and item active state remain unchanged so no player is enlarged into a solid Block.
 - **Call direction:** P2 moves/resolves item → detects player overlap → invokes P3 collection → queues event/cleanup.
 - **Timing:** after movement/block resolution and before cleanup; newly spawned payload joins via pending queue and is not double-updated in its birth traversal.
-- **Current interface / missing behavior:** P2 resolves item/Block motion, safe-growth clearance, typed collection, form application, delta callbacks and deferred cleanup; P1/P4 session/HUD binding plus visual/gameplay acceptance remain.
+- **Current interface / missing behavior:** P2 resolves item/Block motion, safe-growth clearance, typed collection, form application, delta callbacks and deferred cleanup; P1 binds score/coin/lives deltas into the post-update mediator. P4 data/HUD consumers and visual/gameplay acceptance remain.
 - **Failure behavior:** null/inactive/collected item is ignored; an effect failure cannot remove the item silently without a recorded outcome.
 - **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-CONTACT-ITEM-001`, `P3-PLAYER-STATE-001`, `P3-ITEM-001`, `P3-FIRE-001`, `P4-QUESTION-BLOCK-001`, `P4-PAYLOAD-BLOCK-001`.

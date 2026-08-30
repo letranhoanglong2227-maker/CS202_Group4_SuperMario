@@ -13,12 +13,12 @@ Update the checkbox dimensions only after attaching evidence in the task card or
 | `src/Core/MyApp.cpp` | TASK | `P1-APP-001` | DONE on `P1-pre` | [x] | [x] | [x] | [x] | [x] |
 | `include/Core/stdafx.hpp` | NO_CHANGE | none | DONE for present empty compatibility TU; do not use as a dumping ground | [x] | [x] | [x] syntax | n/a | n/a |
 | `src/Core/stdafx.cpp` | NO_CHANGE | none | DONE for present empty compatibility TU | [x] | [x] | [x] syntax | n/a | n/a |
-| `include/Core/GameEventMediator.hpp` | TASK | `P1-EVENT-001` | TESTING; consumer integration pending | [x] | [ ] | [x] | n/a | [ ] |
-| `src/Core/GameEventMediator.cpp` | TASK | `P1-EVENT-001` | TESTING; consumer integration pending | [x] | [ ] | [x] | n/a | [ ] |
+| `include/Core/GameEventMediator.hpp` | TASK | `P1-EVENT-001` | TESTING; P2/P3 producer bridge landed, P4 consumers pending | [x] | [ ] | [x] | n/a | [ ] |
+| `src/Core/GameEventMediator.cpp` | TASK | `P1-EVENT-001` | TESTING; P2/P3 producer bridge landed, P4 consumers pending | [x] | [ ] | [x] | n/a | [ ] |
 | `include/States/Base/State.hpp` | TASK | `P1-STATE-001` | DONE on `P1-pre` | [x] | [x] | [x] | n/a | [x] |
 | `src/States/Base/State.cpp` | TASK | `P1-STATE-001` | DONE on `P1-pre` | [x] | [x] | [x] | n/a | [x] |
-| `include/States/Base/GameState.hpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS for isolated camera clamp; remaining GameState work BLOCKED | [ ] | [ ] | [x] camera | [ ] | [ ] |
-| `src/States/Base/GameState.cpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS for isolated camera clamp; remaining GameState work BLOCKED | [ ] | [ ] | [x] camera | [ ] | [ ] |
+| `include/States/Base/GameState.hpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS runtime owner/bridge; camera is TESTING; production selection/transitions pending | [ ] | [ ] | [x] runtime slice | [ ] | [ ] |
+| `src/States/Base/GameState.cpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS runtime owner/bridge; camera is TESTING; production selection/transitions pending | [ ] | [ ] | [x] runtime slice | [ ] | [ ] |
 | `include/States/Menus/MainMenuState.hpp`, `src/States/Menus/MainMenuState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; P4 routes pending | [ ] | [ ] | [x] | [x] | [ ] |
 | `include/States/Menus/EnterNameState.hpp`, `src/States/Menus/EnterNameState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; profile handoff pending | [ ] | [ ] | [x] | [x] | [ ] |
 | `include/States/Menus/SettingState.hpp`, `src/States/Menus/SettingState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; AudioSystem pending | [ ] | [ ] | [x] | [x] | [ ] |
@@ -30,7 +30,7 @@ Update the checkbox dimensions only after attaching evidence in the task card or
 | `include/States/Menus/PauseMenuState.hpp`, `src/States/Menus/PauseMenuState.cpp` | TASK | `P1-PAUSE-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
 | `include/States/Menus/LeaderboardState.hpp`, `src/States/Menus/LeaderboardState.cpp` | EXCLUDED from P1 implementation; P4-owned | P4 board task | DEFERRED for P1 | n/a | n/a | n/a | n/a | n/a |
 
-P1 task checkpoint on `P1-pre`: 10 planned tasks; 2 DONE; 1 TESTING; 2 IN_PROGRESS; 5 BLOCKED; 8 P0; 2 P1. The two `stdafx` files remain explicitly `NO_CHANGE`, not application features.
+P1 task checkpoint after `c2bbce5`: 10 planned tasks; 2 DONE; 2 TESTING; 2 IN_PROGRESS; 4 BLOCKED; 8 P0; 2 P1. The two `stdafx` files remain explicitly `NO_CHANGE`, not application features.
 
 ### 1.1 `P1-pre` implementation evidence — 2026-08-30
 
@@ -42,6 +42,15 @@ P1 task checkpoint on `P1-pre`: 10 planned tasks; 2 DONE; 1 TESTING; 2 IN_PROGRE
 - Full CMake/Ninja build links `SuperMario` and `Person2RuntimeContracts` against installed SFML 3.1; `ctest --test-dir build-p1-pre --output-on-failure` passes `1/1` P2 regression tests.
 - `tests/Person1ApplicationSmoke.cpp` renders and saves `P1MainMenuPreview.png`, `P1EnterNamePreview.png`, and `P1SettingsPreview.png`; all three were inspected after the final layout pass. Production `SuperMario.exe` also launched and closed cleanly.
 - GCC sanitizer runtimes (`libasan`/`libubsan`) are unavailable in the installed MinGW toolchain. Leak risk is instead covered here by unique ownership, RAII subscriptions with mediator lifetime guards, bounded event-ID history, no owning raw pointer/manual `new`/`delete`, and exact destructor-count checks; a sanitizer run remains a release-machine follow-up rather than a claimed pass.
+
+### 1.2 Active runtime integration evidence — 2026-08-30 (`c2bbce5`)
+
+- `GameState` now owns one `std::unique_ptr<PlayerManager>` and one `std::unique_ptr<LevelManager>`, passes P2 only a borrowed view, and clears callbacks plus that view before the level is destroyed while the player is still alive.
+- P2 score, coin, lives, death, and completion callbacks post typed mediator events during the level traversal; `GameState` flushes them only after `LevelManager::update` returns, so any downstream StateStack transition remains frame-boundary deferred.
+- A ready level receives one update and one render per P1 call. An unloaded level exposes a non-empty error and receives no gameplay update. P2 remains the sole caller of `PlayerManager::update`, avoiding double input/physics.
+- Fire input is an edge event (`K` for player 1, `Numpad0` for player 2), records direction from the matching movement keys, calls P3 `shoot()` once, and hands the resulting value request to P2 `spawnProjectile()`; P3 cooldown rejects repeated key events.
+- The camera queries P2's dynamic world rectangle, follows the owned 1P hitbox center, applies the world view for P2 render, and restores the exact prior view for later P4 HUD rendering.
+- Focused `Person1StateFlowContracts` passes owner/borrower destruction order, exact update/render counts, score/coin delivery, one pit-death event across repeated frames, fire request/cooldown, failed-load suppression, and camera restoration. `SuperMario` builds, and the retained team CTest suite passes `5/5`; P1 test registration remains for P4's final CMake reconciliation.
 
 ## 2. Exact current baseline
 
@@ -62,12 +71,12 @@ P1 task checkpoint on `P1-pre`: 10 planned tasks; 2 DONE; 1 TESTING; 2 IN_PROGRE
 |---:|---|---|---|---|
 | 1 | `P1-STATE-001` State base and stack lifecycle | DONE | P0 | Focused transition/lifetime checks pass |
 | 2 | `P1-APP-001` Production application entry / MyApp | DONE | P0 | Full target links; launch/close and rendered initial-state smoke pass |
-| 3 | `P1-EVENT-001` GameEventMediator event bridge | TESTING | P0 | Source/focused checks pass; provider/consumer hookups land later |
-| 4 | `P1-SELECT-001` Character/world/level selection and session ownership | BLOCKED | P0 | `DEC-PLAYER-OWNER`; `P3-FACTORY-001`; P4 GUI; current in-memory progression read contract |
-| 5 | `P1-GAME-001` GameState active runtime orchestration | BLOCKED | P0 | selection, P2 load/readiness, active-level and player-ownership contracts |
-| 6 | `P1-CAMERA-001` Clamped camera | IN_PROGRESS | P0 | Clamp math passes; active GameState render/HUD integration remains blocked |
-| 7 | `P1-DEATH-001` Death/lives/restart/Game Over | BLOCKED | P0 | `DEC-MULTIPLAYER-DEATH`, `DEC-RESPAWN`, P2 death, P3 reset, and P4 GUI |
-| 8 | `P1-WIN-001` Completion/unlock/next/final flow | BLOCKED | P0 | P2 completion, current in-memory progression contract, and P4 GUI; durable persistence is downstream P1 work |
+| 3 | `P1-EVENT-001` GameEventMediator event bridge | TESTING | P0 | P2/P3 producer bridge and focused checks pass; P4 consumers remain |
+| 4 | `P1-SELECT-001` Character/world/level selection and session ownership | BLOCKED | P0 | P3 factory and GameState owner target are ready; P4 GUI plus current in-memory progression read contract remain |
+| 5 | `P1-GAME-001` GameState active runtime orchestration | IN_PROGRESS | P0 | Injected owner/update/render/event/fire slice passes; production selection, P2 load route, and P4 transitions remain |
+| 6 | `P1-CAMERA-001` Clamped camera | TESTING | P0 | Dynamic P2 extent, 1P focus, world render and UI-view restoration pass; visual gameplay/HUD acceptance remains |
+| 7 | `P1-DEATH-001` Death/lives/restart/Game Over | BLOCKED | P0 | P2 death, P3 reset and P1 queued receipt are ready; P4 lives/GUI plus final respawn policy remain |
+| 8 | `P1-WIN-001` Completion/unlock/next/final flow | BLOCKED | P0 | P2 completion and P1 queued receipt are ready; current P4 in-memory progression contract and GUI remain |
 | 9 | `P1-MENU-001` Main/name/settings menu navigation | IN_PROGRESS | P1 | Main/Name/Settings preview works; final routes consume P4 GUI/Audio/profile services |
 | 10 | `P1-PAUSE-001` Pause/resume/restart/exit | BLOCKED | P1 | stable state stack/GameState; restart semantics aligned with `DEC-RESPAWN` |
 
@@ -201,15 +210,15 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`
-- **Current status:** TESTING on `P1-pre`; cross-owner consumers pending
+- **Current status:** TESTING after `c2bbce5`; P2/P3 producer integration is green and P4 consumers remain
 - **Purpose:** Carry gameplay outcomes to state, score/lives/progression, HUD, and Audio consumers without transferring ownership or causing reentrant state destruction.
-- **Exact current behavior:** `GameEventMediator` now queues typed value events, bounds duplicate history, dispatches listeners deterministically, and uses lifetime-guarded RAII subscriptions; P2/P3/P4 hookups remain absent.
+- **Exact current behavior:** `GameEventMediator` queues typed value events, bounds duplicate history, dispatches listeners deterministically, and uses lifetime-guarded RAII subscriptions. `GameState` now binds P2's score/coin/lives/death/completion callbacks and flushes the queued events after the P2 update returns; P4 HUD/audio/persistence listeners remain absent.
 - **Missing behavior checklist:** [x] typed death event with affected player identity/reference valid only during dispatch; [x] level-completed event; [x] score delta; [x] coin delta; [x] lives change; [x] audio cue; [x] subscribe/unsubscribe lifetime; [x] deterministic dispatch order; [x] bounded duplicate suppression at the event boundary; [x] deferred dispatch for transition-causing consumers; [x] safe no-listener behavior.
 - **Exact target files:** `include/Core/GameEventMediator.hpp`; `src/Core/GameEventMediator.cpp`; planned `tests/Person1StateFlowContracts.cpp`.
 - **Allowed edit files:** exact target files only.
 - **Read-only dependency files:** `LevelManager.hpp`, `PlayerManager.hpp`, `UserData.hpp`, `AudioSystem.hpp`, `LevelGUI.hpp`, GameState/menu files.
 - **Do not implement:** P2 collision/death/completion detection; P3 outcome calculation; P4 score storage, HUD, audio playback, save/load; a service locator; global owning pointers.
-- **Dependencies:** canonical contract cards can be specified now; concrete provider/consumer integration depends on P2/P3/P4 tasks.
+- **Dependencies:** P2/P3 producer integration is present; full task completion still depends on P4 HUD/audio/persistence consumers and visual/gameplay acceptance.
 - **Contracts provided:** P1 routing/timing in `CON-P1-P2-DEATH`, `CON-P1-P2-COMPLETION`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-HUD-DATA`, `CON-P1-P4-AUDIO-EVENTS`, `CON-P1-P4-PROGRESSION`.
 - **Contracts consumed:** P2 affected-player/completion callbacks; P3 item/enemy outcomes; P4 consumer APIs.
 - **Group5 reference if useful:** none is needed; Group4 already has callback boundaries.
@@ -217,7 +226,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Implementation notes:** use a small explicit event surface. If callbacks are used, return/disconnect tokens or bind subscriber lifetime to GameState. Queue transition-causing outcomes until the frame finishes.
 - **SFML 3.1 notes:** mediator is SFML-independent unless a P4-approved audio identifier type requires otherwise.
 - **Compile checks:** syntax check both mediator files and contract test against all consumer forward declarations; prevent circular includes.
-- **Runtime checks:** zero/one/multiple listeners; unsubscribe; listener removed before dispatch; exactly-once death/completion; score/coin events preserve values; queued transition after dispatch.
+- **Runtime checks:** zero/one/multiple listeners; unsubscribe; listener removed before dispatch; score/coin values cross the real P2 callback bridge; pit death emits once across repeated frames; queued transition timing remains after the P2 update.
 - **Visual checks:** HUD refresh and audio cue are checked by P4 integration; record linked evidence, not source-only completion.
 - **Gameplay checks:** one collected coin increments once; one death decrements lives once; one flag completion transitions once.
 - **Definition of done:** event directions and timing match canonical contracts; lifetime checks pass; no reentrant state deletion; all linked consumer integrations and dimensions are recorded separately.
@@ -291,28 +300,28 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`; lifetime/load safety is `IMPLIED_BY_CURRENT_GROUP4_DESIGN`
-- **Current status:** BLOCKED
+- **Current status:** IN_PROGRESS after `c2bbce5`; injected runtime slice is green while production selection/load routing and P4 transitions remain blocked
 - **Purpose:** Own a playable session, select exactly one active stage, bind players/callbacks, and run safe event-update-render transitions.
-- **Exact current behavior:** `GameState` is empty. There is no active player owner, active `LevelManager`, load call/result, callback wiring, pause/death/win routing, or game render path.
-- **Missing behavior checklist:** [ ] receive validated session selection; [ ] own exactly one active level; [ ] hold selected players according to `DEC-PLAYER-OWNER`; [ ] pass non-owning player views; [ ] consume explicit load result/error; [ ] reject update on failed load; [ ] bind mediator/death/completion callbacks; [ ] poll player input once; [ ] deterministic update order; [ ] render level, players if not P2-rendered by contract, then HUD; [ ] defer state replacement until update returns; [ ] clear callbacks/views before destruction/reload; [ ] pause/death/win requests.
+- **Exact current behavior:** `GameState` receives validated stage values plus move-only player/level owners, injects one borrowed player view, rejects unloaded/invalid worlds, binds all P2 result callbacks, calls P2 update/render once, flushes mediator events after update, restores the UI view after camera render, adopts P3 fire requests through P2, and clears callbacks/views before level-then-player teardown. Production selection/stage construction and P4 transition screens are not connected.
+- **Missing behavior checklist:** [ ] receive the production selection route; [x] own exactly one active level; [x] hold the selected player according to `DEC-PLAYER-OWNER`; [x] pass non-owning player views; [x] consume explicit load readiness/error; [x] reject update on failed load; [x] bind mediator/death/completion/score/coin/lives callbacks; [x] poll player input once through P2's single player update plus edge-triggered fire handoff; [x] deterministic update then mediator-flush order; [x] render level and P2-rendered player, then restore the UI view; [x] keep StateStack replacement deferred until update returns; [x] clear callbacks/views before destruction; [ ] implement pause/death/win state requests.
 - **Exact target files:** `include/States/Base/GameState.hpp`; `src/States/Base/GameState.cpp`; planned P1 contract/smoke tests.
 - **Allowed edit files:** exact target files; other P1 surfaces only in their own cards.
 - **Read-only dependency files:** P2 `LevelManager.*` and stage headers; P3 player headers; P4 GUI/HUD/UserData/Audio headers.
 - **Do not implement:** stage loading internals/path fallback, map parsing, physics, player internals, block/entity rendering internals, HUD, audio, persistence, or cross-owner resets.
-- **Dependencies:** `P1-APP-001`, `P1-STATE-001`, `P1-SELECT-001`, `P1-EVENT-001`; P2 active-level/load contracts; resolved P3 ownership and asset-root decisions via their implementation tasks.
+- **Dependencies:** the injected P2/P3 ownership/event slice consumes stable APIs now; the production route still needs `P1-SELECT-001`, P2's packaged asset-root load/stage provider, and P4 GUI/progression consumers.
 - **Contracts provided:** runtime-owner side of `CON-P1-P2-ACTIVE-LEVEL`, `CON-P1-P3-PLAYER-OWNERSHIP`; state-consumer side of death/completion/HUD/audio contracts.
 - **Contracts consumed:** `CON-P1-P2-LEVEL-LOAD`, P2 update/render/callback interfaces, P3 player surface, P4 HUD/audio/UserData surface.
 - **Group5 reference if useful:** update/render sequencing may be compared; Group4 ownership and callbacks remain authoritative.
 - **Do-not-copy warning:** no raw active-level/player ownership, fixed map dimensions, working-directory hacks, or LLM/chat wiring.
 - **Implementation notes:** perform callbacks as signals only and queue state mutations. Load first, check success, then enter gameplay. Keep one canonical session selection; do not infer world/level from asset filenames.
 - **SFML 3.1 notes:** pass `sf::RenderTarget`/views using current SFML 3 APIs; use seconds as `float` only at existing runtime boundaries.
-- **Compile checks:** syntax check GameState with every P1 state and P2/P3/P4 public header; direct link smoke after providers land.
-- **Runtime checks:** successful and failed load; exactly one level owner; repeated enter/exit/restart; callback during update; P2 borrowed views cleared before player teardown; no update after load failure.
+- **Compile checks:** `SuperMario` and all retained P2/P3 test targets build with GameState linked.
+- **Runtime checks:** successful and failed readiness; exactly one level/player owner; callback during update followed by deferred flush; score/coin/death values; P2 borrowed views cleared before player teardown; no update after load failure; exact update/render counts; fire request adoption/cooldown. Repeated restart remains pending.
 - **Visual checks:** level and players visible; HUD drawn in screen view; failed-load screen/message visible without empty gameplay.
 - **Gameplay checks:** one representative level supports input -> physics -> render -> one Block interaction -> one enemy interaction -> one item -> death/restart -> completion/transition.
 - **Definition of done:** full vertical slice runs from production state flow, failure paths are safe, lifetime/update order checks pass, and integration/runtime/visual/gameplay dimensions each cite evidence.
 - **Suggested commit message:** `person1: orchestrate active gameplay state safely`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [ ] because production selection/transitions remain; INTEGRATION_DONE [ ] because P4 and packaged P2 load remain; RUNTIME_TESTED [x] for the injected ownership/update/render/event/fire slice; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
 
 ### P1-CAMERA-001 — Clamped camera
 
@@ -321,10 +330,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `IMPLIED_BY_CURRENT_GROUP4_DESIGN`
-- **Current status:** IN_PROGRESS on `P1-pre` for isolated clamp math; GameState integration remains BLOCKED
+- **Current status:** TESTING after `c2bbce5`; source/runtime integration passes and visual gameplay/HUD acceptance remains
 - **Purpose:** Follow active players while clamping the world view to P2-reported dynamic pixel extent and keeping HUD screen-relative.
-- **Exact current behavior:** `GameState::buildClampedCamera` validates copied pixel bounds/viewport values and clamps or centers both axes without a hard-coded map width. It is not yet connected to an active level/player or render/HUD views.
-- **Missing behavior checklist:** [ ] query the active level's world pixel bounds (pure value consumer exists); [ ] choose active-player focus under approved 1P policy; [x] horizontal clamp; [x] vertical clamp; [x] world narrower than viewport; [x] immediate snap/no smoothing state; [x] no smoothing required for the minimum correct camera; [ ] render world with camera; [ ] restore default/HUD view; [x] viewport-size input supports resize recalculation.
+- **Exact current behavior:** `GameState::buildClampedCamera` validates copied pixel bounds/viewport values and clamps or centers both axes without a hard-coded map width. The render path now queries the active P2 level extent, focuses the owned 1P hitbox center, renders P2 under the gameplay view, and restores the exact prior view for P4 HUD use.
+- **Missing behavior checklist:** [x] query the active level's world pixel bounds; [x] choose the owned active 1P player focus; [x] horizontal clamp; [x] vertical clamp; [x] world narrower than viewport; [x] immediate snap/no smoothing state; [x] no smoothing required for the minimum correct camera; [x] render world with camera; [x] restore default/HUD view; [x] viewport-size input supports resize recalculation.
 - **Exact target files:** `include/States/Base/GameState.hpp`; `src/States/Base/GameState.cpp`; planned P1 smoke/contract test.
 - **Allowed edit files:** exact target files only.
 - **Read-only dependency files:** P2 `LevelManager.hpp`, `MapManager.hpp`; P3 `PlayerManager.hpp`; P4 `LevelGUI.hpp`.
@@ -337,12 +346,12 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Implementation notes:** clamp from extent supplied in pixels. For narrow worlds, center rather than producing a negative clamp interval. If smoothing is added, snap after respawn and cap time-step effects; start with the minimum correct camera.
 - **SFML 3.1 notes:** construct `sf::View` with SFML 3 rectangle/vector APIs and restore the intended view explicitly before HUD drawing.
 - **Compile checks:** syntax check GameState and camera-specific check against SFML 3.1.
-- **Runtime checks:** narrow/equal/wide world; far left/right players; resize; 1P/2P focus; respawn snap; no view beyond bounds.
+- **Runtime checks:** narrow/equal/wide world; far left/right 1P focus; viewport-size input; no view beyond bounds; exact prior-view restoration.
 - **Visual checks:** no void revealed outside world bounds; no HUD drift/scale; movement does not visibly jitter at normal frame rates.
 - **Gameplay checks:** player remains trackable from spawn to flag in one representative wide level and one narrow-bound fixture.
 - **Definition of done:** no hard-coded map width, all edge cases pass, HUD view is restored, and linked visual/gameplay evidence is attached.
 - **Suggested commit message:** `person1: clamp gameplay camera to dynamic world extent`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [x] for clamp math; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [x]; INTEGRATION_DONE [x] for P2 extent/P3 1P focus and render-view restoration; RUNTIME_TESTED [x]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
 
 ### P1-DEATH-001 — Death/lives/restart/Game Over
 
@@ -353,8 +362,8 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Requirement class:** `REQUIRED_BY_PLAN`; pit lifecycle is `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; policy is `NEEDS_HUMAN_DECISION`
 - **Current status:** BLOCKED
 - **Purpose:** Convert an affected-player death notification into exactly one lives change and the approved respawn, restart, or Game Over flow.
-- **Exact current behavior:** `DeathMenuState` and GameState are empty. P2 exposes a `PlayerCallback` death boundary, but no P1 consumer or lives/reset transition exists.
-- **Missing behavior checklist:** [ ] receive affected player identity; [ ] suppress duplicate handling; [ ] apply shared/separate lives rule; [ ] choose surviving-player behavior; [ ] decrement in-memory lives once; [ ] select approved reset/reload/menu transition; [ ] call P3 reset only through contract; [ ] preserve/reset score/power per decision; [ ] Game Over at exact condition; [ ] DeathMenu restart/exit; [ ] clear callbacks before teardown; [ ] emit a stable death/session-change outcome that downstream HUD/persistence may consume later.
+- **Exact current behavior:** `GameState` queues and flushes the affected-player death event after P2 update, with repeated-frame suppression proven by P2 plus the P1 bridge. `DeathMenuState`, lives mutation, reset/reload, and Game Over routing remain absent.
+- **Missing behavior checklist:** [x] receive affected player identity; [x] preserve P2 exactly-once suppression across the queued bridge; [ ] apply the 1P lives rule through P4 storage; [ ] decrement in-memory lives once; [ ] select approved reset/reload/menu transition; [ ] call P3 reset only through contract; [ ] preserve/reset score/power per decision; [ ] Game Over at exact condition; [ ] DeathMenu restart/exit; [x] clear callbacks before teardown; [ ] emit the downstream session-change outcome consumed by HUD/persistence.
 - **Exact target files:** GameState header/source; DeathMenuState header/source; mediator files only through `P1-EVENT-001`; planned P1 tests.
 - **Allowed edit files:** exact P1 targets only.
 - **Read-only dependency files:** P2 LevelManager/hazard/physics; P3 PlayerManager; P4 UserData/HUD/persistence/GUI.
@@ -383,7 +392,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Requirement class:** `REQUIRED_BY_PLAN` and nine-level count `REQUIRED_BY_TEAM`
 - **Current status:** BLOCKED
 - **Purpose:** Turn one level-completion event into in-memory unlock/menu behavior, the correct next stage, or final-game completion, while publishing a stable outcome for later persistence.
-- **Exact current behavior:** `WinMenuState` and GameState are empty. P2 has a completion callback boundary, but no consumer. No progression is connected to UserData or persistence.
+- **Exact current behavior:** `GameState` binds P2's one-shot completion callback and queues the current validated world/level through the mediator after update. `WinMenuState`, progression mutation, next/final routing, and P4 persistence remain absent.
 - **Missing behavior checklist:** [ ] exactly-once completion handling; [ ] freeze/finish current gameplay safely; [ ] show WinMenu; [ ] update the in-memory unlocked successor; [ ] emit a stable completion/progression outcome for later persistence; [ ] retry/select/next controls; [ ] `Wn_L1 -> Wn_L2 -> Wn_L3`; [ ] `W1_L3 -> W2_L1`; [ ] `W2_L3 -> W3_L1`; [ ] `W3_L3 -> final completion`, never W4; [ ] load failure route; [ ] preserve selected session as agreed.
 - **Exact target files:** GameState header/source; WinMenuState header/source; selection menus only under `P1-SELECT-001`; planned P1 tests.
 - **Allowed edit files:** exact P1 targets only.
