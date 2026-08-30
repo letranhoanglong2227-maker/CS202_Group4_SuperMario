@@ -25,21 +25,26 @@ public:
     virtual ~Block();
 };
 
+#include "Core/AssetResolver.hpp"
+
 class TextureBlockManager{
 private:
     inline static sf::Texture blocksTexture;
 public:
     static bool setupTexture(){
-        bool loadOk = blocksTexture.loadFromFile("assets/textures/Items_Blocks.png");
-        if (!loadOk) {
-            loadOk = blocksTexture.loadFromFile(
-                "../assets/textures/Items_Blocks.png");
+        try {
+            auto path = AssetResolver::resolve("assets/textures/Items_Blocks.png");
+            bool loadOk = blocksTexture.loadFromFile(path.string());
+            if(loadOk){
+                std::cout << "File loaded!...\n";
+            } else {
+                std::cout << "File not found!...\n";
+            }
+            return loadOk;
+        } catch (const std::exception& e) {
+            std::cerr << "Asset error: " << e.what() << "\n";
+            return false;
         }
-        if(loadOk){
-            std::cout << "File loaded!...\n";
-        } else
-            std::cout << "File not found!...\n";
-        return loadOk;
     }
 
     static sf::Texture& getBlocksTexture(){

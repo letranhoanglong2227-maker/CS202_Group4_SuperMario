@@ -111,3 +111,19 @@ add_test(NAME Person4AnimationContracts COMMAND Person4AnimationContracts)
 set_tests_properties(Person4AnimationContracts PROPERTIES
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
 )
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/Person1ApplicationSmoke.cpp")
+    add_executable(Person1ApplicationSmoke tests/Person1ApplicationSmoke.cpp ${PERSON2_TEST_SOURCES})
+    target_include_directories(Person1ApplicationSmoke PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    target_link_libraries(Person1ApplicationSmoke PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+    add_test(NAME Person1ApplicationSmoke COMMAND Person1ApplicationSmoke)
+    set_tests_properties(Person1ApplicationSmoke PROPERTIES WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/Person1StateFlowContracts.cpp")
+    add_executable(Person1StateFlowContracts tests/Person1StateFlowContracts.cpp ${PERSON2_TEST_SOURCES})
+    target_include_directories(Person1StateFlowContracts PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    target_link_libraries(Person1StateFlowContracts PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+    add_test(NAME Person1StateFlowContracts COMMAND Person1StateFlowContracts)
+    set_tests_properties(Person1StateFlowContracts PROPERTIES WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+endif()

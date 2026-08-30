@@ -1,0 +1,38 @@
+Hiện team cần bạn ưu tiên các provider mở khóa critical path, theo thứ tự:
+
+1. Shared asset resolver:
+- executable-adjacent
+- dùng std::filesystem
+- không dùng assets/../assets/../../assets fallback
+- missing asset trả lỗi rõ ràng
+- dùng chung được cho P2 map và P3/P4 resource
+- đăng ký thêm Person1StateFlowContracts và Person1ApplicationSmoke vào CTest
+
+Đây chỉ là deliverable nhỏ để mở P2-LOAD, chưa phải làm full P4-PACKAGE.
+
+2. P4-ANIMATION-001:
+- safe missing key/empty frames
+- non-copy/lifetime an toàn
+- test switch animation, missing key và large dt
+- xác nhận chạy với một Player và một Enemy P3
+
+3. P4-GUI-001 minimum slice:
+- control trả value action, không tự đổi State
+- keyboard/mouse/focus
+- one action per input
+- selection, death và win controls trước
+
+4. In-memory progression provider:
+- đúng 9 stage
+- 8 successor và W3_LV3 terminal
+- duplicate completion idempotent
+- chưa làm disk persistence
+
+5. P4-BLOCK-SIZE-001:
+- invariant hiện tại là 64x64
+- sprite bounds = hitbox
+- không scale chồng
+
+Không làm CloudBlock, HUD, leaderboard, full persistence hoặc full package lúc này.
+
+Mỗi task gửi riêng một commit/SHA, clean build và focused test; không sửa file P1/P2/P3.
