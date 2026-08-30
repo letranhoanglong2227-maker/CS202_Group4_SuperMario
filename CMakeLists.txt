@@ -87,3 +87,22 @@ set_tests_properties(Person2RuntimeContracts PROPERTIES
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
 )
 
+# --- P3 Tests ---
+macro(add_p3_test TEST_NAME)
+    add_executable(${TEST_NAME} tests/${TEST_NAME}.cpp ${PERSON2_TEST_SOURCES})
+    target_include_directories(${TEST_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    target_link_libraries(${TEST_NAME} PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+    if(MSVC)
+        target_compile_options(${TEST_NAME} PRIVATE /W4)
+    else()
+        target_compile_options(${TEST_NAME} PRIVATE -Wall -Wextra)
+    endif()
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+    set_tests_properties(${TEST_NAME} PROPERTIES WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+endmacro()
+
+add_p3_test(P3FoundationContracts)
+add_p3_test(P3PlayerContracts)
+add_p3_test(P3EnemyContracts)
+add_p3_test(P3ItemFactoryContracts)
+
