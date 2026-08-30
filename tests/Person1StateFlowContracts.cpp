@@ -1,8 +1,13 @@
 #include "Core/GameEventMediator.hpp"
+#include "Entities/EntityFactory.hpp"
+#include "Entities/Players/PlayerManager.hpp"
+#include "Levels/Managers/LevelManager.hpp"
 #include "States/Base/GameState.hpp"
 #include "States/Base/State.hpp"
 
+#include <SFML/Graphics/RenderTexture.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -70,6 +75,55 @@ public:
 
 private:
     int* m_destructionCount;
+};
+
+class LifetimePlayer final : public PlayerManager {
+public:
+    explicit LifetimePlayer(bool& alive) : PlayerManager(1, "P1 runtime probe"), m_alive(&alive) {
+        *m_alive = true;
+    }
+
+    ~LifetimePlayer() override {
+        *m_alive = false;
+    }
+
+private:
+    bool* m_alive;
+};
+
+class CountingLevel final : public LevelManager {
+public:
+    CountingLevel(bool& playerAliveAtLevelDestruction, bool& borrowedViewsCleared)
+        : m_playerAliveAtLevelDestruction(&playerAliveAtLevelDestruction),
+          m_borrowedViewsCleared(&borrowedViewsCleared) {}
+
+    ~CountingLevel() override {
+        *m_playerAliveAtLevelDestruction = *m_playerAlive;
+        *m_borrowedViewsCleared = getPlayers().empty();
+    }
+
+    bool prepare(PlayerManager& player, bool& playerAlive) {
+        m_playerAlive = &playerAlive;
+        return load("assets/textures/LevelSketch_W1_LV1.png", {&player});
+    }
+
+    void update(float deltaSeconds) override {
+        ++updateCalls;
+        LevelManager::update(deltaSeconds);
+    }
+
+    void render(sf::RenderTarget* target) override {
+        ++renderCalls;
+        LevelManager::render(target);
+    }
+
+    int updateCalls{};
+    int renderCalls{};
+
+private:
+    bool* m_playerAlive{};
+    bool* m_playerAliveAtLevelDestruction;
+    bool* m_borrowedViewsCleared;
 };
 
 void stateStackContract() {
@@ -213,12 +267,101 @@ void cameraContract() {
     assert(!GameState::buildClampedCamera(
         {0.f, 0.f}, {0.f, 600.f}, sf::FloatRect({0.f, 0.f}, {800.f, 600.f})));
 }
+
+void gameStateRuntimeContract() {
+    bool playerAlive{};
+    bool playerAliveAtLevelDestruction{};
+    bool borrowedViewsCleared{};
+
+    {
+        StateStack stack(StateContext{nullptr});
+        auto player = std::make_unique<LifetimePlayer>(playerAlive);
+        auto level = std::make_unique<CountingLevel>(
+            playerAliveAtLevelDestruction, borrowedViewsCleared);
+        CountingLevel* levelProbe = level.get();
+        assert(level->prepare(*player, playerAlive));
+
+        auto game = std::make_unique<GameState>(
+            stack, stack.context(), 1, 1, std::move(player), std::move(level));
+        GameState* gameProbe = game.get();
+        assert(gameProbe->isReady());
+        assert(gameProbe->loadError().empty());
+
+        int deathEvents{};
+        int scoreDelta{};
+        int coinDelta{};
+        const PlayerManager* affectedPlayer{};
+        auto subscription = gameProbe->events().subscribe([&](const GameEvent& event) {
+            if (const auto* death = std::get_if<PlayerDiedEvent>(&event)) {
+                ++deathEvents;
+                affectedPlayer = death->player;
+            } else if (const auto* score = std::get_if<ScoreChangedEvent>(&event)) {
+                scoreDelta += score->delta;
+            } else if (const auto* coin = std::get_if<CoinCollectedEvent>(&event)) {
+                coinDelta += coin->delta;
+            }
+        });
+
+        const sf::Vector2f playerPosition =
+            gameProbe->activePlayer().hitbox.getGlobalBounds().position;
+        gameProbe->activeLevel().addEntity(EntityFactory::createItem("Coin", playerPosition));
+
+        gameProbe->activePlayer().setFire(true);
+        const std::size_t entityCount = gameProbe->activeLevel().getEntities().size();
+        gameProbe->handleEvent(sf::Event(
+            sf::Event::KeyPressed{sf::Keyboard::Key::A}));
+        gameProbe->handleEvent(sf::Event(
+            sf::Event::KeyPressed{sf::Keyboard::Key::K}));
+        assert(gameProbe->activeLevel().getEntities().size() == entityCount + 1);
+        gameProbe->handleEvent(sf::Event(
+            sf::Event::KeyPressed{sf::Keyboard::Key::K}));
+        assert(gameProbe->activeLevel().getEntities().size() == entityCount + 1);
+
+        stack.pushInitial(std::move(game));
+        stack.update(0.016f);
+        assert(levelProbe->updateCalls == 1);
+        assert(scoreDelta == 200);
+        assert(coinDelta == 1);
+
+        const sf::FloatRect world = *gameProbe->activeLevel().getWorldBounds();
+        gameProbe->activePlayer().setPosition(
+            {world.position.x, world.position.y + world.size.y + 65.f});
+        stack.update(0.016f);
+        stack.update(0.016f);
+        assert(levelProbe->updateCalls == 3);
+        assert(deathEvents == 1);
+        assert(affectedPlayer == &gameProbe->activePlayer());
+
+        sf::RenderTexture target({320u, 180u});
+        const sf::View originalView = target.getView();
+        stack.render(target);
+        assert(levelProbe->renderCalls == 1);
+        assert(target.getView().getCenter() == originalView.getCenter());
+        assert(target.getView().getSize() == originalView.getSize());
+        subscription.disconnect();
+    }
+
+    assert(playerAliveAtLevelDestruction);
+    assert(borrowedViewsCleared);
+    assert(!playerAlive);
+
+    StateStack failedStack(StateContext{nullptr});
+    auto failedGame = std::make_unique<GameState>(
+        failedStack, failedStack.context(), 1, 1,
+        std::make_unique<PlayerManager>(), std::make_unique<LevelManager>());
+    GameState* failedProbe = failedGame.get();
+    failedStack.pushInitial(std::move(failedGame));
+    assert(!failedProbe->isReady());
+    assert(!failedProbe->loadError().empty());
+    failedStack.update(0.016f);
+}
 }
 
 int main() {
     stateStackContract();
     mediatorContract();
     cameraContract();
+    gameStateRuntimeContract();
     std::cout << "Person 1 state/event contracts passed\n";
     return 0;
 }
