@@ -8,20 +8,20 @@ Update the checkbox dimensions only after attaching evidence in the task card or
 
 | P1 production component / file | Disposition | Task(s) | Current status | SOURCE_DONE | INTEGRATION_DONE | RUNTIME_TESTED | VISUALLY_VERIFIED | GAMEPLAY_VERIFIED |
 |---|---|---|---|---|---|---|---|---|
-| `src/main.cpp` | TASK | `P1-APP-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `include/Core/MyApp.hpp` | TASK | `P1-APP-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
-| planned `src/Core/MyApp.cpp` (currently missing) | TASK | `P1-APP-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `src/main.cpp` | TASK | `P1-APP-001` | DONE on `P1-pre` | [x] | [x] | [x] | [x] | [x] |
+| `include/Core/MyApp.hpp` | TASK | `P1-APP-001` | DONE on `P1-pre` | [x] | [x] | [x] | [x] | [x] |
+| `src/Core/MyApp.cpp` | TASK | `P1-APP-001` | DONE on `P1-pre` | [x] | [x] | [x] | [x] | [x] |
 | `include/Core/stdafx.hpp` | NO_CHANGE | none | DONE for present empty compatibility TU; do not use as a dumping ground | [x] | [x] | [x] syntax | n/a | n/a |
 | `src/Core/stdafx.cpp` | NO_CHANGE | none | DONE for present empty compatibility TU | [x] | [x] | [x] syntax | n/a | n/a |
-| `include/Core/GameEventMediator.hpp` | TASK | `P1-EVENT-001` | READY | [ ] | [ ] | [ ] | n/a | [ ] |
-| `src/Core/GameEventMediator.cpp` | TASK | `P1-EVENT-001` | READY | [ ] | [ ] | [ ] | n/a | [ ] |
-| `include/States/Base/State.hpp` | TASK | `P1-STATE-001` | READY | [ ] | [ ] | [ ] | n/a | [ ] |
-| `src/States/Base/State.cpp` | TASK | `P1-STATE-001` | READY | [ ] | [ ] | [ ] | n/a | [ ] |
-| `include/States/Base/GameState.hpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `src/States/Base/GameState.cpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `include/States/Menus/MainMenuState.hpp`, `src/States/Menus/MainMenuState.cpp` | TASK | `P1-MENU-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `include/States/Menus/EnterNameState.hpp`, `src/States/Menus/EnterNameState.cpp` | TASK | `P1-MENU-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `include/States/Menus/SettingState.hpp`, `src/States/Menus/SettingState.cpp` | TASK | `P1-MENU-001` | READY | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `include/Core/GameEventMediator.hpp` | TASK | `P1-EVENT-001` | TESTING; consumer integration pending | [x] | [ ] | [x] | n/a | [ ] |
+| `src/Core/GameEventMediator.cpp` | TASK | `P1-EVENT-001` | TESTING; consumer integration pending | [x] | [ ] | [x] | n/a | [ ] |
+| `include/States/Base/State.hpp` | TASK | `P1-STATE-001` | DONE on `P1-pre` | [x] | [x] | [x] | n/a | [x] |
+| `src/States/Base/State.cpp` | TASK | `P1-STATE-001` | DONE on `P1-pre` | [x] | [x] | [x] | n/a | [x] |
+| `include/States/Base/GameState.hpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS for isolated camera clamp; remaining GameState work BLOCKED | [ ] | [ ] | [x] camera | [ ] | [ ] |
+| `src/States/Base/GameState.cpp` | TASK | `P1-GAME-001`, `P1-CAMERA-001`, `P1-DEATH-001`, `P1-WIN-001`, `P1-PAUSE-001` | IN_PROGRESS for isolated camera clamp; remaining GameState work BLOCKED | [ ] | [ ] | [x] camera | [ ] | [ ] |
+| `include/States/Menus/MainMenuState.hpp`, `src/States/Menus/MainMenuState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; P4 routes pending | [ ] | [ ] | [x] | [x] | [ ] |
+| `include/States/Menus/EnterNameState.hpp`, `src/States/Menus/EnterNameState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; profile handoff pending | [ ] | [ ] | [x] | [x] | [ ] |
+| `include/States/Menus/SettingState.hpp`, `src/States/Menus/SettingState.cpp` | TASK | `P1-MENU-001` | IN_PROGRESS UI preview; AudioSystem pending | [ ] | [ ] | [x] | [x] | [ ] |
 | `include/States/Menus/MenuCharacterSelectionState.hpp`, `src/States/Menus/MenuCharacterSelectionState.cpp` | TASK | `P1-SELECT-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
 | `include/States/Menus/MenuWorldState.hpp`, `src/States/Menus/MenuWorldState.cpp` | TASK | `P1-SELECT-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
 | `include/States/Menus/MenuLevelState.hpp`, `src/States/Menus/MenuLevelState.cpp` | TASK | `P1-SELECT-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
@@ -30,34 +30,45 @@ Update the checkbox dimensions only after attaching evidence in the task card or
 | `include/States/Menus/PauseMenuState.hpp`, `src/States/Menus/PauseMenuState.cpp` | TASK | `P1-PAUSE-001` | BLOCKED | [ ] | [ ] | [ ] | [ ] | [ ] |
 | `include/States/Menus/LeaderboardState.hpp`, `src/States/Menus/LeaderboardState.cpp` | EXCLUDED from P1 implementation; P4-owned | P4 board task | DEFERRED for P1 | n/a | n/a | n/a | n/a | n/a |
 
-P1 task totals: 10 remaining tasks; 4 READY; 6 BLOCKED; 8 P0; 2 P1; 0 P2; 0 P3. There is no P1 verified baseline implementation task. The two `stdafx` files are explicitly `NO_CHANGE`, not a completed application feature.
+P1 task checkpoint on `P1-pre`: 10 planned tasks; 2 DONE; 1 TESTING; 2 IN_PROGRESS; 5 BLOCKED; 8 P0; 2 P1. The two `stdafx` files remain explicitly `NO_CHANGE`, not application features.
+
+### 1.1 `P1-pre` implementation evidence — 2026-08-30
+
+- `P1-STATE-001` and `P1-APP-001` are complete for their present definitions: production `main` enters `MyApp`, the SFML 3.1 loop owns a queued `StateStack`, and every state has one `std::unique_ptr` owner.
+- `P1-EVENT-001` source and focused runtime behavior are complete; P2/P3/P4 producer/consumer hookups remain unchecked, so the task is `TESTING`, not `DONE`.
+- `P1-MENU-001` has a visually verified, keyboard/mouse-operable Main/Name/Settings preview. Leaderboard, profile storage, AudioSystem controls, and character-selection continuation remain visibly disabled/pending rather than duplicated in P1 code.
+- The independently safe part of `P1-CAMERA-001` now clamps a viewport against a copied dynamic `sf::FloatRect`; GameState render application, HUD-view restoration, player focus policy, and gameplay proof remain blocked.
+- Focused command: `g++ ... tests/Person1StateFlowContracts.cpp ... && build-p1-pre/Person1StateFlowContracts.exe` reports `Person 1 state/event contracts passed`; it covers push/pop/replace/quit, duplicate transition rejection, exact destruction counts, mediator ordering/dedup/unsubscribe/lifetime/exception cleanup, and camera narrow/equal/wide edge cases.
+- Full CMake/Ninja build links `SuperMario` and `Person2RuntimeContracts` against installed SFML 3.1; `ctest --test-dir build-p1-pre --output-on-failure` passes `1/1` P2 regression tests.
+- `tests/Person1ApplicationSmoke.cpp` renders and saves `P1MainMenuPreview.png`, `P1EnterNamePreview.png`, and `P1SettingsPreview.png`; all three were inspected after the final layout pass. Production `SuperMario.exe` also launched and closed cleanly.
+- GCC sanitizer runtimes (`libasan`/`libubsan`) are unavailable in the installed MinGW toolchain. Leak risk is instead covered here by unique ownership, RAII subscriptions with mediator lifetime guards, bounded event-ID history, no owning raw pointer/manual `new`/`delete`, and exact destructor-count checks; a sanitizer run remains a release-machine follow-up rather than a claimed pass.
 
 ## 2. Exact current baseline
 
-- `src/main.cpp` is an interactive normal-Brick demonstration. It opens an 800x600 window, owns `Brick` and spawned objects through a global `std::vector<GameObject*>`, simulates a bottom collision on Space, and deletes those raw pointers at exit. It does not construct `MyApp`, a `State`, a player, or a level.
-- `include/Core/MyApp.hpp` declares `MyApp()`, `run()`, and private `processEvents()`, `update()`, and `render()` around an `sf::RenderWindow`. There is no `src/Core/MyApp.cpp`, no state stack, and no delta-time parameter on `update()`.
-- `State`, `GameState`, `GameEventMediator`, and every P1-owned menu are empty class shells; their `.cpp` files only include the matching header.
-- No production P1 code calls `LevelManager::load`, `setPlayers`, `setLevelCompletedCallback`, `setPlayerDeathCallback`, `update`, or `render`. There is no camera code.
+- On `P1-pre`, `src/main.cpp` constructs `MyApp`; the former raw-pointer Brick demo and its manual deletes are removed from production startup.
+- `MyApp` now owns one SFML 3.1 window and one `StateStack`, bounds delta time, forwards each event once, and closes safely on window close, queued quit, or an empty stack.
+- `State`/`StateStack` and `GameEventMediator` have implemented, focused-test-covered source. Main/Name/Settings are functional visual previews; the remaining P1-owned states are still shells.
+- No production P1 code yet calls `LevelManager::load`, `setPlayers`, callbacks, `update`, or `render`. A tested pure clamped-camera builder exists, but active-level query, player focus, world-view application, and HUD restoration remain pending GameState integration.
 - The P2 level runtime already owns map/runtime objects with `std::unique_ptr` and deliberately borrows `PlayerManager*` views. P1 must not replace that ownership model or transfer map-object implementation ownership.
 - `ConfiguredLevel` currently hides load failure and requests `assets/levels/...` while the named files are under `assets/textures`. P1 must wait for the P2 load/readiness contract; P1 must not compensate with a second path heuristic.
 - `UserData` has in-memory getters and mutation methods, but P4 owns it and persistence. P1 may consume the agreed API only.
-- All current production translation units passed direct C++20/SFML 3.1 syntax checking at audit time. The standard CMake build is separately blocked by the workspace-space `windres` issue and pins SFML 3.0.0; that is not a P1 source failure.
+- All current production translation units build and link through CMake/Ninja against installed SFML 3.1 on `P1-pre`; the existing P2 CTest target remains green.
 - No map PNG was opened or re-audited for this plan. Exactly nine level identities are in scope: `W1_LV1` through `W3_LV3`; map-data editing remains user-owned.
 - Group5 is reference-only. Its raw-pointer/state architecture and LLM/Ollama/chat feature must not enter Group4.
 
-## 3. Remaining tasks in dependency order
+## 3. Task checkpoint in dependency order
 
 | Order | Task | Status | Priority | Start/finish gate |
 |---:|---|---|---|---|
-| 1 | `P1-STATE-001` State base and stack lifecycle | READY | P0 | No cross-owner start gate; finish with runnable transition checks |
-| 2 | `P1-APP-001` Production application entry / MyApp | READY | P0 | Integrates after `P1-STATE-001` source surface is stable |
-| 3 | `P1-EVENT-001` GameEventMediator event bridge | READY | P0 | Contract names are stable; provider hookups land later |
+| 1 | `P1-STATE-001` State base and stack lifecycle | DONE | P0 | Focused transition/lifetime checks pass |
+| 2 | `P1-APP-001` Production application entry / MyApp | DONE | P0 | Full target links; launch/close and rendered initial-state smoke pass |
+| 3 | `P1-EVENT-001` GameEventMediator event bridge | TESTING | P0 | Source/focused checks pass; provider/consumer hookups land later |
 | 4 | `P1-SELECT-001` Character/world/level selection and session ownership | BLOCKED | P0 | `DEC-PLAYER-OWNER`; `P3-FACTORY-001`; P4 GUI; current in-memory progression read contract |
 | 5 | `P1-GAME-001` GameState active runtime orchestration | BLOCKED | P0 | selection, P2 load/readiness, active-level and player-ownership contracts |
-| 6 | `P1-CAMERA-001` Clamped camera | BLOCKED | P0 | P2 world-extent/camera contract and running GameState |
+| 6 | `P1-CAMERA-001` Clamped camera | IN_PROGRESS | P0 | Clamp math passes; active GameState render/HUD integration remains blocked |
 | 7 | `P1-DEATH-001` Death/lives/restart/Game Over | BLOCKED | P0 | `DEC-MULTIPLAYER-DEATH`, `DEC-RESPAWN`, P2 death, P3 reset, and P4 GUI |
 | 8 | `P1-WIN-001` Completion/unlock/next/final flow | BLOCKED | P0 | P2 completion, current in-memory progression contract, and P4 GUI; durable persistence is downstream P1 work |
-| 9 | `P1-MENU-001` Main/name/settings menu navigation | READY | P1 | Navigation source can proceed in parallel; final visual completion consumes P4 GUI/Audio |
+| 9 | `P1-MENU-001` Main/name/settings menu navigation | IN_PROGRESS | P1 | Main/Name/Settings preview works; final routes consume P4 GUI/Audio/profile services |
 | 10 | `P1-PAUSE-001` Pause/resume/restart/exit | BLOCKED | P1 | stable state stack/GameState; restart semantics aligned with `DEC-RESPAWN` |
 
 Do not change a BLOCKED task to READY merely because a recommended default exists. Record the decision or provider evidence in `01_MASTER_TASK_BOARD.md`, then update both documents in the same planning commit.
@@ -130,10 +141,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`
-- **Current status:** READY
+- **Current status:** DONE on `P1-pre` (2026-08-30)
 - **Purpose:** Provide the smallest safe lifecycle and transition mechanism used by application, menus, and GameState.
-- **Exact current behavior:** `State` is an empty class and `State.cpp` only includes its header; no base lifecycle, shared context, state ownership, or transition behavior exists.
-- **Missing behavior checklist:** [ ] virtual destructor; [ ] event/input, `update(float)`, and render interface; [ ] state-end/quit signal; [ ] minimal shared non-owning context; [ ] `std::unique_ptr<State>` ownership; [ ] push/pop/replace/quit requests; [ ] requests applied only after the active callback returns; [ ] empty-stack application exit; [ ] no duplicate transition from one event.
+- **Exact current behavior:** `State` exposes the SFML 3 event/update/render interface and a non-owning context; `StateStack` uniquely owns states and applies one queued push/pop/replace/quit only after the active callback returns.
+- **Missing behavior checklist:** [x] virtual destructor; [x] event/input, `update(float)`, and render interface; [x] state-end/quit signal; [x] minimal shared non-owning context; [x] `std::unique_ptr<State>` ownership; [x] push/pop/replace/quit requests; [x] requests applied only after the active callback returns; [x] empty-stack application exit; [x] no duplicate transition from one event.
 - **Exact target files:** `include/States/Base/State.hpp`; `src/States/Base/State.cpp`; planned `tests/Person1StateFlowContracts.cpp`.
 - **Allowed edit files:** the exact target files only.
 - **Read-only dependency files:** `include/Core/MyApp.hpp`; all menu/GameState headers; P4 GUI/UserData headers only after their contracts exist.
@@ -151,7 +162,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Gameplay checks:** menu-to-state transition requests do not double-apply; empty stack exits cleanly.
 - **Definition of done:** all missing-behavior boxes pass; no owning raw pointer; transition checks are runnable; consumer headers compile; all five completion dimensions are recorded accurately.
 - **Suggested commit message:** `person1: add safe state lifecycle and queued transitions`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ] (n/a allowed with evidence); GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [x]; INTEGRATION_DONE [x]; RUNTIME_TESTED [x]; VISUALLY_VERIFIED [n/a]; GAMEPLAY_VERIFIED [x] for the defined menu/state transition scope.
 
 ### P1-APP-001 — Production application entry / MyApp
 
@@ -160,10 +171,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`
-- **Current status:** READY
+- **Current status:** DONE on `P1-pre` (2026-08-30)
 - **Purpose:** Replace the Brick test entry with the production C++20/SFML 3.1 application loop and state owner.
-- **Exact current behavior:** `main.cpp` is a manual Brick test with a global raw-pointer vector; `MyApp.hpp` is declaration-only; `src/Core/MyApp.cpp` is absent.
-- **Missing behavior checklist:** [ ] `main` constructs/runs `MyApp`; [ ] window creation/close path; [ ] SFML 3.1 event polling; [ ] clock and bounded delta time; [ ] unique ownership of state stack; [ ] initial state creation; [ ] input/update/render order; [ ] frame-boundary transitions; [ ] graceful empty-stack/close exit; [ ] no Brick-test globals/manual deletes.
+- **Exact current behavior:** production `main.cpp` constructs `MyApp`; `MyApp.cpp` owns the SFML 3.1 loop, bounded clock step, initial MainMenuState, event forwarding, render order, and safe close paths.
+- **Missing behavior checklist:** [x] `main` constructs/runs `MyApp`; [x] window creation/close path; [x] SFML 3.1 event polling; [x] clock and bounded delta time; [x] unique ownership of state stack; [x] initial state creation; [x] input/update/render order; [x] frame-boundary transitions; [x] graceful empty-stack/close exit; [x] no Brick-test globals/manual deletes.
 - **Exact target files:** `src/main.cpp`; `include/Core/MyApp.hpp`; new `src/Core/MyApp.cpp`; planned `tests/Person1ApplicationSmoke.cpp`.
 - **Allowed edit files:** exact target files plus P1 State header only through a separately tracked `P1-STATE-001` change.
 - **Read-only dependency files:** all concrete state headers; P4 Audio/UserData/GUI headers; `CMakeLists.txt` (P4 packaging owner).
@@ -181,7 +192,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Gameplay checks:** production executable enters the state flow, never the Brick demo.
 - **Definition of done:** production entry uses MyApp; Brick-test ownership is gone; State lifetime test passes; successful clean launch/close evidence is linked; completion dimensions are independent.
 - **Suggested commit message:** `person1: replace brick demo with production app loop`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [x]; INTEGRATION_DONE [x]; RUNTIME_TESTED [x]; VISUALLY_VERIFIED [x]; GAMEPLAY_VERIFIED [x] for production entry into the state flow.
 
 ### P1-EVENT-001 — GameEventMediator event bridge
 
@@ -190,10 +201,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `REQUIRED_BY_PLAN`
-- **Current status:** READY
+- **Current status:** TESTING on `P1-pre`; cross-owner consumers pending
 - **Purpose:** Carry gameplay outcomes to state, score/lives/progression, HUD, and Audio consumers without transferring ownership or causing reentrant state destruction.
-- **Exact current behavior:** `GameEventMediator` is an empty class and its `.cpp` only includes the header; P2 callbacks exist for death/completion but have no P1 consumer.
-- **Missing behavior checklist:** [ ] typed death event with affected player identity/reference valid only during dispatch; [ ] level-completed event; [ ] score delta; [ ] coin delta; [ ] lives change; [ ] audio cue; [ ] subscribe/unsubscribe lifetime; [ ] deterministic dispatch order; [ ] duplicate suppression at the producer/event boundary; [ ] deferred state transition; [ ] safe no-listener behavior.
+- **Exact current behavior:** `GameEventMediator` now queues typed value events, bounds duplicate history, dispatches listeners deterministically, and uses lifetime-guarded RAII subscriptions; P2/P3/P4 hookups remain absent.
+- **Missing behavior checklist:** [x] typed death event with affected player identity/reference valid only during dispatch; [x] level-completed event; [x] score delta; [x] coin delta; [x] lives change; [x] audio cue; [x] subscribe/unsubscribe lifetime; [x] deterministic dispatch order; [x] bounded duplicate suppression at the event boundary; [x] deferred dispatch for transition-causing consumers; [x] safe no-listener behavior.
 - **Exact target files:** `include/Core/GameEventMediator.hpp`; `src/Core/GameEventMediator.cpp`; planned `tests/Person1StateFlowContracts.cpp`.
 - **Allowed edit files:** exact target files only.
 - **Read-only dependency files:** `LevelManager.hpp`, `PlayerManager.hpp`, `UserData.hpp`, `AudioSystem.hpp`, `LevelGUI.hpp`, GameState/menu files.
@@ -211,7 +222,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Gameplay checks:** one collected coin increments once; one death decrements lives once; one flag completion transitions once.
 - **Definition of done:** event directions and timing match canonical contracts; lifetime checks pass; no reentrant state deletion; all linked consumer integrations and dimensions are recorded separately.
 - **Suggested commit message:** `person1: add typed deferred gameplay event bridge`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ] (n/a for mediator alone); GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [x]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [x]; VISUALLY_VERIFIED [n/a]; GAMEPLAY_VERIFIED [ ].
 
 ### P1-MENU-001 — Main/name/settings menu navigation
 
@@ -220,10 +231,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P1
 - **Requirement class:** `REQUIRED_BY_PLAN`
-- **Current status:** READY
+- **Current status:** IN_PROGRESS on `P1-pre`; P4 GUI/Audio/profile routes pending
 - **Purpose:** Implement the state/navigation behavior for first entry, player name, and settings while leaving reusable controls/rendering to P4.
-- **Exact current behavior:** `MainMenuState`, `EnterNameState`, and `SettingState` are empty shells; no menu can be entered or exited.
-- **Missing behavior checklist:** [ ] main menu commands Start/Settings/Leaderboard/Exit; [ ] EnterName input policy and confirmation/cancel; [ ] settings volume request and back navigation; [ ] keyboard focus/navigation; [ ] queued transitions; [ ] empty/invalid name handling; [ ] route Leaderboard to P4-owned state without editing it; [ ] preserve settings/session context across states.
+- **Exact current behavior:** MainMenuState is the visible initial state with keyboard/mouse focus; New Game pushes validated name entry, Settings pushes a dependency-transparent preview, and Escape/Exit use queued transitions. P4-owned Leaderboard, profile, AudioSystem, and reusable GUI handoffs remain pending.
+- **Missing behavior checklist:** [ ] full Main commands (Start/Settings/Exit work; Leaderboard remains disabled pending P4); [ ] full EnterName handoff (input/validation/confirm/cancel work; profile/selection handoff pending); [ ] settings volume request and back navigation (Back works; AudioSystem request pending); [x] keyboard focus/navigation; [x] queued transitions; [x] empty/invalid name handling; [ ] route Leaderboard to P4-owned state without editing it; [ ] preserve settings/session context across states.
 - **Exact target files:** P1-owned header/source pairs for `MainMenuState`, `EnterNameState`, `SettingState`; planned P1 state-flow test.
 - **Allowed edit files:** exact target files; State interface only via `P1-STATE-001`.
 - **Read-only dependency files:** P4 `GUI.*`, `AudioSystem.*`, `UserData.*`, and `LeaderboardState.*`.
@@ -241,7 +252,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Gameplay checks:** Start reaches selection, not a hard-coded level; Leaderboard route enters P4 state; return paths preserve valid session data.
 - **Definition of done:** navigation checks pass, P4 UI is consumed rather than duplicated, accessibility path is verified, and all five dimensions have evidence or remain unchecked.
 - **Suggested commit message:** `person1: implement main name and settings navigation`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [x] for available preview routes; VISUALLY_VERIFIED [x] for Main/Name/Settings preview; GAMEPLAY_VERIFIED [ ].
 
 ### P1-SELECT-001 — Character/world/level selection plus active-player session ownership
 
@@ -310,10 +321,10 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Owner:** Person 1
 - **Priority:** P0
 - **Requirement class:** `IMPLIED_BY_CURRENT_GROUP4_DESIGN`
-- **Current status:** BLOCKED
+- **Current status:** IN_PROGRESS on `P1-pre` for isolated clamp math; GameState integration remains BLOCKED
 - **Purpose:** Follow active players while clamping the world view to P2-reported dynamic pixel extent and keeping HUD screen-relative.
-- **Exact current behavior:** no camera/view code exists in P1. Map width is dynamic; hard-coded 192-tile bounds would be incorrect.
-- **Missing behavior checklist:** [ ] consume world pixel bounds; [ ] choose active-player focus under recorded multiplayer policy; [ ] horizontal clamp; [ ] vertical clamp or explicit fixed vertical framing; [ ] world narrower than viewport; [ ] spawn/respawn snap; [ ] stable smoothing if used; [ ] render world with camera; [ ] restore default/HUD view; [ ] resize handling.
+- **Exact current behavior:** `GameState::buildClampedCamera` validates copied pixel bounds/viewport values and clamps or centers both axes without a hard-coded map width. It is not yet connected to an active level/player or render/HUD views.
+- **Missing behavior checklist:** [ ] query the active level's world pixel bounds (pure value consumer exists); [ ] choose active-player focus under approved 1P policy; [x] horizontal clamp; [x] vertical clamp; [x] world narrower than viewport; [x] immediate snap/no smoothing state; [x] no smoothing required for the minimum correct camera; [ ] render world with camera; [ ] restore default/HUD view; [x] viewport-size input supports resize recalculation.
 - **Exact target files:** `include/States/Base/GameState.hpp`; `src/States/Base/GameState.cpp`; planned P1 smoke/contract test.
 - **Allowed edit files:** exact target files only.
 - **Read-only dependency files:** P2 `LevelManager.hpp`, `MapManager.hpp`; P3 `PlayerManager.hpp`; P4 `LevelGUI.hpp`.
@@ -331,7 +342,7 @@ These outputs implement or consume the canonical contracts named in the task car
 - **Gameplay checks:** player remains trackable from spawn to flag in one representative wide level and one narrow-bound fixture.
 - **Definition of done:** no hard-coded map width, all edge cases pass, HUD view is restored, and linked visual/gameplay evidence is attached.
 - **Suggested commit message:** `person1: clamp gameplay camera to dynamic world extent`
-- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [ ]; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
+- **Completion dimensions:** SOURCE_DONE [ ]; INTEGRATION_DONE [ ]; RUNTIME_TESTED [x] for clamp math; VISUALLY_VERIFIED [ ]; GAMEPLAY_VERIFIED [ ].
 
 ### P1-DEATH-001 — Death/lives/restart/Game Over
 

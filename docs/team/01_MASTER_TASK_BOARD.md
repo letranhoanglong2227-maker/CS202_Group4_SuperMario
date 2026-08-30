@@ -29,16 +29,18 @@ This is the canonical roll-up for task identity, owner, priority, status, execut
 
 | Task | Title | Pri | Requirement | Status | Lane | Blocking dependencies | Primary contracts | Subtask/checklist summary | S/I/R/V/G |
 |---|---|---:|---|---|---|---|---|---|---|
-| `P1-APP-001` | Production application entry and `MyApp` loop | P0 | `REQUIRED_BY_PLAN` | `READY` | `READY_INDEPENDENT` | None | Later consumes active State contract | Implement missing `.cpp`; window/clock/event loop; replace Brick test entry; safe shutdown | 0/0/0/0/0 |
-| `P1-STATE-001` | State base and stack lifecycle | P0 | `REQUIRED_BY_PLAN` | `READY` | `READY_INDEPENDENT` | None | Provides lifecycle used by all P1 states | Virtual input/update/render; deferred push/pop/replace; shared data lifetime; quit semantics | 0/0/0/0/0 |
-| `P1-MENU-001` | Main, name, and settings navigation | P1 | `REQUIRED_BY_PLAN` | `READY` | `READY_INDEPENDENT` | `P1-STATE-001` interface can be drafted concurrently | `CON-P1-P4-GUI`, `CON-P1-P4-AUDIO-EVENTS` | Build navigation model; validate name/settings; consume P4 widgets/audio when available | 0/0/0/0/0 |
+| `P1-APP-001` | Production application entry and `MyApp` loop | P0 | `REQUIRED_BY_PLAN` | `DONE` | `READY_INDEPENDENT` | None | State lifecycle integrated; active gameplay services are later consumers | SFML 3.1 window/clock/event loop; production state entry; safe shutdown; no Brick-demo raw owner | 1/1/1/1/1 |
+| `P1-STATE-001` | State base and stack lifecycle | P0 | `REQUIRED_BY_PLAN` | `DONE` | `READY_INDEPENDENT` | None | Provides lifecycle used by all P1 states | Virtual input/update/render; deferred push/pop/replace; shared non-owning context; unique ownership; quit semantics | 1/1/1/NA/1 |
+| `P1-MENU-001` | Main, name, and settings navigation | P1 | `REQUIRED_BY_PLAN` | `IN_PROGRESS` | `READY_INDEPENDENT` | P4 GUI/Audio/profile routes for completion | `CON-P1-P4-GUI`, `CON-P1-P4-AUDIO-EVENTS` | Visually tested Main/Name/Settings preview; Leaderboard/profile/audio handoffs remain | 0/0/1/1/0 |
 | `P1-SELECT-001` | Character/world/level selection and session ownership | P0 | `REQUIRED_BY_PLAN`; `IMPLIED_BY_CURRENT_GROUP4_DESIGN` | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P3-FACTORY-001`; `P4-GUI-001`; P4 in-memory progression provider checklist | `CON-P1-P3-PLAYER-OWNERSHIP`, `CON-P1-P2-ACTIVE-LEVEL`, `CON-P1-P4-PROGRESSION`, `CON-P1-P4-GUI` | Choose 1P character; create one stable owner; read current in-memory unlock values; select one of exactly nine stage IDs | 0/0/0/0/0 |
 | `P1-GAME-001` | `GameState` active runtime orchestration | P0 | `REQUIRED_BY_PLAN` | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P1-STATE-001`, `P1-SELECT-001`, `P2-LOAD-001`; active-level/load contracts | `CON-P1-P2-ACTIVE-LEVEL`, `CON-P1-P2-LEVEL-LOAD`, `CON-P1-P2-DEATH`, `CON-P1-P2-COMPLETION` | Own level; inject borrowed players; update/render once; surface load error; defer state replacement | 0/0/0/0/0 |
-| `P1-CAMERA-001` | Dynamic clamped gameplay camera | P0 | `IMPLIED_BY_CURRENT_GROUP4_DESIGN` | `READY` | `READY_WITH_STABLE_CONTRACT` | P2 extent provider is available and runtime-tested | `CON-P1-P2-WORLD-EXTENT`, `CON-P1-P2-CAMERA` | Consume `LevelManager::getWorldBounds()`; follow selected target; clamp dynamic/narrow worlds; restore UI view | 0/0/0/0/0 |
-| `P1-EVENT-001` | `GameEventMediator` event bridge | P0 | `REQUIRED_BY_PLAN` | `READY` | `READY_WITH_STABLE_CONTRACT` | Contract cards define payloads; implementations may arrive later | `CON-P1-P2-DEATH`, `CON-P1-P2-COMPLETION`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-HUD-DATA`, `CON-P1-P4-AUDIO-EVENTS` | Typed events; no runtime ownership; exactly-once dispatch; unsubscribe/lifetime rules | 0/0/0/0/0 |
+| `P1-CAMERA-001` | Dynamic clamped gameplay camera | P0 | `IMPLIED_BY_CURRENT_GROUP4_DESIGN` | `IN_PROGRESS` | `READY_WITH_STABLE_CONTRACT` | P2 extent provider is ready; active GameState/player focus/HUD render path remains | `CON-P1-P2-WORLD-EXTENT`, `CON-P1-P2-CAMERA` | Dynamic/narrow/equal clamp math passes; LevelManager query, focus policy, world-view application and UI restore remain | 0/0/1/0/0 |
+| `P1-EVENT-001` | `GameEventMediator` event bridge | P0 | `REQUIRED_BY_PLAN` | `TESTING` | `READY_WITH_STABLE_CONTRACT` | Source/focused checks complete; P2/P3/P4 integrations pending | `CON-P1-P2-DEATH`, `CON-P1-P2-COMPLETION`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-HUD-DATA`, `CON-P1-P4-AUDIO-EVENTS` | Typed queued events; bounded dedup; no runtime ownership; deterministic dispatch; RAII unsubscribe/lifetime rules | 1/0/1/NA/0 |
 | `P1-DEATH-001` | Death, lives, restart, and Game Over flow | P0 | `REQUIRED_BY_PLAN`; `IMPLIED_BY_CURRENT_GROUP4_DESIGN` | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P2-PIT-001`, `P3-PLAYER-RESET-001`, `P4-GUI-001` | `CON-P1-P2-DEATH`, `CON-P1-P3-PLAYER-RESET`, `CON-P1-P4-SCORE-COINS-LIVES`, `CON-P1-P4-GUI` | Consume the single-player death event once; update in-memory lives; return fatal deaths to spawn; preserve position on nonfatal power loss; show deferred DeathMenu/Game Over | 0/0/0/0/0 |
 | `P1-WIN-001` | Completion, unlock, next-level, and final flow | P0 | `REQUIRED_BY_PLAN`; `REQUIRED_BY_TEAM` | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P2-WINFLAG-001`; `P4-GUI-001`; P4 in-memory progression provider checklist | `CON-P1-P2-COMPLETION`, `CON-P1-P4-PROGRESSION`, `CON-P1-P4-GUI` | Exactly-once completion; update next of nine in memory; emit downstream completion event; final-game state; no out-of-range stage | 0/0/0/0/0 |
 | `P1-PAUSE-001` | Pause/resume/restart/exit | P1 | `REQUIRED_BY_PLAN` | `BLOCKED` | `LATE_INTEGRATION` | `P1-STATE-001`, `P1-GAME-001`, approved restart behavior | State lifecycle and death/reset contracts | Freeze gameplay without corrupting clock; resume; safe restart; return to menu | 0/0/0/0/0 |
+
+**P1 evidence update — 2026-08-30 (`P1-pre`):** `SuperMario` and `Person2RuntimeContracts` build/link with C++20/SFML 3.1; P2 CTest remains `1/1` green. `Person1StateFlowContracts` passes queued state ownership/destruction, mediator lifetime/dedup/error cleanup, and camera edge cases. `Person1ApplicationSmoke` renders visually inspected Main/Name/Settings PNGs; production launch/close also exits cleanly. No P1 owning raw pointer or manual allocation remains. The installed MinGW lacks ASan/UBSan runtimes, so sanitizer evidence is explicitly pending a release toolchain rather than claimed.
 
 ## EPIC-P2-WORLD-RUNTIME — Person 2 map, physics, environment, and runtime integration
 
@@ -148,11 +150,15 @@ These are synchronized indexes over the canonical task rows above, not duplicate
 
 ### READY
 
-19 tasks: `P1-APP-001`, `P1-STATE-001`, `P1-MENU-001`, `P1-CAMERA-001`, `P1-EVENT-001`; `P3-FOUNDATION-001`, `P3-PLAYER-VISUAL-001`, `P3-PLAYER-STATE-001`, `P3-PLAYER-RESET-001`, `P3-GOOMBA-001`, `P3-KOOPA-001`, `P3-AIR-HERISS-001`, `P3-BOSS-001`, `P3-FACTORY-001`; `P4-ANIMATION-001`, `P4-BLOCK-SIZE-001`, `P4-QUESTION-BLOCK-001`, `P4-AUDIO-001`, `P4-GUI-001`.
+14 tasks: `P3-FOUNDATION-001`, `P3-PLAYER-VISUAL-001`, `P3-PLAYER-STATE-001`, `P3-PLAYER-RESET-001`, `P3-GOOMBA-001`, `P3-KOOPA-001`, `P3-AIR-HERISS-001`, `P3-BOSS-001`, `P3-FACTORY-001`; `P4-ANIMATION-001`, `P4-BLOCK-SIZE-001`, `P4-QUESTION-BLOCK-001`, `P4-AUDIO-001`, `P4-GUI-001`.
 
 ### IN PROGRESS
 
-None at the planning baseline.
+2 tasks: `P1-MENU-001`, `P1-CAMERA-001`.
+
+### TESTING
+
+1 task: `P1-EVENT-001`.
 
 ### BLOCKED
 
@@ -160,7 +166,7 @@ None at the planning baseline.
 
 ### DONE
 
-7 tasks: `P2-EXTENT-001`, `P2-BOUNDS-001`, `P2-PIT-001`, `P2-LAVA-001`, `P2-ENV-001`, `P2-PROJECTILE-001`, `P2-WINFLAG-001`.
+9 tasks: `P1-APP-001`, `P1-STATE-001`; `P2-EXTENT-001`, `P2-BOUNDS-001`, `P2-PIT-001`, `P2-LAVA-001`, `P2-ENV-001`, `P2-PROJECTILE-001`, `P2-WINFLAG-001`.
 
 ### LATE INTEGRATION
 
