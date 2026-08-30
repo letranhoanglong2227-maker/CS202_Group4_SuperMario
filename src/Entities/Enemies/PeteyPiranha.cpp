@@ -43,8 +43,8 @@ std::optional<ProjectileSpawnRequest> PeteyPiranha::consumePendingProjectile() {
     return res;
 }
 
-EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
-    (void)collisionSide;
+EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
+    (void)kind;
     (void)horizontalDirection;
     if (dead || !emerged) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     

@@ -69,7 +69,7 @@ void PlayerManager::resetForRespawn(const sf::Vector2f& spawnPosition) {
     }
     
     setGrounded(true);
-    isJumping = false;
+    jumping = false;
     
     is_fire = false;
     is_big = false;

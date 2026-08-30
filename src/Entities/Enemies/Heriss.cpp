@@ -21,8 +21,8 @@ Heriss::Heriss(const sf::Vector2f& pos)
     }
 }
 
-EnemyContactOutcome Heriss::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
-    (void)collisionSide;
+EnemyContactOutcome Heriss::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
+    (void)kind;
     (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     

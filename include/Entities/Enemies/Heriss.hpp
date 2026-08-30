@@ -8,7 +8,7 @@ public:
     ~Heriss() override = default;
 
     void onStomped() override;
-    EnemyContactOutcome handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection = 0.f) override;
+    EnemyContactOutcome handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection = 0.f) override;
     void updateAnimation(float dt) override;
     void update(float dt) override;
 };

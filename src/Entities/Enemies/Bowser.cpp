@@ -30,7 +30,6 @@ bool Bowser::isBreathingFire() const {
 
 void Bowser::breatheFire() {
     breathingFire = true;
-    fireTimer = 0.f;
 }
 
 void Bowser::jumpSlam() {
@@ -58,8 +57,8 @@ std::optional<ProjectileSpawnRequest> Bowser::consumePendingProjectile() {
     return res;
 }
 
-EnemyContactOutcome Bowser::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
-    (void)collisionSide;
+EnemyContactOutcome Bowser::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
+    (void)kind;
     (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     

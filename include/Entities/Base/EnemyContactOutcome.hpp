@@ -1,5 +1,10 @@
 #pragma once
 
+enum class PlayerEnemyContactKind {
+    Stomp,   // Player hits top of enemy
+    Side     // Player hits side/bottom of enemy
+};
+
 enum class EnemyContactResult {
     None,
     EnemyStomped,

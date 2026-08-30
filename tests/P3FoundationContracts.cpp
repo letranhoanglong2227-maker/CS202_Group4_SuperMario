@@ -29,7 +29,7 @@ int main() {
     enemy.takeDamage(999);
     checkP3(enemy.isDead() == true, "Enemy dies when health <= 0");
     
-    auto out = enemy.handlePlayerContact(mario, 1, 0.f);
+    auto out = enemy.handlePlayerContact(mario, PlayerEnemyContactKind::Stomp, 0.f);
     checkP3(out.result == EnemyContactResult::None, "Dead enemy returns None contact outcome");
     
     std::cout << "P3 Foundation Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";

@@ -15,6 +15,7 @@ public:
     virtual ~Coin() = default;
 
     ItemCollectionResult collect(PlayerManager& player) override;
+    void reactToCollision() override;
 
     void update(float dt) override;
 };

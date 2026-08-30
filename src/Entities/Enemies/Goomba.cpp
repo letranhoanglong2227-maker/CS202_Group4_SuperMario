@@ -25,10 +25,10 @@ Goomba::Goomba(const sf::Vector2f& pos)
     }
 }
 
-EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     if (dead || isSquished) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
-    if (collisionSide == 1 || collisionSide == 0) { // Top collision
+    if (kind == PlayerEnemyContactKind::Stomp) {
         onStomped();
         return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, false};
     }

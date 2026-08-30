@@ -24,10 +24,10 @@ Koopa::Koopa(const sf::Vector2f& pos)
     }
 }
 
-EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
-    bool isTop = (collisionSide == 1 || collisionSide == 0);
+    bool isTop = (kind == PlayerEnemyContactKind::Stomp);
     
     if (!inShell) {
         if (isTop) {

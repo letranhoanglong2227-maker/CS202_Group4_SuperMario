@@ -53,6 +53,8 @@ int main() {
     // 3. Reset logic
     mario.resetForRespawn({50.f, 50.f});
     checkP3(mario.isDead() == false && mario.isBig() == false && mario.getPosition().x == 50.f, "resetForRespawn clears states and sets position");
+    checkP3(mario.isImmortal() == false, "resetForRespawn clears immortality");
+    checkP3(mario.isFire() == false, "resetForRespawn clears fire form");
     
     std::cout << "P3 Player Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
     return P3_test_failed > 0 ? 1 : 0;

@@ -16,7 +16,7 @@ public:
     Enemy();
     virtual ~Enemy() = default;
 
-    virtual EnemyContactOutcome handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection = 0.f);
+    virtual EnemyContactOutcome handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection = 0.f);
 
     bool isFacingRight() const;
     void setFacingRight(bool right);

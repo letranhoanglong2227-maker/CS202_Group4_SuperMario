@@ -13,11 +13,11 @@ bool FlyingKoopa::isFlying() const {
     return hasWings;
 }
 
-EnemyContactOutcome FlyingKoopa::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+EnemyContactOutcome FlyingKoopa::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
     if (hasWings) {
-        bool isTop = (collisionSide == 1 || collisionSide == 0);
+        bool isTop = (kind == PlayerEnemyContactKind::Stomp);
         if (isTop) {
             onStomped();
             return EnemyContactOutcome{EnemyContactResult::EnemyStomped, 200, -500.f, false};
@@ -27,7 +27,7 @@ EnemyContactOutcome FlyingKoopa::handlePlayerContact(PlayerManager& player, int 
         }
     }
     
-    return Koopa::handlePlayerContact(player, collisionSide, horizontalDirection);
+    return Koopa::handlePlayerContact(player, kind, horizontalDirection);
 }
 
 void FlyingKoopa::onStomped() {

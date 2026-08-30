@@ -1,6 +1,6 @@
 #include "Entities/Base/Enemy.hpp"
 
-Enemy::Enemy() : LivingEntity("Enemy") {
+Enemy::Enemy() : LivingEntity() {
     animationComponent = std::make_unique<AnimationComponent>(
         entitySprite, 
         TextureEnemyManager::getEnemyTexture(), 
@@ -8,12 +8,10 @@ Enemy::Enemy() : LivingEntity("Enemy") {
     );
 }
 
-EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, int collisionSide, float horizontalDirection) {
+EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
-    // Default implementation:
-    // If stomped from top (enemy's top) or player's bottom
-    if (collisionSide == 1 || collisionSide == 0) {
+    if (kind == PlayerEnemyContactKind::Stomp) {
         onStomped();
         return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, true};
     }
