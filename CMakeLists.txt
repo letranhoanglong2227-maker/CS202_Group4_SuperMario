@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(SuperMarioProject VERSION 1.0 LANGUAGES CXX)
+project(SuperMarioProject VERSION 1.0 LANGUAGES C CXX)
 
 # Require C++20 standard (needed for SFML 3)
 set(CMAKE_CXX_STANDARD 20)
