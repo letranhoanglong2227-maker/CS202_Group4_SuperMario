@@ -50,6 +50,23 @@ int main() {
     checkP3(res2.consumed == false && res2.scoreDelta == 0, "Mushroom cannot be collected twice");
     checkP3(mushroom->exists() == false, "Item exists() == false after collection, ready for removal");
 
+    auto deniedMushroom = EntityFactory::createItem("Mushroom");
+    auto deniedMushroomResult = deniedMushroom->collect(*player1, false);
+    checkP3(!deniedMushroomResult.consumed && deniedMushroomResult.requestedForm == RequestedPlayerForm::None
+                && deniedMushroom->exists(),
+            "Denied Mushroom collection keeps item alive");
+
+    auto deniedFireFlower = EntityFactory::createItem("FireFlower");
+    auto deniedFireFlowerResult = deniedFireFlower->collect(*player1, false);
+    checkP3(!deniedFireFlowerResult.consumed && deniedFireFlowerResult.requestedForm == RequestedPlayerForm::None
+                && deniedFireFlower->exists(),
+            "Denied FireFlower collection keeps item alive");
+
+    auto acceptedFireFlowerResult = deniedFireFlower->collect(*player1, true);
+    checkP3(acceptedFireFlowerResult.consumed && acceptedFireFlowerResult.requestedForm == RequestedPlayerForm::Fire
+                && !deniedFireFlower->exists(),
+            "FireFlower is consumed once after clearance succeeds");
+
     // 3. Fireball lifecycle
     Fireball fireball({0.f, 0.f}, 1.f);
     checkP3(!fireball.isExpired(), "Fireball is not expired initially");

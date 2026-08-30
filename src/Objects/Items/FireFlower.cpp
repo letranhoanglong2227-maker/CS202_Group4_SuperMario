@@ -25,6 +25,7 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
 
 ItemCollectionResult FireFlower::collect(PlayerManager& player, bool canGrow) {
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+    if (!player.isBig() && !canGrow) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     
     exist = false;
     return ItemCollectionResult{true, 1000, 0, 0, RequestedPlayerForm::Fire};
