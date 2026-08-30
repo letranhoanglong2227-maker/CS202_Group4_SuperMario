@@ -2,8 +2,10 @@
 
 #include "Entities/Base/Character.hpp"
 #include "Objects/Items/PlayerBuff.hpp"
+#include "Objects/Items/ProjectileSpawnRequest.hpp"
 #include <vector>
 #include <memory>
+#include <optional>
 
 class PlayerManager : public Character {
 protected:
@@ -20,6 +22,9 @@ protected:
     bool isTransforming{ false };
     float transformationTimer{ 0.f };
     bool horizontalControlsInverted{ false };
+    
+    float shootTimer{ 0.f };
+    float shootCooldown{ 0.3f };
 
     std::vector<std::unique_ptr<PlayerBuff>> buffs;
 
@@ -31,10 +36,15 @@ public:
     void setPlayerId(int pId);
 
     bool isBig() const;
-    void setBig(bool big);
+    bool setBig(bool big, bool canGrow = true);
 
     bool isFire() const;
-    void setFire(bool fire);
+    bool setFire(bool fire, bool canGrow = true);
+
+    void resetForRespawn(const sf::Vector2f& spawnPosition = {0.f, 0.f});
+
+    bool canShoot() const;
+    std::optional<ProjectileSpawnRequest> shoot(float direction);
 
     bool isImmortal() const;
     void setImmortal(bool val, float duration = 2.0f);

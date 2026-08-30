@@ -22,21 +22,93 @@ bool PlayerManager::isBig() const {
     return is_big;
 }
 
-void PlayerManager::setBig(bool big) {
+bool PlayerManager::setBig(bool big, bool canGrow) {
+    if (big && !canGrow) return false;
+    if (is_big == big) return true;
+    
     is_big = big;
+    if (!is_big) {
+        is_fire = false;
+        position.y += CELL_SIZE; // Shrink: move top down, keep feet anchored
+    } else {
+        position.y -= CELL_SIZE; // Grow: move top up, keep feet anchored
+    }
+    
     updateHitboxSize();
+    hitbox.setPosition(position);
+    entitySprite.setPosition(position);
+    return true;
 }
 
 bool PlayerManager::isFire() const {
     return is_fire;
 }
 
-void PlayerManager::setFire(bool fire) {
-    is_fire = fire;
-    if (is_fire) {
-        is_big = true;
+bool PlayerManager::setFire(bool fire, bool canGrow) {
+    if (fire && !is_big && !canGrow) return false;
+    
+    if (fire) {
+        if (!is_big) {
+            setBig(true, canGrow);
+        }
+        is_fire = true;
+    } else {
+        is_fire = false;
     }
+    
     updateHitboxSize();
+    return true;
+}
+
+void PlayerManager::resetForRespawn(const sf::Vector2f& spawnPosition) {
+    health = 1;
+    dead = false;
+    
+    if (movementComponent) {
+        movementComponent->setVelocity({0.f, 0.f});
+    }
+    
+    setGrounded(true);
+    isJumping = false;
+    
+    is_fire = false;
+    is_big = false;
+    updateHitboxSize();
+    
+    buffs.clear();
+    
+    immortal = false;
+    isFlashing = false;
+    flashTimer = 0.f;
+    
+    horizontalControlsInverted = false;
+    isTransforming = false;
+    transformationTimer = 0.f;
+    shootTimer = 0.f;
+    
+    setPosition(spawnPosition);
+}
+
+bool PlayerManager::canShoot() const {
+    return is_fire && !dead && shootTimer <= 0.f;
+}
+
+std::optional<ProjectileSpawnRequest> PlayerManager::shoot(float direction) {
+    if (!canShoot()) return std::nullopt;
+    
+    shootTimer = shootCooldown;
+    
+    float dirX = (direction >= 0.f) ? 1.f : -1.f;
+    float spawnX = position.x + (dirX > 0 ? size.x : -16.f);
+    float spawnY = position.y + 16.f;
+    
+    return ProjectileSpawnRequest{
+        "Fireball",
+        {spawnX, spawnY},
+        {dirX, 0.f},
+        400.f,
+        1
+    };
 }
 
 bool PlayerManager::isImmortal() const {
@@ -155,6 +227,10 @@ void PlayerManager::update(float dt) {
                 return false;
             }),
         buffs.end());
+
+    if (shootTimer > 0.f) {
+        shootTimer -= dt;
+    }
 
     // Update invincibility & flashing
     if (immortal) {
