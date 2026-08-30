@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
+
+if(WIN32)
+    find_program(NATIVE_RC NAMES windres.exe HINTS "C:/msys64/ucrt64/bin" "C:/msys64/mingw64/bin" "C:/msys64/clang64/bin")
+    if(NATIVE_RC)
+        set(CMAKE_RC_COMPILER "${NATIVE_RC}" CACHE FILEPATH "RC compiler" FORCE)
+    endif()
+endif()
+
 project(SuperMarioProject VERSION 1.0 LANGUAGES C CXX)
 
 # Require C++20 standard (needed for SFML 3)
