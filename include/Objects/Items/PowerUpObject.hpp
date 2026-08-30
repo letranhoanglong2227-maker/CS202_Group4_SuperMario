@@ -24,7 +24,7 @@ public:
     PowerUpObject(const std::string& name = "PowerUp");
     virtual ~PowerUpObject() = default;
 
-    virtual ItemCollectionResult collect(PlayerManager& player);
+    virtual ItemCollectionResult collect(PlayerManager& player, bool canGrow = true);
 
     const std::string& getName() const;
     bool exists() const;

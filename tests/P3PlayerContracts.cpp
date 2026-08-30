@@ -33,7 +33,7 @@ int main() {
     checkP3(mario.canShoot() == true, "Fire Mario can shoot");
     
     auto req = mario.shoot(1.f);
-    checkP3(req.has_value() && req->type == "Fireball", "Shoot returns Fireball request");
+    checkP3(req.has_value() && req->type == ProjectileKind::Fireball, "Shoot returns Fireball request");
     checkP3(mario.canShoot() == false, "Cannot shoot again immediately (cooldown)");
     
     // 2. Damage flow

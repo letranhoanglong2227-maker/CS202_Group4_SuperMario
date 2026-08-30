@@ -17,6 +17,7 @@ EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, PlayerEnem
     }
     
     // Side collision
+    if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
@@ -64,4 +65,8 @@ void Enemy::onStomped() {
 
 void Enemy::reactToCollision(int collidedSide) {
     (void)collidedSide;
+}
+
+std::optional<ProjectileSpawnRequest> Enemy::consumePendingProjectile() {
+    return std::nullopt;
 }

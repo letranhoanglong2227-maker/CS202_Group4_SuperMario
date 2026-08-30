@@ -33,6 +33,7 @@ EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, PlayerEne
         return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, false};
     }
     
+    if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
@@ -44,6 +45,8 @@ void Goomba::onStomped() {
     setDamage(0);
     hitbox.setSize({CELL_SIZE, CELL_SIZE * 0.5f});
     position.y += CELL_SIZE * 0.5f; // Anchor feet
+    hitbox.setPosition(position);
+    entitySprite.setPosition(position);
 }
 
 void Goomba::updateAnimation(float dt) {

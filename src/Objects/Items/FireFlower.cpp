@@ -23,7 +23,7 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
     }
 }
 
-ItemCollectionResult FireFlower::collect(PlayerManager& player) {
+ItemCollectionResult FireFlower::collect(PlayerManager& player, bool canGrow) {
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     
     exist = false;

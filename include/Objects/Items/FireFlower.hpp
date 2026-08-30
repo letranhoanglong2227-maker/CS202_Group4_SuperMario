@@ -14,6 +14,6 @@ public:
     FireFlower(const sf::Vector2f& pos, bool popped = false);
     
     virtual ~FireFlower() = default;
-    ItemCollectionResult collect(PlayerManager& player) override;
+    ItemCollectionResult collect(PlayerManager& player, bool canGrow = true) override;
     void update(float dt) override;
 };

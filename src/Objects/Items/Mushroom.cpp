@@ -10,18 +10,19 @@ Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     size = hitbox.getSize();
     movementComponent = std::make_unique<MovementComponent>(60.f, 500.f, 0.f);
-    
+
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
         animationComponent->addAnimation("idle", { sf::IntRect({2, 2}, {16, 16}) });
     }
 }
 
-ItemCollectionResult Mushroom::collect(PlayerManager& player) {
+ItemCollectionResult Mushroom::collect(PlayerManager& player, bool canGrow) {
+    (void)player;
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+    if (!canGrow) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     
     exist = false;
-    // Request Big form. P2 will call player.setBig(true, canGrow) based on clearance.
     return ItemCollectionResult{true, 1000, 0, 0, RequestedPlayerForm::Big};
 }
 
@@ -44,7 +45,7 @@ void Mushroom::update(float dt) {
         hitbox.setPosition(position);
         entitySprite.setPosition(position);
     }
-    
+
     if (animationComponent) {
         animationComponent->play("idle", dt);
     }

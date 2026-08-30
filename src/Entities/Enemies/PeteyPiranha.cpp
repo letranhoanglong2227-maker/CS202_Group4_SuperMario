@@ -48,6 +48,7 @@ EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, Pla
     (void)horizontalDirection;
     if (dead || !emerged) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
+    if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
@@ -86,7 +87,7 @@ void PeteyPiranha::update(float dt) {
         if (emergeTimer >= 1.0f && !hasShot) {
             hasShot = true;
             pendingProjectile = ProjectileSpawnRequest{
-                "PeteySpike",
+                ProjectileKind::PeteySpike,
                 {position.x + size.x / 2.f, position.y + 16.f},
                 {0.f, -1.f}, // shoot upwards
                 250.f,

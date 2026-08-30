@@ -1,7 +1,7 @@
 #include "Core/GameObject.hpp"
 
 GameObject::GameObject() : entitySprite(entityTexture) {
-    std::cout << "Inform GameObject Constructor...\n";
+
 }
 
 sf::Vector2f GameObject::getPosition() const {

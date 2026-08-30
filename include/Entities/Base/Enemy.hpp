@@ -1,3 +1,5 @@
+#include <optional>
+#include "Objects/Items/ProjectileSpawnRequest.hpp"
 #pragma once
 
 #include "Entities/Base/LivingEntity.hpp"
@@ -15,6 +17,8 @@ protected:
 public:
     Enemy();
     virtual ~Enemy() = default;
+
+    virtual std::optional<ProjectileSpawnRequest> consumePendingProjectile();
 
     virtual EnemyContactOutcome handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection = 0.f);
 

@@ -3,6 +3,7 @@
 #include "Entities/Enemies/Heriss.hpp"
 #include "Entities/Enemies/Bowser.hpp"
 #include "Entities/Players/Mario.hpp"
+#include "Entities/Enemies/PeteyPiranha.hpp"
 #include <iostream>
 #include <string>
 
@@ -50,8 +51,45 @@ int main() {
     bowser.update(2.5f); // Advance timer to fire breath
     checkP3(bowser.hasPendingProjectile(), "Bowser has deterministic pending projectile");
     auto proj = bowser.consumePendingProjectile();
-    checkP3(proj.has_value() && proj->type == "BowserFire", "Bowser projectile consumed");
+    checkP3(proj.has_value() && proj->type == ProjectileKind::BowserFire, "Bowser projectile consumed");
     checkP3(!bowser.hasPendingProjectile(), "Pending projectile cleared after consumption");
+
+    // Immortal side contact
+    Mario player2;
+    player2.setBig(true);
+    player2.takeDamage(1);
+    Goomba goomba2({0.f, 0.f});
+    auto immortalRes = goomba2.handlePlayerContact(player2, PlayerEnemyContactKind::Side, 0.f);
+    checkP3(immortalRes.result == EnemyContactResult::None, "Immortal side contact returns None");
+
+    // Hitbox anchors
+    Goomba goomba3({0.f, 0.f});
+    float g3Bot = goomba3.getPosition().y + goomba3.hitbox.getSize().y;
+    goomba3.handlePlayerContact(player2, PlayerEnemyContactKind::Stomp, 0.f);
+    float g3BotNew = goomba3.hitbox.getPosition().y + goomba3.hitbox.getSize().y;
+    checkP3(g3Bot == g3BotNew, "Goomba hitbox anchor maintained");
+
+    Koopa koopa3({0.f, 0.f});
+    float k3Bot = koopa3.getPosition().y + koopa3.hitbox.getSize().y;
+    koopa3.handlePlayerContact(player2, PlayerEnemyContactKind::Stomp, 0.f);
+    float k3BotNew = koopa3.hitbox.getPosition().y + koopa3.hitbox.getSize().y;
+    checkP3(k3Bot == k3BotNew, "Koopa hitbox anchor maintained");
+
+    // Petey
+    PeteyPiranha petey({0.f, 0.f});
+    petey.update(2.5f); petey.update(1.01f);
+    checkP3(petey.hasPendingProjectile(), "Petey has pending projectile");
+    auto pProj = petey.consumePendingProjectile();
+    checkP3(pProj.has_value() && pProj->type == ProjectileKind::PeteySpike, "Petey projectile consumed");
+    auto pProj2 = petey.consumePendingProjectile();
+    checkP3(!pProj2.has_value(), "Petey consume request dung mot lan");
+
+    // Timing boundary
+    Bowser bowser2({0.f, 0.f});
+    bowser2.update(1.99f);
+    checkP3(!bowser2.hasPendingProjectile(), "Bowser boundary: not fired at 1.99s");
+    bowser2.update(0.02f);
+    checkP3(bowser2.hasPendingProjectile(), "Bowser boundary: fired at 2.01s");
 
     // Enemy lifecycle (predicate = isDead())
     checkP3(bowser.isDead() == false, "Bowser is alive initially");

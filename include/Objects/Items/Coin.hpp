@@ -14,7 +14,7 @@ public:
     Coin(const sf::Vector2f& pos, bool popped = false);
     virtual ~Coin() = default;
 
-    ItemCollectionResult collect(PlayerManager& player) override;
+    ItemCollectionResult collect(PlayerManager& player, bool canGrow = true) override;
     void reactToCollision() override;
 
     void update(float dt) override;

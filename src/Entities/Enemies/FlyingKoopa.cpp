@@ -22,6 +22,7 @@ EnemyContactOutcome FlyingKoopa::handlePlayerContact(PlayerManager& player, Play
             onStomped();
             return EnemyContactOutcome{EnemyContactResult::EnemyStomped, 200, -500.f, false};
         } else {
+            if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
             player.takeDamage(damage);
             return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
         }

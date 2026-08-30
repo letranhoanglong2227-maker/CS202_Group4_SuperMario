@@ -34,6 +34,7 @@ EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, PlayerEnem
             onStomped();
             return EnemyContactOutcome{EnemyContactResult::EnemyStomped, 200, -500.f, false};
         } else {
+            if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
             player.takeDamage(damage);
             return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
         }
@@ -83,6 +84,8 @@ void Koopa::onStomped() {
         size = hitbox.getSize();
         position.y += (oldH - size.y);
         setSpeed(0.f);
+        hitbox.setPosition(position);
+        entitySprite.setPosition(position);
     }
 }
 

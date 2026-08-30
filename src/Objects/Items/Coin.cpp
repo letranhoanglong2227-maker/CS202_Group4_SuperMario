@@ -20,7 +20,7 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
     }
 }
 
-ItemCollectionResult Coin::collect(PlayerManager& player) {
+ItemCollectionResult Coin::collect(PlayerManager& player, bool canGrow) {
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     
     exist = false;

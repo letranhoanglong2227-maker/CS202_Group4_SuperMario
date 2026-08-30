@@ -23,7 +23,7 @@ public:
     EnemyContactOutcome handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection = 0.f) override;
 
     bool hasPendingProjectile() const;
-    std::optional<ProjectileSpawnRequest> consumePendingProjectile();
+    std::optional<ProjectileSpawnRequest> consumePendingProjectile() override;
 
     void takeDamage(int amount) override;
     void updateAnimation(float dt) override;

@@ -103,7 +103,7 @@ std::optional<ProjectileSpawnRequest> PlayerManager::shoot(float direction) {
     float spawnY = position.y + 16.f;
     
     return ProjectileSpawnRequest{
-        "Fireball",
+        ProjectileKind::Fireball,
         {spawnX, spawnY},
         {dirX, 0.f},
         400.f,

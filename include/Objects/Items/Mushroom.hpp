@@ -16,7 +16,7 @@ public:
     Mushroom(const sf::Vector2f& pos, bool popped = false);
     virtual ~Mushroom() = default;
 
-    ItemCollectionResult collect(PlayerManager& player) override;
+    ItemCollectionResult collect(PlayerManager& player, bool canGrow = true) override;
     
     void reverseDirection();
     void reactToBlockCollision(Block* block) override;

@@ -8,7 +8,7 @@ PowerUpObject::PowerUpObject(const std::string& name) : GameObject(), name(name)
     );
 }
 
-ItemCollectionResult PowerUpObject::collect(PlayerManager& player) {
+ItemCollectionResult PowerUpObject::collect(PlayerManager& player, bool canGrow) {
     (void)player;
     return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
 }

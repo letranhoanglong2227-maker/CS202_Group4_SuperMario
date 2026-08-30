@@ -61,7 +61,8 @@ EnemyContactOutcome Bowser::handlePlayerContact(PlayerManager& player, PlayerEne
     (void)kind;
     (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
+    if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
@@ -93,10 +94,10 @@ void Bowser::update(float dt) {
             breathingFire = true;
             float dirX = facingRight ? 1.f : -1.f;
             pendingProjectile = ProjectileSpawnRequest{
-                "BowserFire", 
-                {position.x + (dirX > 0 ? size.x : -32.f), position.y + 32.f}, 
-                {dirX, 0.f}, 
-                350.f, 
+                ProjectileKind::BowserFire,
+                {position.x + (dirX > 0 ? size.x : -32.f), position.y + 32.f},
+                {dirX, 0.f},
+                350.f,
                 damage
             };
         }

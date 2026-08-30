@@ -27,6 +27,7 @@ EnemyContactOutcome Heriss::handlePlayerContact(PlayerManager& player, PlayerEne
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
     // Heriss is spiked! Always damages player!
+    if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};
 }
