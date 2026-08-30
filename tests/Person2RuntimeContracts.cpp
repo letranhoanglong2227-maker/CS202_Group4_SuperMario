@@ -1,5 +1,8 @@
 #include "Entities/Base/Enemy.hpp"
 #include "Entities/Enemies/Bowser.hpp"
+#include "Entities/Enemies/Goomba.hpp"
+#include "Entities/Enemies/Heriss.hpp"
+#include "Entities/Enemies/Koopa.hpp"
 #include "Entities/Players/Mario.hpp"
 #include "Levels/Managers/LevelManager.hpp"
 #include "Levels/Stages/W3_LV3.hpp"
@@ -14,6 +17,10 @@
 #include "Objects/Environment/Rocket.hpp"
 #include "Objects/Environment/Trampoline.hpp"
 #include "Objects/Environment/WinFlag.hpp"
+#include "Objects/Items/Coin.hpp"
+#include "Objects/Items/Fireball.hpp"
+#include "Objects/Items/Mushroom.hpp"
+#include "Objects/Items/ProjectileSpawnRequest.hpp"
 #include "Physics/PhysicsEngine.hpp"
 
 #include <algorithm>
@@ -572,6 +579,249 @@ int main() {
                             level.getEnemies().empty() &&
                             level.getPhysicsEnemies().empty(),
                         "dead enemy removal rebuilds all non-owning views");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        player.getMovementComponent()->setVelocity(0.f, 100.f);
+        level.setPlayers({&player});
+        auto goomba = std::make_unique<Goomba>(sf::Vector2f{0.f, 64.f});
+        Goomba* goombaView = goomba.get();
+        level.addEntity(std::move(goomba));
+        int score = 0;
+        int deaths = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.setPlayerDeathCallback([&](PlayerManager&) { ++deaths; });
+
+        level.update(0.05f);
+        passed &= check(goombaView->isStomped() && score == 100 &&
+                            deaths == 0 &&
+                            nearlyEqual(player.getMovementComponent()
+                                            ->getVelocity().y,
+                                        -500.f),
+                        "Goomba stomp resolves once, scores, and bounces player");
+
+        level.update(1.01f);
+        passed &= check(level.getEnemies().empty() && score == 100,
+                        "stomped Goomba expires once and leaves no enemy view");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        player.getMovementComponent()->setVelocity(100.f, 0.f);
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<Goomba>(sf::Vector2f{64.f, 0.f}));
+        int deaths = 0;
+        level.setPlayerDeathCallback([&](PlayerManager&) { ++deaths; });
+        level.update(0.05f);
+        level.update(0.05f);
+        passed &= check(player.isDead() && deaths == 1,
+                        "Goomba side contact kills a small player exactly once");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        player.setImmortal(true);
+        player.getMovementComponent()->setVelocity(100.f, 0.f);
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<Goomba>(sf::Vector2f{64.f, 0.f}));
+        int deaths = 0;
+        level.setPlayerDeathCallback([&](PlayerManager&) { ++deaths; });
+        level.update(0.05f);
+        passed &= check(!player.isDead() && deaths == 0,
+                        "immortal player ignores harmful enemy contact");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        player.getMovementComponent()->setVelocity(0.f, 100.f);
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<Heriss>(sf::Vector2f{0.f, 64.f}));
+        int deaths = 0;
+        level.setPlayerDeathCallback([&](PlayerManager&) { ++deaths; });
+        level.update(0.05f);
+        passed &= check(player.isDead() && deaths == 1,
+                        "Heriss converts an apparent stomp into one harmful contact");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        player.getMovementComponent()->setVelocity(0.f, 100.f);
+        level.setPlayers({&player});
+        auto koopa = std::make_unique<Koopa>(sf::Vector2f{0.f, 64.f});
+        Koopa* koopaView = koopa.get();
+        level.addEntity(std::move(koopa));
+        level.update(0.05f);
+
+        player.setPosition({-60.f, koopaView->getPosition().y});
+        player.getMovementComponent()->setVelocity(100.f, 0.f);
+        level.update(0.05f);
+        passed &= check(koopaView->isInShell() && koopaView->isShellKicked(),
+                        "Koopa stomp and side contact transition shell once");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 0.f});
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<Coin>(sf::Vector2f{0.f, 0.f}));
+        int score = 0;
+        int coins = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.setCoinCollectedCallback([&](int delta) { coins += delta; });
+        level.update(0.01f);
+        level.update(0.01f);
+        passed &= check(score == 200 && coins == 1 &&
+                            level.getEntities().empty(),
+                        "Coin collection forwards one outcome and removes owner");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 64.f});
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<TestBlock>(
+                            sf::Vector2f{0.f, 0.f},
+                            sf::Vector2f{64.f, 32.f}),
+                        false, true);
+        auto mushroom = std::make_unique<Mushroom>(sf::Vector2f{0.f, 64.f});
+        Mushroom* mushroomView = mushroom.get();
+        level.addEntity(std::move(mushroom));
+        int score = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.update(0.01f);
+        passed &= check(!player.isBig() && mushroomView->exists() &&
+                            score == 0,
+                        "low ceiling denies Mushroom without consuming it");
+    }
+
+    {
+        LevelManager level;
+        Mario player;
+        player.setPosition({0.f, 64.f});
+        level.setPlayers({&player});
+        level.addEntity(std::make_unique<Mushroom>(
+            sf::Vector2f{0.f, 64.f}));
+        int score = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.update(0.01f);
+        passed &= check(player.isBig() && score == 1000 &&
+                            level.getEntities().empty(),
+                        "cleared Mushroom grows player and cleans item once");
+    }
+
+    {
+        LevelManager level;
+        auto wall = std::make_unique<TestBlock>(
+            sf::Vector2f{64.f, 0.f}, sf::Vector2f{64.f, 64.f});
+        level.addEntity(std::move(wall), false, true);
+        auto mushroom = std::make_unique<Mushroom>(sf::Vector2f{0.f, 0.f});
+        Mushroom* mushroomView = mushroom.get();
+        level.addEntity(std::move(mushroom));
+        level.update(0.5f);
+        const bool resolvedAtWall = nearlyEqual(mushroomView->getPosition().x, 0.f);
+        level.update(0.5f);
+        passed &= check(resolvedAtWall && mushroomView->getPosition().x < 0.f,
+                        "moving Mushroom resolves a Block hit and reverses direction");
+    }
+
+    {
+        LevelManager level;
+        auto bowser = std::make_unique<Bowser>(sf::Vector2f{0.f, 0.f});
+        level.addEntity(std::move(bowser));
+        level.update(2.01f);
+        Bullet* spawned = nullptr;
+        for (const auto& entity : level.getEntities()) {
+            if (auto* bullet = dynamic_cast<Bullet*>(entity.get())) {
+                spawned = bullet;
+                break;
+            }
+        }
+        const float birthX = spawned ? spawned->getPosition().x : 0.f;
+        const bool adoptedAfterTraversal =
+            spawned && spawned->getDamage() == 2 && nearlyEqual(birthX, -32.f);
+        level.update(0.1f);
+        passed &= check(adoptedAfterTraversal &&
+                            spawned->getPosition().x < birthX,
+                        "base Enemy projectile request queues one damaging Bullet");
+    }
+
+    {
+        LevelManager level;
+        ProjectileSpawnRequest invalid{ProjectileKind::BowserFire,
+                                       {0.f, 0.f}, {0.f, 0.f}, 350.f, 2};
+        ProjectileSpawnRequest unsupportedFireballDamage{
+            ProjectileKind::Fireball, {0.f, 0.f}, {1.f, 0.f}, 400.f, 2};
+        const bool rejected = !level.spawnProjectile(invalid) &&
+                              !level.spawnProjectile(
+                                  unsupportedFireballDamage);
+        ProjectileSpawnRequest fireball{ProjectileKind::Fireball,
+                                        {0.f, 0.f}, {1.f, 0.f}, 200.f, 1};
+        const bool accepted = level.spawnProjectile(fireball);
+        level.addEntity(std::make_unique<TestEnemy>(sf::Vector2f{48.f, 0.f}));
+        int score = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.update(0.1f);
+        const bool noProjectileOrEnemy = std::none_of(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<Fireball*>(entity.get()) != nullptr ||
+                       dynamic_cast<Enemy*>(entity.get()) != nullptr;
+            });
+        passed &= check(rejected && accepted && noProjectileOrEnemy &&
+                            score == 100,
+                        "Fireball request rejects invalid data and resolves one enemy hit");
+    }
+
+    {
+        W3_LV3 level;
+        const auto bounds = level.getWorldBounds();
+        const float farRight = bounds
+            ? bounds->position.x + bounds->size.x +
+                  2.f * MapFormat::TILE_SIZE
+            : 4096.f;
+        auto offWorldEnemy =
+            std::make_unique<TestEnemy>(sf::Vector2f{farRight, 64.f});
+        TestEnemy* offWorldEnemyView = offWorldEnemy.get();
+        level.addEntity(std::move(offWorldEnemy));
+        auto airborneEnemy =
+            std::make_unique<TestEnemy>(sf::Vector2f{64.f, -640.f});
+        TestEnemy* airborneEnemyView = airborneEnemy.get();
+        level.addEntity(std::move(airborneEnemy));
+        auto offWorldCoin =
+            std::make_unique<Coin>(sf::Vector2f{farRight, 64.f});
+        Coin* offWorldCoinView = offWorldCoin.get();
+        level.addEntity(std::move(offWorldCoin));
+        level.spawnProjectile({ProjectileKind::Fireball,
+                               {farRight, 128.f}, {1.f, 0.f}, 400.f, 1});
+        level.update(0.01f);
+
+        const bool offWorldOwnersRemoved = std::none_of(
+            level.getEntities().begin(), level.getEntities().end(),
+            [offWorldEnemyView, offWorldCoinView](
+                const std::unique_ptr<GameObject>& entity) {
+                return entity.get() == offWorldEnemyView ||
+                       entity.get() == offWorldCoinView ||
+                       (dynamic_cast<Fireball*>(entity.get()) != nullptr &&
+                        entity->getPosition().x > 1600.f);
+            });
+        const bool airborneRetained =
+            std::find(level.getEnemies().begin(), level.getEnemies().end(),
+                      airborneEnemyView) != level.getEnemies().end();
+        passed &= check(bounds && offWorldOwnersRemoved && airborneRetained,
+                        "world cleanup removes actors/items/fireballs but retains airborne enemy");
     }
 
     {

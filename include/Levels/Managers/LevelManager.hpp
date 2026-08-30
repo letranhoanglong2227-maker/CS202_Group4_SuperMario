@@ -15,17 +15,20 @@
 class Block;
 class Bullet;
 class Enemy;
+class Fireball;
 class GameObject;
 class Lava;
 class PlayerManager;
 class PowerUpObject;
 class Rocket;
 class WinFlag;
+struct ProjectileSpawnRequest;
 
 class LevelManager {
 public:
     using LevelCallback = std::function<void()>;
     using PlayerCallback = std::function<void(PlayerManager&)>;
+    using ValueCallback = std::function<void(int)>;
     using ProjectileTargetResolver =
         std::function<std::optional<sf::Vector2f>()>;
 
@@ -40,6 +43,9 @@ public:
     // LevelManager invokes these callbacks and never owns the state-flow target.
     void setLevelCompletedCallback(LevelCallback callback);
     void setPlayerDeathCallback(PlayerCallback callback);
+    void setScoreChangedCallback(ValueCallback callback);
+    void setCoinCollectedCallback(ValueCallback callback);
+    void setLivesChangedCallback(ValueCallback callback);
     void addEntity(std::unique_ptr<GameObject> entity,
                    bool participatesInGenericPhysics = false,
                    bool participatesInBlockCollisions = false);
@@ -48,6 +54,7 @@ public:
                      float speed = 140.f, float lifetime = 8.f);
     void spawnRocket(sf::Vector2f position, sf::Vector2f velocity,
                      float lifetime = 8.f);
+    bool spawnProjectile(const ProjectileSpawnRequest& request);
     virtual void update(float dt);
     virtual void render(sf::RenderTarget* target);
     void clear();
@@ -99,12 +106,16 @@ private:
     std::vector<Lava*> lavaHazards;
     std::vector<Bullet*> bullets;
     std::vector<Rocket*> rockets;
+    std::vector<Fireball*> fireballs;
     std::vector<WinFlag*> winFlags;
     std::unordered_set<const GameObject*> genericPhysicsParticipants;
     std::unordered_set<const GameObject*> blockCollisionParticipants;
     std::vector<PlayerManager*> players;
     LevelCallback levelCompletedCallback;
     PlayerCallback playerDeathCallback;
+    ValueCallback scoreChangedCallback;
+    ValueCallback coinCollectedCallback;
+    ValueCallback livesChangedCallback;
     bool completionPending{false};
     bool completionEmitted{false};
     bool loaded{false};

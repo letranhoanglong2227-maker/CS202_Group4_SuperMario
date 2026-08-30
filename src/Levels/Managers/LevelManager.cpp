@@ -16,9 +16,12 @@
 #include "Objects/Environment/Rocket.hpp"
 #include "Objects/Environment/Trampoline.hpp"
 #include "Objects/Environment/WinFlag.hpp"
+#include "Objects/Items/Fireball.hpp"
 #include "Objects/Items/PowerUpObject.hpp"
+#include "Objects/Items/ProjectileSpawnRequest.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <utility>
 
@@ -57,6 +60,18 @@ void LevelManager::setPlayerDeathCallback(PlayerCallback callback) {
     playerDeathCallback = std::move(callback);
 }
 
+void LevelManager::setScoreChangedCallback(ValueCallback callback) {
+    scoreChangedCallback = std::move(callback);
+}
+
+void LevelManager::setCoinCollectedCallback(ValueCallback callback) {
+    coinCollectedCallback = std::move(callback);
+}
+
+void LevelManager::setLivesChangedCallback(ValueCallback callback) {
+    livesChangedCallback = std::move(callback);
+}
+
 void LevelManager::addEntity(std::unique_ptr<GameObject> entity,
                              bool participatesInGenericPhysics,
                              bool participatesInBlockCollisions) {
@@ -87,12 +102,76 @@ void LevelManager::spawnRocket(sf::Vector2f position, sf::Vector2f velocity,
     addEntity(std::make_unique<Rocket>(position, velocity, lifetime));
 }
 
+bool LevelManager::spawnProjectile(const ProjectileSpawnRequest& request) {
+    const float length = std::hypot(request.direction.x, request.direction.y);
+    if (!std::isfinite(request.position.x) ||
+        !std::isfinite(request.position.y) || !std::isfinite(length) ||
+        !std::isfinite(request.speed) || length <= 0.f ||
+        request.speed <= 0.f || request.damage <= 0) {
+        return false;
+    }
+
+    const sf::Vector2f direction = request.direction / length;
+    switch (request.type) {
+    case ProjectileKind::Fireball:
+        if (direction.x == 0.f || request.damage != 1) return false;
+        {
+            auto fireball =
+                std::make_unique<Fireball>(request.position, direction.x);
+            fireball->getMovementComponent()->setVelocity(
+                direction * request.speed);
+            addEntity(std::move(fireball));
+        }
+        return true;
+    case ProjectileKind::BowserFire:
+    case ProjectileKind::PeteySpike:
+        addEntity(std::make_unique<Bullet>(request.position,
+                                           direction * request.speed, 8.f,
+                                           request.damage));
+        return true;
+    }
+    return false;
+}
+
 void LevelManager::update(float dt) {
     if (dt <= 0.f) return;
+
+    std::vector<sf::FloatRect> previousPlayerBounds;
+    previousPlayerBounds.reserve(players.size());
+    for (PlayerManager* player : players) {
+        previousPlayerBounds.push_back(
+            player ? player->hitbox.getGlobalBounds() : sf::FloatRect{});
+    }
+    std::vector<sf::FloatRect> previousEnemyBounds;
+    previousEnemyBounds.reserve(enemies.size());
+    for (Enemy* enemy : enemies) {
+        previousEnemyBounds.push_back(
+            enemy ? enemy->hitbox.getGlobalBounds() : sf::FloatRect{});
+    }
+    std::vector<sf::FloatRect> previousPowerUpBounds;
+    previousPowerUpBounds.reserve(powerUps.size());
+    for (PowerUpObject* powerUp : powerUps) {
+        previousPowerUpBounds.push_back(
+            powerUp ? powerUp->hitbox.getGlobalBounds() : sf::FloatRect{});
+    }
+    std::vector<sf::FloatRect> previousFireballBounds;
+    previousFireballBounds.reserve(fireballs.size());
+    for (Fireball* fireball : fireballs) {
+        previousFireballBounds.push_back(
+            fireball ? fireball->hitbox.getGlobalBounds() : sf::FloatRect{});
+    }
+
     updating = true;
     for (auto& entity : entities) {
         if (entity) entity->update(dt);
     }
+    for (Enemy* enemy : enemies) {
+        if (!enemy || enemy->isDead()) continue;
+        if (const auto request = enemy->consumePendingProjectile()) {
+            spawnProjectile(*request);
+        }
+    }
+
     const auto worldBounds = getWorldBounds();
     for (PlayerManager* player : players) {
         if (player && !player->isDead()) {
@@ -114,8 +193,166 @@ void LevelManager::update(float dt) {
             physicsEngine.step(*enemy, blocks, dt);
         }
     }
+
+    for (std::size_t itemIndex = 0; itemIndex < powerUps.size(); ++itemIndex) {
+        PowerUpObject* item = powerUps[itemIndex];
+        if (!item || !item->exists()) continue;
+        const sf::FloatRect current = item->hitbox.getGlobalBounds();
+        for (Block* block : blocks) {
+            if (!block || !block->isExist()) continue;
+            const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
+            const AabbContactSide side = PhysicsEngine::classifyAabbContact(
+                previousPowerUpBounds[itemIndex], current, blockBounds);
+            if (side == AabbContactSide::None) continue;
+
+            sf::Vector2f resolved = current.position;
+            if (side == AabbContactSide::Right) {
+                resolved.x = blockBounds.position.x - current.size.x;
+            } else if (side == AabbContactSide::Left) {
+                resolved.x = blockBounds.position.x + blockBounds.size.x;
+            } else if (side == AabbContactSide::Bottom) {
+                resolved.y = blockBounds.position.y - current.size.y;
+            } else {
+                resolved.y = blockBounds.position.y + blockBounds.size.y;
+            }
+            item->setPosition(resolved);
+            item->reactToBlockCollision(block);
+            break;
+        }
+    }
     enforceStagePatrols();
+
+    for (std::size_t fireballIndex = 0;
+         fireballIndex < fireballs.size(); ++fireballIndex) {
+        Fireball* fireball = fireballs[fireballIndex];
+        if (!fireball || fireball->isExpired()) continue;
+
+        bool hitWorld = false;
+        const sf::FloatRect current = fireball->hitbox.getGlobalBounds();
+        for (Block* block : blocks) {
+            if (block && block->isExist() &&
+                PhysicsEngine::sweptAabbIntersects(
+                    previousFireballBounds[fireballIndex], current,
+                    block->hitbox.getGlobalBounds())) {
+                fireball->setPosition(
+                    previousFireballBounds[fireballIndex].position);
+                fireball->reactToBlockCollision();
+                hitWorld = true;
+                break;
+            }
+        }
+        if (hitWorld) continue;
+
+        for (Enemy* enemy : enemies) {
+            if (!enemy || enemy->isDead()) continue;
+            if (!PhysicsEngine::sweptAabbIntersects(
+                    previousFireballBounds[fireballIndex], current,
+                    enemy->hitbox.getGlobalBounds())) {
+                continue;
+            }
+            enemy->takeDamage(1);
+            fireball->reactToCollision();
+            if (enemy->isDead() && scoreChangedCallback) {
+                scoreChangedCallback(enemy->getPointsValue());
+            }
+            break;
+        }
+    }
     resolveProjectileWorldCollisions();
+
+    std::vector<sf::FloatRect> activeBlockBounds;
+    activeBlockBounds.reserve(blocks.size());
+    for (Block* block : blocks) {
+        if (block && block->isExist()) {
+            activeBlockBounds.push_back(block->hitbox.getGlobalBounds());
+        }
+    }
+
+    for (std::size_t playerIndex = 0; playerIndex < players.size(); ++playerIndex) {
+        PlayerManager* player = players[playerIndex];
+        if (!player || player->isDead()) continue;
+        const sf::FloatRect playerBounds = player->hitbox.getGlobalBounds();
+
+        for (std::size_t enemyIndex = 0; enemyIndex < enemies.size(); ++enemyIndex) {
+            Enemy* enemy = enemies[enemyIndex];
+            if (!enemy || enemy->isDead()) continue;
+            const sf::FloatRect enemyBounds = enemy->hitbox.getGlobalBounds();
+            sf::FloatRect relativePrevious = previousPlayerBounds[playerIndex];
+            relativePrevious.position +=
+                enemyBounds.position - previousEnemyBounds[enemyIndex].position;
+            const AabbContactSide side = PhysicsEngine::classifyAabbContact(
+                relativePrevious, playerBounds, enemyBounds);
+            if (side == AabbContactSide::None) continue;
+
+            const PlayerEnemyContactKind kind =
+                side == AabbContactSide::Bottom
+                    ? PlayerEnemyContactKind::Stomp
+                    : PlayerEnemyContactKind::Side;
+            const float playerCenter =
+                playerBounds.position.x + playerBounds.size.x * 0.5f;
+            const float enemyCenter =
+                enemyBounds.position.x + enemyBounds.size.x * 0.5f;
+            const bool wasDead = player->isDead();
+            const EnemyContactOutcome outcome = enemy->handlePlayerContact(
+                *player, kind, playerCenter < enemyCenter ? 1.f : -1.f);
+            if (outcome.bounceVelocity != 0.f) {
+                if (MovementComponent* movement = player->getMovementComponent()) {
+                    movement->setVelocity(movement->getVelocity().x,
+                                          outcome.bounceVelocity);
+                }
+            }
+            if (outcome.scoreDelta != 0 && scoreChangedCallback) {
+                scoreChangedCallback(outcome.scoreDelta);
+            }
+            if (!wasDead && player->isDead() && playerDeathCallback) {
+                playerDeathCallback(*player);
+            }
+            if (player->isDead()) break;
+        }
+
+        if (player->isDead()) continue;
+        for (PowerUpObject* item : powerUps) {
+            if (!item || !item->exists() ||
+                !player->hitbox.getGlobalBounds().findIntersection(
+                    item->hitbox.getGlobalBounds())) {
+                continue;
+            }
+
+            bool canGrow = true;
+            if (!player->isBig()) {
+                canGrow = physicsEngine.canGrow(
+                    player->hitbox.getGlobalBounds(),
+                    {player->hitbox.getSize().x,
+                     2.f * MapFormat::TILE_SIZE},
+                    activeBlockBounds);
+            }
+
+            const ItemCollectionResult outcome = item->collect(*player, canGrow);
+            if (!outcome.consumed) continue;
+
+            bool applied = true;
+            if (outcome.requestedForm == RequestedPlayerForm::Big) {
+                applied = player->setBig(true, canGrow);
+            } else if (outcome.requestedForm == RequestedPlayerForm::Fire) {
+                applied = player->setFire(true, canGrow);
+            } else if (outcome.requestedForm == RequestedPlayerForm::Invincible) {
+                player->setImmortal(true);
+            }
+            if (!applied) {
+                item->setExist(true);
+                continue;
+            }
+            if (outcome.scoreDelta != 0 && scoreChangedCallback) {
+                scoreChangedCallback(outcome.scoreDelta);
+            }
+            if (outcome.coinDelta != 0 && coinCollectedCallback) {
+                coinCollectedCallback(outcome.coinDelta);
+            }
+            if (outcome.lifeDelta != 0 && livesChangedCallback) {
+                livesChangedCallback(outcome.lifeDelta);
+            }
+        }
+    }
 
     for (PlayerManager* player : players) {
         if (!player || player->isDead()) continue;
@@ -134,7 +371,7 @@ void LevelManager::update(float dt) {
                 player->hitbox.getGlobalBounds().findIntersection(
                     bullet->hitbox.getGlobalBounds())) {
                 bullet->deactivate();
-                damagePlayer(*player, 1);
+                damagePlayer(*player, bullet->getDamage());
             }
         }
         if (player->isDead()) continue;
@@ -187,6 +424,7 @@ void LevelManager::clear() {
     lavaHazards.clear();
     bullets.clear();
     rockets.clear();
+    fireballs.clear();
     winFlags.clear();
     genericPhysicsParticipants.clear();
     blockCollisionParticipants.clear();
@@ -365,6 +603,7 @@ void LevelManager::registerEntity(GameObject& entity) {
     if (auto* lava = dynamic_cast<Lava*>(&entity)) lavaHazards.push_back(lava);
     if (auto* bullet = dynamic_cast<Bullet*>(&entity)) bullets.push_back(bullet);
     if (auto* rocket = dynamic_cast<Rocket*>(&entity)) rockets.push_back(rocket);
+    if (auto* fireball = dynamic_cast<Fireball*>(&entity)) fireballs.push_back(fireball);
     if (auto* flag = dynamic_cast<WinFlag*>(&entity)) winFlags.push_back(flag);
 }
 
@@ -380,13 +619,26 @@ void LevelManager::flushPendingEntities() {
 
 void LevelManager::rebuildViews() {
     blocks.clear(); enemies.clear(); physicsEnemies.clear(); powerUps.clear();
-    lavaHazards.clear(); bullets.clear(); rockets.clear(); winFlags.clear();
+    lavaHazards.clear(); bullets.clear(); rockets.clear(); fireballs.clear();
+    winFlags.clear();
     for (auto& entity : entities) if (entity) registerEntity(*entity);
 }
 
 void LevelManager::removeInactiveEntities() {
+    const auto worldBounds = getWorldBounds();
+    const auto outsideActorWorld = [&worldBounds](const sf::FloatRect& bounds) {
+        if (!worldBounds) return false;
+        const float margin = MapFormat::TILE_SIZE;
+        const float worldLeft = worldBounds->position.x;
+        const float worldRight = worldLeft + worldBounds->size.x;
+        const float worldBottom =
+            worldBounds->position.y + worldBounds->size.y;
+        return bounds.position.x + bounds.size.x < worldLeft - margin ||
+               bounds.position.x > worldRight + margin ||
+               bounds.position.y > worldBottom + margin;
+    };
     entities.erase(std::remove_if(entities.begin(), entities.end(),
-        [this](const std::unique_ptr<GameObject>& entity) {
+        [this, &outsideActorWorld](const std::unique_ptr<GameObject>& entity) {
             bool remove = false;
             if (const auto* block = dynamic_cast<const Block*>(entity.get())) {
                 remove = !block->isExist();
@@ -394,11 +646,17 @@ void LevelManager::removeInactiveEntities() {
                 remove = !bullet->isActive();
             } else if (const auto* rocket = dynamic_cast<const Rocket*>(entity.get())) {
                 remove = !rocket->isActive();
+            } else if (const auto* fireball =
+                           dynamic_cast<const Fireball*>(entity.get())) {
+                remove = fireball->isExpired() ||
+                         outsideActorWorld(fireball->hitbox.getGlobalBounds());
             } else if (const auto* enemy = dynamic_cast<const Enemy*>(entity.get())) {
-                remove = enemy->isDead();
+                remove = enemy->isDead() ||
+                         outsideActorWorld(enemy->hitbox.getGlobalBounds());
             } else if (const auto* powerUp =
                            dynamic_cast<const PowerUpObject*>(entity.get())) {
-                remove = !powerUp->exists();
+                remove = !powerUp->exists() ||
+                         outsideActorWorld(powerUp->hitbox.getGlobalBounds());
             }
             if (remove) {
                 genericPhysicsParticipants.erase(entity.get());

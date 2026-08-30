@@ -4,9 +4,10 @@
 #include <algorithm>
 
 Bullet::Bullet(sf::Vector2f pos, sf::Vector2f initialVelocity,
-               float activeLifetime)
+               float activeLifetime, int impactDamage)
     : velocity(initialVelocity), shape(MapFormat::TILE_SIZE * 0.25f),
-      lifetime(std::max(0.f, activeLifetime)), active(activeLifetime > 0.f) {
+      lifetime(std::max(0.f, activeLifetime)),
+      damage(std::max(0, impactDamage)), active(activeLifetime > 0.f) {
     setPosition(pos);
     setSize({MapFormat::TILE_SIZE * 0.5f, MapFormat::TILE_SIZE * 0.5f});
     previousBounds = hitbox.getGlobalBounds();
@@ -43,6 +44,8 @@ bool Bullet::deactivateOnWorldCollision(
 sf::FloatRect Bullet::getPreviousBounds() const noexcept {
     return previousBounds;
 }
+
+int Bullet::getDamage() const noexcept { return damage; }
 
 bool Bullet::cullOutside(const sf::FloatRect& worldBounds,
                          float margin) noexcept {
