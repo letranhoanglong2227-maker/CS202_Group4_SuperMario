@@ -22,9 +22,13 @@ void drawCentered(sf::RenderTarget& target, const sf::Font& font, std::string_vi
 
 SettingState::SettingState(StateStack& stack, StateContext context)
     : State(stack, context),
-      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")) {
+      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")),
+      m_readableFontLoaded(m_readableFont.openFromFile("assets/fonts/American Captain.ttf")) {
     if (!m_fontLoaded) {
         std::cerr << "Settings font unavailable.\n";
+    }
+    if (!m_readableFontLoaded) {
+        std::cerr << "Settings readable font unavailable.\n";
     }
 }
 
@@ -53,10 +57,13 @@ void SettingState::render(sf::RenderTarget& target) {
 
     if (m_fontLoaded) {
         drawCentered(target, m_font, "SETTINGS", 38, {640.f, 220.f}, sf::Color(255, 218, 62));
-        drawCentered(target, m_font, "AUDIO CONTROLS PENDING P4 AUDIOSYSTEM CONTRACT", 14,
+    }
+    if (m_readableFontLoaded) {
+        drawCentered(target, m_readableFont, "AUDIO CONTROLS ARE WAITING FOR THE P4 AUDIOSYSTEM CONTRACT", 23,
                      {640.f, 330.f}, sf::Color(255, 185, 85));
-        drawCentered(target, m_font, "NO DUPLICATE VOLUME STORE WAS ADDED", 15,
-                     {640.f, 380.f}, sf::Color(195, 215, 235));
-        drawCentered(target, m_font, "ENTER / ESC TO BACK", 18, {640.f, 475.f}, sf::Color::White);
+        drawCentered(target, m_readableFont, "NO DUPLICATE VOLUME STORE WAS ADDED", 22,
+                     {640.f, 385.f}, sf::Color(205, 220, 235));
+        drawCentered(target, m_readableFont, "ENTER OR ESC TO GO BACK", 25,
+                     {640.f, 475.f}, sf::Color::White);
     }
 }

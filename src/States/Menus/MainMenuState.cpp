@@ -18,7 +18,7 @@
 
 namespace {
 constexpr std::array<std::string_view, 4> Options{
-    "NEW GAME", "SETTINGS", "LEADERBOARD  P4", "EXIT"};
+    "NEW GAME", "SETTINGS", "LEADERBOARD", "EXIT"};
 constexpr float ButtonX = 790.f;
 constexpr float ButtonY = 285.f;
 constexpr float ButtonWidth = 390.f;
@@ -41,12 +41,16 @@ void drawCenteredText(sf::RenderTarget& target, const sf::Font& font, std::strin
 MainMenuState::MainMenuState(StateStack& stack, StateContext context)
     : State(stack, context),
       m_backgroundLoaded(m_backgroundTexture.loadFromFile("assets/textures/basic_mainmenu.png")),
-      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")) {
+      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")),
+      m_readableFontLoaded(m_readableFont.openFromFile("assets/fonts/American Captain.ttf")) {
     if (!m_backgroundLoaded) {
         std::cerr << "Main menu background unavailable; using color fallback.\n";
     }
     if (!m_fontLoaded) {
         std::cerr << "Main menu font unavailable; controls remain keyboard-operable.\n";
+    }
+    if (!m_readableFontLoaded) {
+        std::cerr << "Main menu readable font unavailable.\n";
     }
 }
 
@@ -119,25 +123,29 @@ void MainMenuState::render(sf::RenderTarget& target) {
         const float y = ButtonY + static_cast<float>(i) * (ButtonHeight + ButtonGap);
         sf::RectangleShape button({ButtonWidth, ButtonHeight});
         button.setPosition({ButtonX, y});
-        const bool disabled = i == 2;
-        button.setFillColor(disabled ? sf::Color(55, 62, 74, 215)
-                                     : (i == m_selected ? sf::Color(190, 52, 46, 238)
-                                                        : sf::Color(22, 36, 58, 225)));
+        button.setFillColor(i == m_selected ? sf::Color(190, 52, 46, 238)
+                                            : sf::Color(22, 36, 58, 225));
         button.setOutlineColor(i == m_selected ? sf::Color(255, 226, 92) : sf::Color(225, 235, 245));
         button.setOutlineThickness(i == m_selected ? 3.f : 1.f);
         target.draw(button);
 
         if (m_fontLoaded) {
-            drawCenteredText(target, m_font, Options[i], 24, {ButtonX + ButtonWidth / 2.f, y + ButtonHeight / 2.f},
-                             disabled ? sf::Color(160, 165, 175) : sf::Color::White);
+            drawCenteredText(target, m_font, Options[i], 24,
+                             {ButtonX + ButtonWidth / 2.f, y + ButtonHeight / 2.f}, sf::Color::White);
         }
     }
 
     if (m_fontLoaded) {
         drawCenteredText(target, m_font, "SUPER MARIO", 36, {980.f, 120.f}, sf::Color(255, 218, 62));
-        drawCenteredText(target, m_font, "GROUP 4  -  UI PREVIEW", 20, {980.f, 180.f}, sf::Color(238, 245, 255));
-        drawCenteredText(target, m_font, "ARROWS / MOUSE TO SELECT   ENTER TO CONFIRM", 13,
-                         {980.f, 625.f}, sf::Color(205, 220, 235));
+    }
+    if (m_readableFontLoaded) {
+        drawCenteredText(target, m_readableFont, "GROUP 4 - UI PREVIEW", 32,
+                         {980.f, 180.f}, sf::Color(238, 245, 255));
+        const std::string_view hint = m_selected == 2
+            ? "LEADERBOARD ROUTE IS WAITING FOR P4"
+            : "ARROWS OR MOUSE TO SELECT  -  ENTER TO CONFIRM";
+        drawCenteredText(target, m_readableFont, hint, 19,
+                         {980.f, 632.f}, sf::Color(225, 235, 245));
     }
 }
 

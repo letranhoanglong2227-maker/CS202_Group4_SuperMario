@@ -14,5 +14,7 @@ public:
 
 private:
     sf::Font m_font;
+    sf::Font m_readableFont;
     bool m_fontLoaded{};
+    bool m_readableFontLoaded{};
 };

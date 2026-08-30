@@ -21,7 +21,9 @@ private:
 
     sf::Texture m_backgroundTexture;
     sf::Font m_font;
+    sf::Font m_readableFont;
     bool m_backgroundLoaded{};
     bool m_fontLoaded{};
+    bool m_readableFontLoaded{};
     std::size_t m_selected{};
 };
