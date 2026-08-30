@@ -18,6 +18,9 @@ public:
     bool isExist() const { return exist; }
     void setSizeBlock(const sf::Vector2f& sz);
 
+    void setSize(const sf::Vector2f& sz) override;
+    void setSize(float width, float height) override;
+
     virtual void initSpritesSheet() = 0;
     virtual void reactToCollision(int collidedSide) = 0;
     virtual void update(float dt) = 0;
