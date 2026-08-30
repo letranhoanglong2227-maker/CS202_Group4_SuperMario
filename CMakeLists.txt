@@ -87,3 +87,27 @@ set_tests_properties(Person2RuntimeContracts PROPERTIES
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
 )
 
+
+add_executable(Person4AnimationContracts
+    tests/Person4AnimationContracts.cpp
+    ${PERSON2_TEST_SOURCES}
+)
+target_include_directories(Person4AnimationContracts PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(Person4AnimationContracts PRIVATE
+    SFML::Graphics
+    SFML::Audio
+    SFML::Window
+    SFML::System
+)
+if(MSVC)
+    target_compile_options(Person4AnimationContracts PRIVATE /W4)
+else()
+    target_compile_options(Person4AnimationContracts PRIVATE -Wall -Wextra)
+endif()
+
+add_test(NAME Person4AnimationContracts COMMAND Person4AnimationContracts)
+set_tests_properties(Person4AnimationContracts PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)

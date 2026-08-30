@@ -1,0 +1,10 @@
+XREQ-CON-P3-P4-ANIMATION-001
+Consumer task: P4-ANIMATION-001
+Provider: Person 3
+P4 cần P3 xác nhận:
+1. Danh sách key semantic tối thiểu mà player/enemy dùng, ví dụ Idle/Run/Jump/Fall/Hurt/Dead.
+2. P3 sở hữu sf::Sprite và sf::Texture; lifetime phải dài hơn AnimationComponent.
+3. P3 register frame trước update và chỉ gọi play/update một lần mỗi entity mỗi frame.
+4. Cho một consumer fixture tối thiểu: một player và một enemy để test chuyển key.
+P4 sẽ cung cấp deterministic frame playback; P4 không chọn gameplay state hay atlas coordinate cho P3.
+Acceptance: compile + visible switch không missing-key spam.
