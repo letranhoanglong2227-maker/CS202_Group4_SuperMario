@@ -160,9 +160,9 @@ Contract status vocabulary:
 - **Output:** deterministic result such as stomped, harmful, shell-kicked, enemy-defeated, player-damaged, bounce, score value.
 - **Call direction:** P2 classifies → invokes P3 behavior → applies physical response → emits P1 event.
 - **Timing:** after movement/block resolution, before inactive cleanup; at most one semantic resolution per contact pair/frame.
-- **Current interface / missing behavior:** fragmented P3 methods exist; no integrated contact loop or common result/order exists.
+- **Current interface / missing behavior:** P2 consumes P3's common typed result after relative-motion AABB classification and exposes score/death callbacks; P1 callback-to-event binding plus visual/gameplay acceptance remain.
 - **Failure behavior:** ambiguous contact uses a documented harmful/default result, never both stomp and damage; invulnerability and dead/inactive filters apply first.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-CONTACT-ENEMY-001`, `P3-GOOMBA-001`, `P3-KOOPA-001`, `P3-AIR-HERISS-001`, `P3-BOSS-001`, `P1-EVENT-001`.
 
 ### CON-P2-P3-PLAYER-ITEM — world motion and exactly-once collection
@@ -175,9 +175,9 @@ Contract status vocabulary:
 - **Output:** exactly one item effect/outcome, inactive transition, and optional score/coin/power event. A denied growth clearance returns `not consumed/not applied`: player size/power and item active state remain unchanged so no player is enlarged into a solid Block.
 - **Call direction:** P2 moves/resolves item → detects player overlap → invokes P3 collection → queues event/cleanup.
 - **Timing:** after movement/block resolution and before cleanup; newly spawned payload joins via pending queue and is not double-updated in its birth traversal.
-- **Current interface / missing behavior:** `onCollect`/lifecycle methods exist, but P2 does not call them and item world physics/rendering are incomplete.
+- **Current interface / missing behavior:** P2 resolves item/Block motion, safe-growth clearance, typed collection, form application, delta callbacks and deferred cleanup; P1/P4 session/HUD binding plus visual/gameplay acceptance remain.
 - **Failure behavior:** null/inactive/collected item is ignored; an effect failure cannot remove the item silently without a recorded outcome.
-- **Status:** `PARTIAL`.
+- **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-CONTACT-ITEM-001`, `P3-PLAYER-STATE-001`, `P3-ITEM-001`, `P3-FIRE-001`, `P4-QUESTION-BLOCK-001`, `P4-PAYLOAD-BLOCK-001`.
 
 ### CON-P2-P3-ENEMY-REMOVAL — dead and off-world owned entity cleanup
@@ -190,9 +190,9 @@ Contract status vocabulary:
 - **Output:** exclusion from later same-frame interactions followed by owner deletion at the cleanup barrier.
 - **Call direction:** P3 state/P2 threshold → P2 filters participation → P2 cleanup.
 - **Timing:** deactivate immediately; delete after active traversal; rebuild views before the next frame.
-- **Current interface / missing behavior:** dead removal and typed view rebuild exist; generic below-world cleanup is absent.
+- **Current interface / missing behavior:** dead/inactive and map-derived off-world enemy/item/Fireball removal plus typed view rebuild pass; long-session gameplay acceptance remains.
 - **Failure behavior:** duplicate removal is harmless; cleanup never dereferences a removed object or erases while iterating active owners.
-- **Status:** `PARTIAL` with verified ownership foundation.
+- **Status:** `IMPLEMENTED_PENDING_GAMEPLAY_ACCEPTANCE` with verified ownership foundation.
 - **Dependent tasks:** `P2-CLEANUP-001` and all P3 enemy/item tasks; preserves `BASE-P2-OWNERSHIP-001` and `BASE-P2-LIFECYCLE-001`. P2-owned Cannon/Bullet/Rocket culling is an internal P2 cleanup use, not a P3 removal dependency.
 
 ### CON-P2-P3-PROJECTILE-SPAWN — boss/fire attack request and runtime adoption
@@ -205,9 +205,9 @@ Contract status vocabulary:
 - **Output:** one queued P2-owned runtime projectile/attack object or an explicit rejected request; on collision, one typed P3 target-state result and at most one P1-facing score/death outcome.
 - **Call direction:** P3 update/input → P2 spawn callback/queue → P2 constructs or immediately adopts one unique owner → P2 classifies projectile contact → P3 target-state method returns a semantic result → P2 deactivates/queues cleanup and forwards any P1 outcome.
 - **Timing:** request at most once per cooldown/action edge; flush after current traversal so the birth frame is not double-updated; collide starting at the agreed next participation point; accept at most one semantic hit per projectile/target pair per frame, mark a consumed projectile inactive before later pair traversal, and delete only at the owner cleanup barrier.
-- **Current interface / missing behavior:** P2 already has safe Cannon/Bullet and Rocket ownership/lifetime patterns, but no P3 boss/fire request path; P3 boss/fire source behavior is incomplete.
+- **Current interface / missing behavior:** P2 validates typed requests, consumes Boss requests through base `Enemy`, and queues damage-carrying Bullet/Fireball owners without a birth-frame update; P1 fire-input binding and production visual/gameplay acceptance remain.
 - **Failure behavior:** invalid kind/parameters or failed construction is diagnosed and creates no partial/raw owner; a rejected request does not consume cooldown unless the P3 task explicitly tests that policy. Duplicate pairs/events are suppressed, an already-inactive projectile cannot award score or death twice, and a failed target reaction produces no partial session mutation.
-- **Status:** `DEFINED_PENDING_IMPLEMENTATION`.
+- **Status:** `IMPLEMENTED_PENDING_DOWNSTREAM_ACCEPTANCE`.
 - **Dependent tasks:** `P2-PROJECTILE-001`, `P3-BOSS-001`, `P3-FIRE-001`; preserves `BASE-P2-OWNERSHIP-001`, `BASE-P2-LIFECYCLE-001`, and `BASE-P2-ROCKET-001`.
 
 ## P2 ↔ P4 contracts

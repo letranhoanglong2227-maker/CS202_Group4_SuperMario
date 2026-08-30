@@ -11,7 +11,7 @@ Status values are limited to `DONE`, `READY`, `IN_PROGRESS`, `BLOCKED`, `TESTING
 | `include/Components/MovementComponent.hpp`; `src/Components/MovementComponent.cpp` | `VERIFIED_DONE` for audited base contract | `BASE-P2-RUNTIME-001` | `DONE` | YES | YES (current consumers) | YES (indirect) | N/A | NO |
 | `include/Physics/PhysicsEngine.hpp`; `src/Physics/PhysicsEngine.cpp` | `TASK` plus frozen baseline | `BASE-P2-LIFECYCLE-001`, `P2-BOUNDS-001`, `P2-CONTACT-ENEMY-001`, `P2-CONTACT-ITEM-001`, `P2-PROJECTILE-001` | `BLOCKED` overall | PARTIAL | PARTIAL | PARTIAL | N/A | NO |
 | `include/Levels/Managers/MapManager.hpp`; `src/Levels/Managers/MapManager.cpp` | `TASK` | `P2-LOAD-001`, `P2-EXTENT-001`, `P2-VARIANT-WIRE-001`, `P2-NINE-LEVEL-001` | `BLOCKED` overall | PARTIAL | NO | PARTIAL | N/A | NO |
-| `include/Levels/Managers/LevelManager.hpp`; `src/Levels/Managers/LevelManager.cpp` | `TASK` plus frozen baselines | all remaining P2 runtime tasks; `BASE-P2-OWNERSHIP-001`, `BASE-P2-LIFECYCLE-001`, `BASE-P2-ROCKET-001` | `BLOCKED` overall | PARTIAL | PARTIAL | PARTIAL | NO | NO |
+| `include/Levels/Managers/LevelManager.hpp`; `src/Levels/Managers/LevelManager.cpp` | `TASK` plus frozen baselines | all remaining P2 runtime tasks; `BASE-P2-OWNERSHIP-001`, `BASE-P2-LIFECYCLE-001`, `BASE-P2-ROCKET-001` | `TESTING` overall | YES | PARTIAL | YES | NO | NO |
 | `include/Levels/Stages/W1_LV1.hpp`; `src/Levels/Stages/W1_LV1.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W1-LV1` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
 | `include/Levels/Stages/W1_LV2.hpp`; `src/Levels/Stages/W1_LV2.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W1-LV2` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
 | `include/Levels/Stages/W1_LV3.hpp`; `src/Levels/Stages/W1_LV3.cpp` | `TASK` | `P2-NINE-LEVEL-001`, `LV-W1-LV3` | `BLOCKED` | YES (wrapper) | NO | NO | NO | NO |
@@ -30,7 +30,7 @@ Status values are limited to `DONE`, `READY`, `IN_PROGRESS`, `BLOCKED`, `TESTING
 | `include/Objects/Environment/Rocket.hpp`; `src/Objects/Environment/Rocket.cpp` | `TASK` plus frozen lifetime | `P2-PROJECTILE-001`, `BASE-P2-ROCKET-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
 | `include/Objects/Environment/WinFlag.hpp`; `src/Objects/Environment/WinFlag.cpp` | `TASK` | `P2-WINFLAG-001` | `DONE` | YES | PARTIAL | YES | NO | NO |
 
-Summary: 7 P2 implementation tasks are `DONE`, 6 remaining tasks are `BLOCKED`, 4 frozen P2 baseline cards remain `DONE`, and 9 separate level-validation entries remain tracked. No owned production file is unaccounted for. There are no P2-owned production files classified `NO_CHANGE`, `DEFERRED`, or `EXCLUDED`; preservation-only components are explicitly tied to a task or verified baseline.
+Summary: 7 P2 implementation tasks are `DONE`, 3 are `TESTING`, 3 remain `BLOCKED`, 4 frozen P2 baseline cards remain `DONE`, and 9 separate level-validation entries remain tracked. No owned production file is unaccounted for. There are no P2-owned production files classified `NO_CHANGE`, `DEFERRED`, or `EXCLUDED`; preservation-only components are explicitly tied to a task or verified baseline.
 
 ## 2. Exact current baseline
 
@@ -40,7 +40,7 @@ Summary: 7 P2 implementation tasks are `DONE`, 6 remaining tasks are `BLOCKED`, 
 - All nine wrappers W1_LV1 through W3_LV3 exist. `ConfiguredLevel` currently requests `assets/levels/LevelSketch_W*_LV*.png`, while the named files are under `assets/textures`, and its constructor discards `LevelManager::load`'s Boolean result. No map image is to be opened or edited by this plan.
 - `LevelManager` is the unique owner of map/runtime objects through `std::unique_ptr`; typed raw-pointer collections are non-owning views. P1-selected players are borrowed and must have a stable external owner. Do not convert either design to Group5-style raw ownership.
 - The audited ownership/physics-participation distinction, immediate callback adoption, pending-spawn flush, inactive-owner cleanup, and same-frame inactive-Block exclusion are current working baselines.
-- The 27-check P2 runtime executable passed. It covers current floor/wall/ceiling/headbutt behavior, ownership/view rebuilds, Bullet/BrickFragment lifecycle, normal Brick integration, and live/lost Rocket target lifetime. It does not establish camera, bounds, pit, player/enemy, player/item, nine-level, or visual/gameplay completion.
+- The 77-check P2 runtime executable passes. It covers block/environment baselines, ownership/view rebuilds, dynamic maps/bounds/pit, player/enemy and player/item contracts, Boss/Fireball request adoption, and off-world actor/item/projectile cleanup. It does not establish production P1/P4 callback binding or visual/gameplay completion.
 - Current update order is owned-object update, borrowed-player block physics, participating-enemy block physics, selected Lava/Bullet/Rocket/WinFlag overlap checks, then spawn flush and inactive cleanup. There is no player/enemy or player/item pass.
 - Lava may shrink a powered player while still firing the death callback unconditionally. WinFlag interprets its marker as a pole top, but the team's Group5-derived white marker convention is a base/anchor tile. Anchor direction is a required correction; delayed flag polish remains `DEC-WINFLAG-POLISH` and stays open.
 - Map variants are parsed but discarded at construction. CloudPlatform/CloudBlock is deferred from the current release; `MovingBlock` remains independent.
@@ -58,9 +58,9 @@ Summary: 7 P2 implementation tasks are `DONE`, 6 remaining tasks are `BLOCKED`, 
 | 6 | `P2-LOAD-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `DEC-ASSET-ROOT`; then `CON-P1-P2-LEVEL-LOAD` |
 | 7 | `P2-BOUNDS-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; production visual/gameplay acceptance is downstream |
 | 8 | `P2-PIT-001` | P0 | `DONE` | `READY_WITH_STABLE_CONTRACT` | P2 source/runtime complete; P1/P3 fatal-respawn flow is downstream |
-| 9 | `P2-CLEANUP-001` | P1 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | `P2-EXTENT-001`, P3 lifecycle predicates, `CON-P2-P3-ENEMY-REMOVAL` |
-| 10 | `P2-CONTACT-ENEMY-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | P3 contact/result APIs, P1 event sink, `CON-P2-P3-PLAYER-ENEMY` |
-| 11 | `P2-CONTACT-ITEM-001` | P0 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | P3 collection/result APIs, P1 score sink, `CON-P2-P3-PLAYER-ITEM` |
+| 9 | `P2-CLEANUP-001` | P1 | `TESTING` | `READY_WITH_STABLE_CONTRACT` | Source/runtime complete; long-session gameplay acceptance remains |
+| 10 | `P2-CONTACT-ENEMY-001` | P0 | `TESTING` | `READY_WITH_STABLE_CONTRACT` | P3 API integrated; P1 callback-to-event binding and gameplay acceptance remain |
+| 11 | `P2-CONTACT-ITEM-001` | P0 | `TESTING` | `READY_WITH_STABLE_CONTRACT` | P3 API integrated; P1/P4 session/HUD binding and gameplay acceptance remain |
 | 12 | `P2-VARIANT-WIRE-001` | P1 | `BLOCKED` | `BLOCKED_BY_OTHER_TASK` | P4 variant constructors, P3 payloads, `DEC-CLOUD-SEMANTICS`, `DEC-BLOCK-ACTOR-ELIGIBILITY` |
 | 13 | `P2-NINE-LEVEL-001` | P1 | `BLOCKED` | `LATE_INTEGRATION` | Tasks 1–12 as applicable, P1 playable flow, P3/P4 visible gameplay; map-data issues remain user-owned |
 
@@ -203,15 +203,15 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 - **Owner / priority / requirement / status:** Person 2; P1; `REQUIRED_BY_PLAN`; `DONE`.
 - **Purpose:** Preserve sound projectile ownership while making projectiles constructible, collidable, and bounded in the real runtime.
-- **Exact current behavior:** LevelManager exposes owned homing and straight Rocket spawn paths. Cannon spawns through deferred unique ownership without a birth-frame update. Bullet/Rocket use configurable lifetimes, swept-AABB Block collision over the full frame path, map-derived extent culling, once-only player damage, and deferred inactive cleanup.
-- **Missing checklist:** [x] production Rocket entry points; [x] immediate unique ownership; [x] Block collision and extent culling; [x] once-only player damage/death; [x] hit/expiry/target-loss/off-world removal; [x] focused runtime checks; [ ] P3 boss/fire callers consume the spawn surface; [ ] production visual/gameplay verification.
+- **Exact current behavior:** LevelManager exposes owned homing/straight Rocket paths and a validated typed P3 request path. Boss requests are consumed through base `Enemy`, converted to damage-carrying Bullet or Fireball owners, queued during traversal, and join collision/views only after the birth frame.
+- **Missing checklist:** [x] production Rocket entry points; [x] immediate unique ownership; [x] Block collision and extent culling; [x] once-only player damage/death; [x] hit/expiry/target-loss/off-world removal; [x] focused runtime checks; [x] P3 boss/fire request consumption; [ ] P1 fire-input binding; [ ] production visual/gameplay verification.
 - **Exact target files:** `include/Objects/Environment/Cannon.hpp`, `src/Objects/Environment/Cannon.cpp`, `include/Objects/Environment/Bullet.hpp`, `src/Objects/Environment/Bullet.cpp`, `include/Objects/Environment/Rocket.hpp`, `src/Objects/Environment/Rocket.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets only. **Read-only dependencies:** P3 boss/player/fire files, P4 block files, P1 mediator/state. **Do not implement:** Bowser/Petey attacks, FireBuff shooting, projectile sprites/audio, or P3 internals.
 - **Dependencies:** `P2-EXTENT-001` for final culling; frozen `BASE-P2-OWNERSHIP-001` and `BASE-P2-ROCKET-001`; death/block contracts. **Provides:** P2 runtime half of `CON-P2-P3-PROJECTILE-SPAWN`. **Consumes:** P3 value/move-only attack request, borrowed target identity only through a safe resolver, and P3 damage result; projectile culling is internal P2 cleanup, not `CON-P2-P3-ENEMY-REMOVAL`.
 - **Group5 reference / do-not-copy:** no architecture copy; Group4's unique ownership and target resolver are the required baseline.
 - **Notes / SFML:** no new dependency; preserve SFML 3.1 vectors/rect APIs. Prefer one generic spawn hook over separate caller-specific hacks.
 - **Checks:** compile; runtime Cannon/Bullet existing checks remain green, Rocket production spawn, target loss, block/world hit, off-world and once-only damage; visual verify trajectory/collider alignment; gameplay verify Cannon and one Rocket source without dangling targets.
-- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=NO`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
+- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
 - **Definition of done:** each projectile has a reachable production source and deterministic safe removal while all frozen lifetime checks remain green. **Suggested commit:** `p2: complete projectile spawn and culling paths`.
 
 ### `P2-LOAD-001` — Make stage path and load readiness explicit
@@ -261,25 +261,25 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 
 ### `P2-CLEANUP-001` — Remove off-world owned runtime objects safely
 
-- **Owner / priority / requirement / status:** Person 2; P1; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `BLOCKED`.
+- **Owner / priority / requirement / status:** Person 2; P1; `IMPLIED_BY_CURRENT_GROUP4_DESIGN`; `TESTING`.
 - **Purpose:** Prevent enemies, items, and projectiles that leave the dynamic world from living forever in owner/view collections.
-- **Exact current behavior:** inactive specialized objects are removed after traversal and views rebuild. Bullet/Rocket now cull through map-derived extent and the existing inactive cleanup; enemy/item off-world policy still lacks the P3 lifecycle predicates needed for safe removal.
-- **Missing checklist:** [x] projectile extent margin; [x] projectile lifecycle marking; [x] deferred removal/view rebuild; [ ] enemy/item category margins; [ ] P3 inactive-removal API; [ ] legal-airborne retention; [ ] full category boundary/runtime and gameplay checks.
+- **Exact current behavior:** inactive specialized objects are removed after traversal and views rebuild. Enemy, item and Fireball owners now also use the map-derived horizontal/bottom margin; above-world airborne actors remain legal.
+- **Missing checklist:** [x] projectile extent margin; [x] projectile lifecycle marking; [x] deferred removal/view rebuild; [x] enemy/item category margins; [x] P3 inactive-removal API; [x] legal-airborne retention; [x] focused category runtime checks; [ ] long-session gameplay check.
 - **Exact target files:** `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`; projectile files from `P2-PROJECTILE-001` only for their P2 lifecycle predicates.
 - **Allowed files:** exact targets. **Read-only dependencies:** all P3 enemy/item files, P4 BrickFragment/Block files. **Do not implement:** P3/P4 lifecycle APIs, camera culling, or delete raw view pointers directly.
 - **Dependencies:** `P2-EXTENT-001`, `CON-P2-P3-ENEMY-REMOVAL`; accepted P3 item/enemy predicate. **Provides:** safe owner removal/view rebuild. **Consumes:** extent and provider lifecycle state.
 - **Group5 reference / do-not-copy:** Group5 has no equivalent cleanup and is not a model. Preserve Group4 `unique_ptr` superiority.
 - **Notes / SFML:** no visual-frustum culling; world-lifecycle cleanup is distinct. If a missing P3 predicate is required, file a cross-owner request.
 - **Checks:** compile; runtime each category crosses each relevant boundary, erased after traversal, no dangling view, legal airborne case retained; visual N/A; gameplay long fall/spawn session shows stable object counts.
-- **Completion dimensions:** `SOURCE_DONE=NO`; `INTEGRATION_DONE=NO`; `RUNTIME_TESTED=NO`; `VISUALLY_VERIFIED=N/A`; `GAMEPLAY_VERIFIED=NO`.
+- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=N/A`; `GAMEPLAY_VERIFIED=NO`.
 - **Definition of done:** owned off-world actors are removed deterministically without violating update iteration or ownership. **Suggested commit:** `p2: clean up off-world runtime objects`.
 
 ### `P2-CONTACT-ENEMY-001` — Orchestrate player/enemy contacts
 
-- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `BLOCKED`.
+- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `TESTING`.
 - **Purpose:** Connect P3 enemy/player behavior to P2's movement/contact order without moving behavior ownership.
-- **Exact current behavior:** P2 applies generic block physics to selected enemies and borrowed players and now has a tested previous/current AABB side classifier, but no player/enemy loop consumes it. P3 exposes fragmented damage, stomp, and shell methods; no integrated result contract exists.
-- **Missing checklist:** [ ] agree typed contact result; [ ] broad-phase active pairs; [ ] classify stomp vs harmful side/bottom; [ ] invoke P3 once/contact; [ ] apply bounce/shell motion; [ ] respect invulnerability/dead state; [ ] suppress inactive entities later same frame; [ ] forward score/death outcome without owning it.
+- **Exact current behavior:** after movement/block resolution, P2 classifies relative player/enemy motion, calls P3's typed contact method once per active pair, applies bounce/shell semantics, and forwards score/death deltas through non-owning callbacks.
+- **Missing checklist:** [x] typed contact result; [x] active-pair traversal; [x] stomp vs harmful side/bottom classification; [x] once/contact P3 call; [x] bounce/shell motion; [x] invulnerability/dead filters; [x] later same-frame inactive suppression; [x] callback outcome surface; [ ] P1 event binding; [ ] visual/gameplay acceptance.
 - **Exact target files:** `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets. **Read-only dependencies:** every P3 player/enemy file, P1 mediator, P4 UserData/HUD. **Do not implement:** enemy state logic, scoring, animation, lives, boss attacks, or edit P3 to fit an ad hoc cast.
 - **Dependencies:** accepted `CON-P2-P3-PLAYER-ENEMY`; P3 source tasks; P1/P4 outcome sinks. `DEC-BLOCK-ACTOR-ELIGIBILITY` remains OPEN for any shell/enemy-to-block extension, which is outside the minimum contact task.
@@ -287,22 +287,22 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 - **Group5 reference / do-not-copy:** reuse interaction ordering as a checklist only; do not copy GameEventMediator raw-pointer orchestration.
 - **Notes / SFML:** AABB/contact math must use SFML 3.1 rect API and previous/current motion, not render bounds. Avoid O(n²) abstraction unless current entity counts justify a documented `ponytail:` ceiling.
 - **Checks:** compile; runtime 1P Goomba stomp/side, Heriss harmful stomp, Koopa shell transitions, invulnerability and inactive removal/order; visual verify bounce/contact alignment; gameplay verify score/death handoff once.
-- **Completion dimensions:** `SOURCE_DONE=NO`; `INTEGRATION_DONE=NO`; `RUNTIME_TESTED=NO`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
+- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
 - **Definition of done:** representative required enemy contacts produce correct P3 outcomes with deterministic P2 ordering and no duplicate events. **Suggested commit:** `p2: orchestrate player enemy contacts`.
 
 ### `P2-CONTACT-ITEM-001` — Orchestrate player/item collection
 
-- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `BLOCKED`.
+- **Owner / priority / requirement / status:** Person 2; P0; `REQUIRED_BY_PLAN`; `TESTING`.
 - **Purpose:** Make P3 Coin/Mushroom/power-up objects collectible exactly once in the owned runtime.
-- **Exact current behavior:** LevelManager owns and removes inactive power-ups; it never calls `onCollect`. The feet-anchored `canGrow` clearance primitive has a focused low-ceiling test, but Coin/Mushroom provider behavior is partial and no score/coin event is integrated.
-- **Missing checklist:** [ ] active 1P player/item overlap after movement; [ ] P3 typed collection outcome; [ ] one-shot deactivation; [ ] Mushroom/block world physics where contract requires; [ ] queue-safe removal; [ ] outcome forwarded to P1/P4 via owner contract.
+- **Exact current behavior:** after item movement/Block resolution, LevelManager detects active player/item overlap, evaluates feet-anchored clearance, consumes one typed P3 outcome, applies the requested form, forwards score/coin/life deltas, and removes inactive ownership after traversal.
+- **Missing checklist:** [x] active 1P player/item overlap; [x] P3 typed outcome; [x] one-shot deactivation; [x] Mushroom/Block resolution; [x] queue-safe removal; [x] callback outcome surface; [ ] P1/P4 session/HUD binding; [ ] visual/gameplay acceptance.
 - **Exact target files:** `include/Physics/PhysicsEngine.hpp`, `src/Physics/PhysicsEngine.cpp`, `include/Levels/Managers/LevelManager.hpp`, `src/Levels/Managers/LevelManager.cpp`, `tests/Person2RuntimeContracts.cpp`.
 - **Allowed files:** exact targets. **Read-only dependencies:** P3 item/player/buff files, P1 mediator, P4 UserData/HUD/block payloads. **Do not implement:** score amount, coin-to-life policy, buff internals, payload animation, HUD, or persistence.
 - **Dependencies:** accepted `CON-P2-P3-PLAYER-ITEM`; P3 collection result; outcome sink. **Provides:** contact timing and owner cleanup. **Consumes:** P3 item behavior and player identity.
 - **Group5 reference / do-not-copy:** Group5 overlap order may be consulted; do not copy its raw vectors or mediator coupling.
 - **Notes / SFML:** use hitboxes, not sprite bounds. The current release has one active player, so no simultaneous-2P collection rule is required.
 - **Checks:** compile; runtime 1P Coin/Mushroom/power-up exactly once, inactive item skipped, and spawned-during-frame pickup deferred consistently; visual verify item contact alignment; gameplay verify score/state/HUD effects after cross-owner integration.
-- **Completion dimensions:** `SOURCE_DONE=NO`; `INTEGRATION_DONE=NO`; `RUNTIME_TESTED=NO`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
+- **Completion dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
 - **Definition of done:** every required collectible routes one P3 outcome through safe P2 ownership and disappears once. **Suggested commit:** `p2: integrate player item collection`.
 
 ### `P2-VARIANT-WIRE-001` — Wire Block, payload, and Cloud construction variants
@@ -347,7 +347,7 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 - **Dependencies / contracts:** provides `CON-P2-P4-SPAWN-HANDOFF` and owner half of `CON-P2-P3-ENEMY-REMOVAL`; consumes fresh callback object. Group5 raw ownership is `DO_NOT_COPY_ARCHITECTURE`.
 - **Notes / SFML / checks:** architecture is SFML-independent; C++20 syntax and existing ownership/spawn/remove runtime assertions remain required. Visual/gameplay not part of frozen scope.
 - **Dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES`; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=N/A`; `GAMEPLAY_VERIFIED=NO` because no production gameplay flow exists.
-- **DoD / commit:** existing 27 checks stay green; no new commit is suggested unless repairing a proven regression (`p2: preserve runtime ownership contract`).
+- **DoD / commit:** the expanded 77 checks stay green; no new commit is suggested unless repairing a proven regression (`p2: preserve runtime ownership contract`).
 
 #### `BASE-P2-LIFECYCLE-001` — Physics participation and inactive-owner removal
 
@@ -371,10 +371,10 @@ The following are persistent task cards. Requirement labels are `REQUIRED_BY_PLA
 - **Dimensions:** `SOURCE_DONE=YES`; `INTEGRATION_DONE=YES` for lifetime; `RUNTIME_TESTED=YES`; `VISUALLY_VERIFIED=NO`; `GAMEPLAY_VERIFIED=NO`.
 - **DoD / commit:** no dangling access under existing checks; regression-only commit `p2: restore rocket target lifetime safety`.
 
-#### `BASE-P2-RUNTIME-001` — Existing 27-check runtime suite and movement base
+#### `BASE-P2-RUNTIME-001` — Runtime contract suite and movement base
 
 - **Owner / priority / requirement / status:** Person 2; P0 baseline; `REQUIRED_BY_PLAN`; `DONE` for audited assertions — frozen.
-- **Purpose / current behavior:** current `tests/Person2RuntimeContracts.cpp` executable printed and passed 27 checks; current production syntax passed SFML 3.1. Movement base velocity/force/friction/clamps is exercised indirectly.
+- **Purpose / current behavior:** current `tests/Person2RuntimeContracts.cpp` executable prints and passes 77 checks; current production syntax passes SFML 3.1. Movement base velocity/force/friction/clamps is exercised indirectly.
 - **Missing checklist:** none for the 27 audited checks; isolated tuning/nine-level evidence remains in other tasks.
 - **Exact target / allowed files:** `tests/Person2RuntimeContracts.cpp`, `include/Components/MovementComponent.hpp`, `src/Components/MovementComponent.cpp`, and production files reached by existing assertions; append checks, never weaken/delete current assertions without new evidence. **Read-only dependencies:** none beyond their owners' public APIs. **Do not implement:** a new test framework or claim visual/gameplay completion from headless checks.
 - **Dependencies / contracts:** protects every P2 task from regression; consumes current public interfaces. Group5 not needed.
