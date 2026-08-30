@@ -13,10 +13,11 @@ private:
     std::unique_ptr<MovementComponent> movementComponent;
 
 public:
-    Mushroom(const sf::Vector2f& pos = { 0.f, 0.f }, bool popped = false);
-    ~Mushroom() override = default;
+    Mushroom(const sf::Vector2f& pos, bool popped = false);
+    virtual ~Mushroom() = default;
 
-    void onCollect(PlayerManager* player);
+    ItemCollectionResult collect(PlayerManager& player) override;
+    
     void reverseDirection();
     void reactToBlockCollision(Block* block) override;
 

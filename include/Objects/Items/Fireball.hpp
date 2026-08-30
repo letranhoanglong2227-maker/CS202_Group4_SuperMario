@@ -16,6 +16,10 @@ public:
 
     void reactToCollision();
     void reactToBlockCollision();
+    
+    bool isExpired() const;
+    bool canBeRemoved() const;
+
     void update(float dt) override;
     void render(sf::RenderTarget* target) override;
 };

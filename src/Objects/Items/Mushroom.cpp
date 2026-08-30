@@ -17,11 +17,12 @@ Mushroom::Mushroom(const sf::Vector2f& pos, bool popped)
     }
 }
 
-void Mushroom::onCollect(PlayerManager* player) {
-    if (player && exist) {
-        player->setBig(true);
-        exist = false;
-    }
+ItemCollectionResult Mushroom::collect(PlayerManager& player) {
+    if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+    
+    exist = false;
+    // Request Big form. P2 will call player.setBig(true, canGrow) based on clearance.
+    return ItemCollectionResult{true, 1000, 0, 0, RequestedPlayerForm::Big};
 }
 
 void Mushroom::reverseDirection() {

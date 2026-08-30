@@ -38,6 +38,14 @@ void Fireball::reactToBlockCollision() {
     }
 }
 
+bool Fireball::isExpired() const {
+    return dead;
+}
+
+bool Fireball::canBeRemoved() const {
+    return dead;
+}
+
 void Fireball::update(float dt) {
     if (dead) return;
 

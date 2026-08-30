@@ -1,12 +1,16 @@
 #include "Objects/Items/PowerUpObject.hpp"
 
-PowerUpObject::PowerUpObject(const std::string& n)
-    : GameObject(), name(n) {
+PowerUpObject::PowerUpObject(const std::string& name) : GameObject(), name(name) {
     animationComponent = std::make_unique<AnimationComponent>(
         entitySprite, 
         TextureItemManager::getItemTexture(), 
         0.1f
     );
+}
+
+ItemCollectionResult PowerUpObject::collect(PlayerManager& player) {
+    (void)player;
+    return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
 }
 
 const std::string& PowerUpObject::getName() const {

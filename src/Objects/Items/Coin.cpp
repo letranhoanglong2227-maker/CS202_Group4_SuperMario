@@ -20,9 +20,11 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
     }
 }
 
-void Coin::onCollect(PlayerManager* player) {
-    (void)player;
+ItemCollectionResult Coin::collect(PlayerManager& player) {
+    if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+    
     exist = false;
+    return ItemCollectionResult{true, 200, 1, 0, RequestedPlayerForm::None};
 }
 
 void Coin::reactToCollision() {

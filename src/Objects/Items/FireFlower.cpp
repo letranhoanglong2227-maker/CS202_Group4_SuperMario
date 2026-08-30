@@ -23,11 +23,11 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
     }
 }
 
-void FireFlower::onCollect(PlayerManager* player) {
-    if (player && exist) {
-        player->addBuff(std::make_unique<FireBuff>(-1.f)); // Infinite duration until hit
-        exist = false;
-    }
+ItemCollectionResult FireFlower::collect(PlayerManager& player) {
+    if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+    
+    exist = false;
+    return ItemCollectionResult{true, 1000, 0, 0, RequestedPlayerForm::Fire};
 }
 
 void FireFlower::update(float dt) {

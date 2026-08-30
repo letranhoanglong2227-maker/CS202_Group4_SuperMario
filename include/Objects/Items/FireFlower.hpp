@@ -13,6 +13,7 @@ private:
 public:
     FireFlower(const sf::Vector2f& pos, bool popped = false);
     
-    void onCollect(PlayerManager* player);
+    virtual ~FireFlower() = default;
+    ItemCollectionResult collect(PlayerManager& player) override;
     void update(float dt) override;
 };

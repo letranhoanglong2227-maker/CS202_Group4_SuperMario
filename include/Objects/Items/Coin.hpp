@@ -11,10 +11,10 @@ private:
     float initialY{ 0.f };
 
 public:
-    Coin(const sf::Vector2f& pos = { 0.f, 0.f }, bool popped = false);
-    ~Coin() override = default;
+    Coin(const sf::Vector2f& pos, bool popped = false);
+    virtual ~Coin() = default;
 
-    void onCollect(PlayerManager* player);
-    void reactToCollision() override;
+    ItemCollectionResult collect(PlayerManager& player) override;
+
     void update(float dt) override;
 };

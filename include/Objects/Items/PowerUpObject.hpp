@@ -4,6 +4,8 @@
 #include "Components/AnimationComponent.hpp"
 #include <string>
 #include <memory>
+#include "Entities/Players/PlayerManager.hpp"
+#include "Objects/Items/ItemCollectionResult.hpp"
 
 class Enemy;
 class Block;
@@ -13,14 +15,22 @@ protected:
     std::string name;
     bool exist{ true };
     std::unique_ptr<AnimationComponent> animationComponent;
+    bool popped{ false };
+    float popTimer{ 0.f };
+    float popDuration{ 0.5f };
+    sf::Vector2f startPosition;
 
 public:
     PowerUpObject(const std::string& name = "PowerUp");
     virtual ~PowerUpObject() = default;
 
+    virtual ItemCollectionResult collect(PlayerManager& player);
+
     const std::string& getName() const;
     bool exists() const;
     void setExist(bool e);
+    bool isPopped() const;
+    void setPopped(bool p);
 
     virtual void reactToCollision();
     virtual void reactToEnemyCollision(Enemy* enemy);
