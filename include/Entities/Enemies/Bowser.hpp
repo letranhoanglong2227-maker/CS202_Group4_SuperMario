@@ -7,6 +7,7 @@
 
 class Bowser : public Enemy {
 private:
+    static constexpr int maxHealth = 30;
     float attackTimer{ 0.f };
     bool breathingFire{ false };
     bool jumpingSlam{ false };
@@ -28,4 +29,5 @@ public:
     void takeDamage(int amount) override;
     void updateAnimation(float dt) override;
     void update(float dt) override;
+    void render(sf::RenderTarget* target) override;
 };

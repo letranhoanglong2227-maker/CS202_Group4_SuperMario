@@ -22,11 +22,18 @@ protected:
     bool isTransforming{ false };
     float transformationTimer{ 0.f };
     bool horizontalControlsInverted{ false };
+    bool jumpHeld{ false };
+    bool running{ false };
+    bool crouching{ false };
+    int maxAirJumps{ 1 };
+    int airJumpsRemaining{ 1 };
     
     float shootTimer{ 0.f };
     float shootCooldown{ 0.3f };
 
     std::vector<std::unique_ptr<PlayerBuff>> buffs;
+
+    void syncVisualToHitbox() override;
 
 public:
     PlayerManager(int pId = 1, const std::string& name = "Player");
@@ -57,6 +64,8 @@ public:
 
     virtual void handleInput(float dt);
     virtual void updateHitboxSize();
+    bool canJump() const noexcept;
+    void jump() override;
 
     void takeDamage(int amount) override;
     void update(float dt) override;

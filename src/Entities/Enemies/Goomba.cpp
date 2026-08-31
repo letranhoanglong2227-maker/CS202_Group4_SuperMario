@@ -6,15 +6,15 @@ Goomba::Goomba(const sf::Vector2f& pos)
     : Enemy() {
     setHealth(1);
     setDamage(1);
-    setPointsValue(100);
-    setSpeed(50.f);
+    setPointsValue(300);
+    setSpeed(300.f);
     
     setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
-    movementComponent = std::make_unique<MovementComponent>(50.f, 200.f, 0.f);
+    movementComponent = std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
 
     // Initial scale
     entitySprite.setScale({2.0f, 2.0f});
@@ -26,6 +26,7 @@ Goomba::Goomba(const sf::Vector2f& pos)
 }
 
 EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
+    (void)horizontalDirection;
     if (dead || isSquished) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
     if (kind == PlayerEnemyContactKind::Stomp) {
@@ -43,7 +44,9 @@ void Goomba::onStomped() {
     isSquished = true;
     setStomped(true);
     setDamage(0);
+    if (movementComponent) movementComponent->setVelocity({0.f, 0.f});
     hitbox.setSize({CELL_SIZE, CELL_SIZE * 0.5f});
+    size = hitbox.getSize();
     position.y += CELL_SIZE * 0.5f; // Anchor feet
     hitbox.setPosition(position);
     entitySprite.setPosition(position);

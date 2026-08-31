@@ -5,7 +5,7 @@ Character::Character(const std::string& name)
     animationComponent = std::make_unique<AnimationComponent>(
         entitySprite, 
         TexturePlayerManager::getPlayerTexture(), 
-        0.1f
+        0.2f
     );
 }
 

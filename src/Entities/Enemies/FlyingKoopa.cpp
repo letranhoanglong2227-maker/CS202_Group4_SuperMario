@@ -2,10 +2,14 @@
 #include <cmath>
 
 FlyingKoopa::FlyingKoopa(const sf::Vector2f& pos)
-    : Koopa(pos), initialY(pos.y) {
-    setPointsValue(300);
+    : Koopa(pos), initialX(pos.x), initialY(pos.y) {
+    setPointsValue(400);
+    setSpeed(300.f);
+    setFacingRight(true);
     if (animationComponent) {
-        animationComponent->addAnimation("fly", { sf::IntRect({52, 37}, {16, 24}), sf::IntRect({69, 38}, {16, 23}) }); // Use walk frames for now, or specific if exists
+        animationComponent->addAnimation("fly", {
+            sf::IntRect({86, 37}, {16, 24}),
+            sf::IntRect({103, 38}, {16, 23})});
     }
 }
 
@@ -56,12 +60,20 @@ void FlyingKoopa::update(float dt) {
 
     if (hasWings) {
         flyTimer += dt * 3.f;
-        float offsetY = std::sin(flyTimer) * 40.f;
+        const float offsetY = std::sin(flyTimer) * 40.f;
         position.y = initialY + offsetY;
-        float dirX = facingRight ? 1.f : -1.f;
+        const float dirX = facingRight ? 1.f : -1.f;
         position.x += dirX * speed * dt;
+        if (position.x <= initialX - patrolRadius) {
+            position.x = initialX - patrolRadius;
+            setFacingRight(true);
+        } else if (position.x >= initialX + patrolRadius) {
+            position.x = initialX + patrolRadius;
+            setFacingRight(false);
+        }
         hitbox.setPosition(position);
         entitySprite.setPosition(position);
+        updateAnimation(dt);
     } else {
         Koopa::update(dt);
     }

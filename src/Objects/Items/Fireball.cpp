@@ -70,6 +70,7 @@ void Fireball::update(float dt) {
 
 void Fireball::render(sf::RenderTarget* target) {
     if (target && !dead) {
+        syncVisualToHitbox();
         target->draw(entitySprite);
     }
 }

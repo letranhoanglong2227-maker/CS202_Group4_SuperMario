@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/AssetLocator.hpp"
 #include "Entities/Base/LivingEntity.hpp"
 #include <string>
 #include <iostream>
@@ -32,15 +33,12 @@ private:
     inline static sf::Texture playerTexture;
 public:
     static bool setupTexture() {
-        bool loadOk = playerTexture.loadFromFile("assets/textures/Mario_Luigi.png");
-        if (!loadOk) {
-            loadOk = playerTexture.loadFromFile("../assets/textures/Mario_Luigi.png");
-        }
-        if (loadOk) {
-            std::cout << "Player Texture loaded!...\n";
-        } else {
-            std::cout << "Player Texture not found!...\n";
-        }
+        const auto path = AssetLocator::find("assets/textures/Mario_Luigi.png");
+        const bool loadOk = path && playerTexture.loadFromFile(*path);
+        if (!loadOk)
+            std::cerr << AssetLocator::missingMessage(
+                             "assets/textures/Mario_Luigi.png")
+                      << '\n';
         return loadOk;
     }
 

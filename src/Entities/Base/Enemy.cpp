@@ -1,14 +1,17 @@
 #include "Entities/Base/Enemy.hpp"
 
+#include <cmath>
+
 Enemy::Enemy() : LivingEntity() {
     animationComponent = std::make_unique<AnimationComponent>(
         entitySprite, 
         TextureEnemyManager::getEnemyTexture(), 
-        0.15f
+        0.2f
     );
 }
 
 EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
+    (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
     if (kind == PlayerEnemyContactKind::Stomp) {
@@ -28,6 +31,17 @@ bool Enemy::isFacingRight() const {
 
 void Enemy::setFacingRight(bool right) {
     facingRight = right;
+    if (movementComponent) {
+        const sf::Vector2f velocity = movementComponent->getVelocity();
+        if (velocity.x != 0.f) {
+            movementComponent->setVelocity(
+                right ? std::abs(velocity.x) : -std::abs(velocity.x),
+                velocity.y);
+        }
+    }
+    const sf::Vector2f scale = entitySprite.getScale();
+    entitySprite.setScale({right ? std::abs(scale.x) : -std::abs(scale.x),
+                           scale.y});
 }
 
 int Enemy::getDamage() const {
@@ -55,7 +69,7 @@ void Enemy::setStomped(bool s) {
 }
 
 void Enemy::reverseDirection() {
-    facingRight = !facingRight;
+    setFacingRight(!facingRight);
 }
 
 void Enemy::onStomped() {

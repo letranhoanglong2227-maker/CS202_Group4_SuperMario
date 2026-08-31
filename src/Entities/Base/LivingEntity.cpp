@@ -67,12 +67,35 @@ void LivingEntity::updateAnimation(float dt) {
 void LivingEntity::update(float dt) {
     updateVelocity(dt);
     updateAnimation(dt);
-    entitySprite.setPosition(hitbox.getPosition());
+    syncVisualToHitbox();
+}
+
+void LivingEntity::syncVisualToHitbox() {
+    const sf::Vector2i frameSize = entitySprite.getTextureRect().size;
+    const sf::Vector2f hitboxSize = hitbox.getSize();
+    if (frameSize.x > 0 && frameSize.y > 0 &&
+        hitboxSize.x > 0.f && hitboxSize.y > 0.f) {
+        const bool facingLeft = entitySprite.getScale().x < 0.f;
+        const float scale = hitboxSize.x / static_cast<float>(frameSize.x);
+        entitySprite.setScale({
+            (facingLeft ? -1.f : 1.f) * scale, scale});
+        entitySprite.setOrigin(
+            facingLeft ? sf::Vector2f{static_cast<float>(frameSize.x), 0.f}
+                       : sf::Vector2f{});
+        const sf::Vector2f hitboxPosition = hitbox.getPosition();
+        entitySprite.setPosition({
+            hitboxPosition.x,
+            hitboxPosition.y + hitboxSize.y -
+                static_cast<float>(frameSize.y) * scale});
+    } else {
+        entitySprite.setPosition(hitbox.getPosition());
+    }
     position = hitbox.getPosition();
 }
 
 void LivingEntity::render(sf::RenderTarget* target) {
     if (target) {
+        syncVisualToHitbox();
         target->draw(entitySprite);
     }
 }

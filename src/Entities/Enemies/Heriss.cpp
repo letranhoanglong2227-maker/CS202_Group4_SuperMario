@@ -5,19 +5,21 @@ Heriss::Heriss(const sf::Vector2f& pos)
     : Enemy() {
     setHealth(1);
     setDamage(1);
-    setPointsValue(200);
-    setSpeed(55.f);
+    setPointsValue(300);
+    setSpeed(300.f);
 
     setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
-    movementComponent = std::make_unique<MovementComponent>(55.f, 500.f, 0.f);
+    movementComponent = std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
     
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
-        animationComponent->addAnimation("walk", { sf::IntRect({1, 16}, {16, 16}), sf::IntRect({16, 16}, {16, 16}) }); // Use goomba/spiny placeholder
+        animationComponent->addAnimation("walk", {
+            sf::IntRect({290, 14}, {16, 17}),
+            sf::IntRect({307, 15}, {16, 15}) });
     }
 }
 

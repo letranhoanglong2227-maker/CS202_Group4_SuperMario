@@ -6,7 +6,9 @@ class FlyingKoopa : public Koopa {
 private:
     bool hasWings{ true };
     float flyTimer{ 0.f };
+    float initialX{ 0.f };
     float initialY{ 0.f };
+    float patrolRadius{ 300.f };
 
 public:
     FlyingKoopa(const sf::Vector2f& pos = { 0.f, 0.f });

@@ -1,19 +1,21 @@
 #include "Entities/Enemies/Koopa.hpp"
 #include "Core/Constants.hpp"
 
+#include <algorithm>
+
 Koopa::Koopa(const sf::Vector2f& pos)
     : Enemy() {
     setHealth(1);
     setDamage(1);
     setPointsValue(200);
-    setSpeed(40.f);
+    setSpeed(300.f);
 
     setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE * 1.5f});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
-    movementComponent = std::make_unique<MovementComponent>(40.f, 200.f, 0.f);
+    movementComponent = std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
     
     // Initial scale
     entitySprite.setScale({2.0f, 2.0f});
@@ -21,6 +23,11 @@ Koopa::Koopa(const sf::Vector2f& pos)
     if (animationComponent) {
         animationComponent->addAnimation("walk", { sf::IntRect({52, 37}, {16, 24}), sf::IntRect({69, 38}, {16, 23}) });
         animationComponent->addAnimation("shell", { sf::IntRect({188, 45}, {16, 14}) });
+        animationComponent->addAnimation("shell_move", {
+            sf::IntRect({120, 45}, {16, 14}),
+            sf::IntRect({137, 45}, {16, 14}),
+            sf::IntRect({154, 45}, {16, 14}),
+            sf::IntRect({171, 45}, {16, 14}) });
     }
 }
 
@@ -32,6 +39,7 @@ EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, PlayerEnem
     if (!inShell) {
         if (isTop) {
             onStomped();
+            kickShell(facingRight);
             return EnemyContactOutcome{EnemyContactResult::EnemyStomped, 200, -500.f, false};
         } else {
             if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
@@ -47,6 +55,8 @@ EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, PlayerEnem
             if (isTop) {
                 shellKicked = false;
                 setSpeed(0.f);
+                shellTimer = 0.f;
+                if (movementComponent) movementComponent->setVelocity(0.f, 0.f);
                 return EnemyContactOutcome{EnemyContactResult::ShellStopped, 100, -500.f, false};
             } else {
                 if (!player.isImmortal()) {
@@ -70,9 +80,10 @@ bool Koopa::isShellKicked() const {
 void Koopa::kickShell(bool toRight) {
     if (!inShell) return;
     shellKicked = true;
-    facingRight = toRight;
+    setFacingRight(toRight);
     setSpeed(shellSpeed);
     movementComponent = std::make_unique<MovementComponent>(shellSpeed, 1000.f, 0.f);
+    movementComponent->setVelocity(toRight ? shellSpeed : -shellSpeed, 0.f);
 }
 
 void Koopa::onStomped() {
@@ -84,6 +95,8 @@ void Koopa::onStomped() {
         size = hitbox.getSize();
         position.y += (oldH - size.y);
         setSpeed(0.f);
+        shellTimer = 0.f;
+        if (movementComponent) movementComponent->setVelocity(0.f, 0.f);
         hitbox.setPosition(position);
         entitySprite.setPosition(position);
     }
@@ -92,8 +105,9 @@ void Koopa::onStomped() {
 void Koopa::updateAnimation(float dt) {
     (void)dt;
     if (animationComponent) {
-        if (stomped || inShell) {
-            animationComponent->play("shell", dt);
+        if (inShell) {
+            animationComponent->play(
+                shellKicked ? "shell_move" : "shell", dt);
         } else {
             animationComponent->play("walk", dt);
         }
@@ -102,6 +116,23 @@ void Koopa::updateAnimation(float dt) {
 
 void Koopa::update(float dt) {
     if (dead) return;
+
+    if (inShell && !shellKicked) {
+        shellTimer += std::max(0.f, dt);
+        if (shellTimer >= shellDuration) {
+            const float oldHeight = size.y;
+            inShell = false;
+            stomped = false;
+            shellTimer = 0.f;
+            hitbox.setSize({CELL_SIZE, CELL_SIZE * 1.5f});
+            size = hitbox.getSize();
+            position.y -= size.y - oldHeight;
+            hitbox.setPosition(position);
+            setSpeed(300.f);
+            movementComponent =
+                std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
+        }
+    }
 
     if (!inShell || shellKicked) {
         float dirX = facingRight ? 1.f : -1.f;

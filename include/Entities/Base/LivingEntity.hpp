@@ -14,6 +14,8 @@ protected:
     std::unique_ptr<MovementComponent> movementComponent;
     std::unique_ptr<AnimationComponent> animationComponent;
 
+    virtual void syncVisualToHitbox();
+
 public:
     LivingEntity();
     virtual ~LivingEntity() = default;
