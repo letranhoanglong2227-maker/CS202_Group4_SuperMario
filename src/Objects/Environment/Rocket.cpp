@@ -1,5 +1,6 @@
 ﻿#include "Objects/Environment/Rocket.hpp"
 #include "Levels/Managers/MapManager.hpp"
+#include "Entities/Base/Enemy.hpp"
 #include "Physics/PhysicsEngine.hpp"
 #include <algorithm>
 #include <cmath>
@@ -10,11 +11,15 @@ Rocket::Rocket(sf::Vector2f pos, TargetResolver resolver, float moveSpeed,
     : targetResolver(std::move(resolver)), speed(std::max(0.f, moveSpeed)),
       lifetime(std::max(0.f, activeLifetime)) {
     setPosition(pos);
-    setSize({MapFormat::TILE_SIZE, MapFormat::TILE_SIZE * 0.5f});
+    setSize({MapFormat::TILE_SIZE - 2.f, MapFormat::TILE_SIZE - 2.f});
     previousBounds = hitbox.getGlobalBounds();
     shape.setPosition(pos);
     shape.setSize(getSize());
     shape.setFillColor(sf::Color(235, 235, 235));
+    entitySprite.setTexture(TextureEnemyManager::getEnemyTexture(), true);
+    entitySprite.setTextureRect({{87, 63}, {16, 16}});
+    entitySprite.setScale({getSize().x / 16.f, getSize().y / 16.f});
+    entitySprite.setPosition(pos);
     active = activeLifetime > 0.f;
 }
 
@@ -49,10 +54,14 @@ void Rocket::update(float dt) {
     }
     setPosition(getPosition() + velocity * dt);
     shape.setPosition(getPosition());
+    entitySprite.setTextureRect(
+        velocity.x >= 0.f ? sf::IntRect({35, 63}, {16, 16})
+                          : sf::IntRect({87, 63}, {16, 16}));
+    entitySprite.setPosition(getPosition());
 }
 
 void Rocket::render(sf::RenderTarget* renderTarget) {
-    if (renderTarget && active) renderTarget->draw(shape);
+    if (renderTarget && active) renderTarget->draw(entitySprite);
 }
 
 bool Rocket::isActive() const noexcept { return active; }

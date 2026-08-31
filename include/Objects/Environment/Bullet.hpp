@@ -20,6 +20,7 @@ private:
     sf::FloatRect previousBounds;
     sf::CircleShape shape;
     float lifetime;
+    float animationTime{};
     int damage;
     bool active{true};
 };

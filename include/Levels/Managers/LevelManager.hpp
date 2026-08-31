@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/GameObject.hpp"
+#include "Core/GameEventMediator.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include "Physics/PhysicsEngine.hpp"
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -31,14 +32,14 @@ public:
     using ValueCallback = std::function<void(int)>;
     using ProjectileTargetResolver =
         std::function<std::optional<sf::Vector2f>()>;
+    using AudioCallback = std::function<void(AudioCue)>;
 
-    LevelManager();
+    explicit LevelManager(unsigned int visualWorld = 1);
     virtual ~LevelManager() = default;
     bool load(const std::string& mapPath,
               const std::vector<PlayerManager*>& players = {});
     void setPlayers(const std::vector<PlayerManager*>& players);
 
-    // TODO(Person1 integration): inject non-owning selected players before load.
     // Completion has no input; death receives the affected player by reference.
     // LevelManager invokes these callbacks and never owns the state-flow target.
     void setLevelCompletedCallback(LevelCallback callback);
@@ -46,6 +47,7 @@ public:
     void setScoreChangedCallback(ValueCallback callback);
     void setCoinCollectedCallback(ValueCallback callback);
     void setLivesChangedCallback(ValueCallback callback);
+    void setAudioCueCallback(AudioCallback callback);
     void addEntity(std::unique_ptr<GameObject> entity,
                    bool participatesInGenericPhysics = false,
                    bool participatesInBlockCollisions = false);
@@ -89,6 +91,8 @@ private:
     void rebuildViews();
     void removeInactiveEntities();
     void enforceStagePatrols();
+    void resolveBlockBumpEnemyCollisions();
+    void resolveEnemyCollisions();
     void resolveProjectileWorldCollisions();
     bool damagePlayer(PlayerManager& player, int amount);
     void killPlayer(PlayerManager& player);
@@ -96,6 +100,7 @@ private:
 
     MapManager mapManager;
     PhysicsEngine physicsEngine;
+    unsigned int visualWorld{1};
     std::vector<std::unique_ptr<GameObject>> entities;
     std::vector<std::unique_ptr<GameObject>> pendingEntities;
     std::vector<Block*> blocks;
@@ -116,6 +121,7 @@ private:
     ValueCallback scoreChangedCallback;
     ValueCallback coinCollectedCallback;
     ValueCallback livesChangedCallback;
+    AudioCallback audioCueCallback;
     bool completionPending{false};
     bool completionEmitted{false};
     bool loaded{false};

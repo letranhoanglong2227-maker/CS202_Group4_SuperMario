@@ -8,6 +8,7 @@ public:
     const sf::Vector2f& getVelocity() const;
     void setVelocity(const sf::Vector2f& velocity);
     void setVelocity(float x, float y);
+    void setMaxVelocity(float value);
 
     void applyForce(const sf::Vector2f& force);
     void move(float dirX, float dirY, float dt);
@@ -18,5 +19,6 @@ private:
     float maxVelocity;
     float acceleration;
     float friction;
+    bool horizontalInputApplied{};
 };
 

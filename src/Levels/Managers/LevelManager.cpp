@@ -1,11 +1,16 @@
 ﻿#include "Levels/Managers/LevelManager.hpp"
 
+#include "Core/AssetLocator.hpp"
 #include "Entities/EntityFactory.hpp"
 #include "Entities/Base/Enemy.hpp"
+#include "Entities/Enemies/Bowser.hpp"
+#include "Entities/Enemies/Koopa.hpp"
+#include "Entities/Enemies/PeteyPiranha.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 #include "Objects/Blocks/Block.hpp"
 #include "Objects/Blocks/Brick.hpp"
 #include "Objects/Blocks/CoinBlock.hpp"
+#include "Objects/Blocks/CloudBlock.hpp"
 #include "Objects/Blocks/MovingBlock.hpp"
 #include "Objects/Blocks/MushroomBlock.hpp"
 #include "Objects/Blocks/SolidBlock.hpp"
@@ -22,10 +27,46 @@
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <utility>
 
-LevelManager::LevelManager() : physicsEngine(980.f) {}
+namespace {
+sf::IntRect tileRect(int x, int y) {
+    return {{x, y}, {16, 16}};
+}
+
+sf::IntRect terrainFrame(unsigned int world, int variant) {
+    if (variant == 6) return tileRect(393, 52);
+    if (variant == 7) return tileRect(392, 69);
+    if (variant >= 13 && variant <= 15)
+        return tileRect(103 + 17 * (variant - 13), 154);
+    if (variant == 16) return tileRect(world == 3 ? 35 : 1, 155);
+    if (variant >= 10 && variant <= 12)
+        return tileRect(103 + 17 * (variant - 10), world == 2 ? 137 : 120);
+
+    const bool underground = variant == 0 || variant == 3 || variant == 5 ||
+                             variant == 9;
+    int column = 1;
+    if (variant == 0 || variant == 1) column = 18;
+    else if (variant == 4 || variant == 5) column = 35;
+    else if (variant == 8 || variant == 9) column = 52;
+
+    if (world == 2) return tileRect(column + 136, underground ? 18 : 1);
+    if (world == 3) {
+        if (variant == 8 || variant == 9) column = 307;
+        else column += 289;
+        return tileRect(column, underground ? 35 : 18);
+    }
+    return tileRect(column, underground ? 18 : 1);
+}
+
+sf::IntRect brickFrame(unsigned int world) {
+    return tileRect(world == 3 ? 69 : 1, 86);
+}
+}
+
+LevelManager::LevelManager(unsigned int selectedVisualWorld)
+    : physicsEngine(),
+      visualWorld(std::clamp(selectedVisualWorld, 1u, 3u)) {}
 
 bool LevelManager::load(const std::string& mapPath,
                         const std::vector<PlayerManager*>& activePlayers) {
@@ -34,6 +75,9 @@ bool LevelManager::load(const std::string& mapPath,
     if (!mapManager.loadMap(mapPath)) return false;
 
     TextureBlockManager::setupTexture();
+    TexturePlayerManager::setupTexture();
+    TextureEnemyManager::setupTexture();
+    TextureItemManager::setupTexture();
     for (const MapSpawnInfo& spawn : mapManager.getSpawns()) {
         constructSpawn(spawn);
     }
@@ -70,6 +114,10 @@ void LevelManager::setCoinCollectedCallback(ValueCallback callback) {
 
 void LevelManager::setLivesChangedCallback(ValueCallback callback) {
     livesChangedCallback = std::move(callback);
+}
+
+void LevelManager::setAudioCueCallback(AudioCallback callback) {
+    audioCueCallback = std::move(callback);
 }
 
 void LevelManager::addEntity(std::unique_ptr<GameObject> entity,
@@ -114,7 +162,7 @@ bool LevelManager::spawnProjectile(const ProjectileSpawnRequest& request) {
     const sf::Vector2f direction = request.direction / length;
     switch (request.type) {
     case ProjectileKind::Fireball:
-        if (direction.x == 0.f || request.damage != 1) return false;
+        if (request.damage != 1) return false;
         {
             auto fireball =
                 std::make_unique<Fireball>(request.position, direction.x);
@@ -168,10 +216,23 @@ void LevelManager::update(float dt) {
     for (Enemy* enemy : enemies) {
         if (!enemy || enemy->isDead()) continue;
         if (const auto request = enemy->consumePendingProjectile()) {
-            spawnProjectile(*request);
+            ProjectileSpawnRequest aimedRequest = *request;
+            if (aimedRequest.type == ProjectileKind::BowserFire) {
+                const auto target = std::find_if(
+                    players.begin(), players.end(),
+                    [](const PlayerManager* player) {
+                        return player && !player->isDead();
+                    });
+                if (target != players.end()) {
+                    aimedRequest.position = enemy->getCenter();
+                    aimedRequest.direction =
+                        (*target)->getCenter() - aimedRequest.position;
+                    enemy->setFacingRight(aimedRequest.direction.x >= 0.f);
+                }
+            }
+            spawnProjectile(aimedRequest);
         }
     }
-
     const auto worldBounds = getWorldBounds();
     for (PlayerManager* player : players) {
         if (player && !player->isDead()) {
@@ -188,11 +249,19 @@ void LevelManager::update(float dt) {
             }
         }
     }
+    for (Block* block : blocks) {
+        if (dynamic_cast<Brick*>(block) && !block->isExist()) {
+            if (scoreChangedCallback) scoreChangedCallback(50);
+            if (audioCueCallback) audioCueCallback(AudioCue::BrickBreak);
+        }
+    }
+    resolveBlockBumpEnemyCollisions();
     for (Enemy* enemy : physicsEnemies) {
         if (enemy && !enemy->isDead()) {
             physicsEngine.step(*enemy, blocks, dt);
         }
     }
+    resolveEnemyCollisions();
 
     for (std::size_t itemIndex = 0; itemIndex < powerUps.size(); ++itemIndex) {
         PowerUpObject* item = powerUps[itemIndex];
@@ -230,16 +299,34 @@ void LevelManager::update(float dt) {
         bool hitWorld = false;
         const sf::FloatRect current = fireball->hitbox.getGlobalBounds();
         for (Block* block : blocks) {
-            if (block && block->isExist() &&
-                PhysicsEngine::sweptAabbIntersects(
-                    previousFireballBounds[fireballIndex], current,
-                    block->hitbox.getGlobalBounds())) {
-                fireball->setPosition(
-                    previousFireballBounds[fireballIndex].position);
-                fireball->reactToBlockCollision();
-                hitWorld = true;
-                break;
+            if (!block || !block->isExist()) continue;
+            const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
+            const sf::FloatRect previous =
+                previousFireballBounds[fireballIndex];
+            if (!PhysicsEngine::sweptAabbIntersects(
+                    previous, current, blockBounds)) {
+                continue;
             }
+
+            const AabbContactSide side = PhysicsEngine::classifyAabbContact(
+                previous, current, blockBounds);
+            const bool crossedTop =
+                previous.position.y + previous.size.y <=
+                    blockBounds.position.y &&
+                current.position.y + current.size.y >=
+                    blockBounds.position.y;
+            if (side == AabbContactSide::Bottom ||
+                (side == AabbContactSide::None && crossedTop)) {
+                fireball->setPosition(
+                    {current.position.x,
+                     blockBounds.position.y - current.size.y});
+                fireball->reactToBlockCollision();
+            } else {
+                fireball->setPosition(previous.position);
+                fireball->reactToCollision();
+            }
+            hitWorld = true;
+            break;
         }
         if (hitWorld) continue;
 
@@ -351,6 +438,11 @@ void LevelManager::update(float dt) {
             if (outcome.lifeDelta != 0 && livesChangedCallback) {
                 livesChangedCallback(outcome.lifeDelta);
             }
+            if (audioCueCallback) {
+                audioCueCallback(outcome.coinDelta != 0
+                                     ? AudioCue::Coin
+                                     : AudioCue::PowerUp);
+            }
         }
     }
 
@@ -389,6 +481,12 @@ void LevelManager::update(float dt) {
                             flag->hitbox.getGlobalBounds())) {
                 flag->activate();
             }
+        }
+    }
+    for (Enemy* enemy : enemies) {
+        if (enemy && enemy->isDead() && dynamic_cast<Bowser*>(enemy)) {
+            completionPending = true;
+            break;
         }
     }
     updating = false;
@@ -453,9 +551,9 @@ Enemy* LevelManager::addStageEnemy(std::string_view type,
     Enemy* view = enemy.get();
     const bool genericPhysics = type != "FlyingKoopa" &&
                                 type != "PeteyPiranha";
+    view->setFacingRight(true);
     addEntity(std::move(enemy), genericPhysics);
     if (type == "Goomba" || type == "Koopa") {
-        view->setFacingRight(true);
         stagePatrols.push_back({view, 32.f, 13416.f});
     }
     return view;
@@ -490,30 +588,44 @@ const std::vector<PlayerManager*>& LevelManager::getPlayers() const noexcept {
 void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
     std::unique_ptr<GameObject> object;
     bool participatesInGenericPhysics = false;
-    auto adoptRawSpawn = [this](GameObject* spawned) {
-        addEntity(std::unique_ptr<GameObject>(spawned));
-    };
     auto adoptOwnedSpawn = [this](std::unique_ptr<GameObject> spawned) {
         addEntity(std::move(spawned));
+    };
+    auto awardCoinBlock = [this](int scoreDelta, int coinDelta) {
+        if (scoreChangedCallback) scoreChangedCallback(scoreDelta);
+        if (coinCollectedCallback) coinCollectedCallback(coinDelta);
+        if (audioCueCallback) audioCueCallback(AudioCue::Coin);
     };
 
     switch (spawnInfo.type) {
     case MapObjectType::SolidGround:
+        object = std::make_unique<SolidBlock>(
+            terrainFrame(visualWorld, spawnInfo.variant));
+        break;
     case MapObjectType::LavaBottom:
+        object = std::make_unique<SolidBlock>(tileRect(273, 171));
+        break;
     case MapObjectType::CannonBody:
-        object = std::make_unique<SolidBlock>();
+        object = std::make_unique<SolidBlock>(
+            tileRect(69, spawnInfo.variant == 1 ? 171 : 154));
         break;
     case MapObjectType::Brick:
-        object = std::make_unique<Brick>(adoptRawSpawn);
+        object = std::make_unique<Brick>(
+            adoptOwnedSpawn, spawnInfo.variant == 1,
+            brickFrame(visualWorld));
         break;
     case MapObjectType::CoinBlock:
-        object = std::make_unique<CoinBlock>(1, adoptRawSpawn);
+        object = std::make_unique<CoinBlock>(
+            1, adoptOwnedSpawn, awardCoinBlock);
         break;
     case MapObjectType::MushroomBlock:
-        object = std::make_unique<MushroomBlock>(adoptRawSpawn);
+        object = std::make_unique<MushroomBlock>(adoptOwnedSpawn,
+                                                 spawnInfo.variant);
         break;
     case MapObjectType::Pipe:
-        object = std::make_unique<Pipe>(spawnInfo.position, spawnInfo.heightInTiles);
+        object = std::make_unique<Pipe>(spawnInfo.position,
+                                        spawnInfo.heightInTiles,
+                                        visualWorld == 3);
         break;
     case MapObjectType::Lava:
         object = std::make_unique<Lava>(spawnInfo.position);
@@ -525,12 +637,8 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
         object = std::make_unique<Cannon>(spawnInfo.position, adoptOwnedSpawn);
         break;
     case MapObjectType::CloudPlatform:
-        object = std::make_unique<MovingBlock>(spawnInfo.position,
-                                               spawnInfo.widthInTiles,
-                                               sf::Vector2f{
-                                                   3.f * MapFormat::TILE_SIZE,
-                                                   0.f},
-                                               std::max(20.f, spawnInfo.parameter * 20.f));
+        object = std::make_unique<CloudBlock>(
+            spawnInfo.position, spawnInfo.widthInTiles, spawnInfo.parameter);
         break;
     case MapObjectType::WinFlag:
         object = std::make_unique<WinFlag>(spawnInfo.position, [this] {
@@ -563,14 +671,24 @@ void LevelManager::constructSpawn(const MapSpawnInfo& spawnInfo) {
         participatesInGenericPhysics = true;
         break;
     case MapObjectType::Player1Spawn:
-        if (PlayerManager* player = findPlayer(1)) player->setPosition(spawnInfo.position);
+        // Character selection chooses the skin/abilities, not a different map
+        // lane. A single selected Mario or Luigi always uses the primary spawn.
+        if (players.size() == 1) players.front()->setPosition(spawnInfo.position);
+        else if (PlayerManager* player = findPlayer(1))
+            player->setPosition(spawnInfo.position);
         return;
     case MapObjectType::Player2Spawn:
-        if (PlayerManager* player = findPlayer(2)) player->setPosition(spawnInfo.position);
+        if (players.size() > 1) {
+            if (PlayerManager* player = findPlayer(2))
+                player->setPosition(spawnInfo.position);
+        }
         return;
     }
 
     if (!object) return;
+    if (auto* enemy = dynamic_cast<Enemy*>(object.get())) {
+        enemy->setFacingRight(true);
+    }
     object->setPosition(spawnInfo.position);
     if (object->getSize().x <= 0.f || object->getSize().y <= 0.f) {
         const sf::Vector2f mapSize{
@@ -641,7 +759,7 @@ void LevelManager::removeInactiveEntities() {
         [this, &outsideActorWorld](const std::unique_ptr<GameObject>& entity) {
             bool remove = false;
             if (const auto* block = dynamic_cast<const Block*>(entity.get())) {
-                remove = !block->isExist();
+                remove = block->canBeRemoved();
             } else if (const auto* bullet = dynamic_cast<const Bullet*>(entity.get())) {
                 remove = !bullet->isActive();
             } else if (const auto* rocket = dynamic_cast<const Rocket*>(entity.get())) {
@@ -684,6 +802,90 @@ void LevelManager::enforceStagePatrols() {
             patrol.enemy->setFacingRight(false);
         }
         patrol.enemy->setPosition(position);
+    }
+}
+
+void LevelManager::resolveBlockBumpEnemyCollisions() {
+    constexpr float standingTolerance = 4.f;
+    for (Block* block : blocks) {
+        if (!block || !block->isExist() || !block->isBumpingUpward()) continue;
+        const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
+        for (Enemy* enemy : enemies) {
+            if (!enemy || enemy->isDead()) continue;
+            const sf::FloatRect enemyBounds = enemy->hitbox.getGlobalBounds();
+            const float enemyBottom =
+                enemyBounds.position.y + enemyBounds.size.y;
+            const bool horizontalOverlap =
+                enemyBounds.position.x + enemyBounds.size.x >
+                    blockBounds.position.x &&
+                enemyBounds.position.x <
+                    blockBounds.position.x + blockBounds.size.x;
+            if (!horizontalOverlap ||
+                std::abs(enemyBottom - blockBounds.position.y) >
+                    standingTolerance) {
+                continue;
+            }
+            enemy->takeDamage(enemy->getHealth());
+            if (enemy->isDead() && scoreChangedCallback)
+                scoreChangedCallback(enemy->getPointsValue());
+        }
+    }
+}
+
+void LevelManager::resolveEnemyCollisions() {
+    for (std::size_t i = 0; i < enemies.size(); ++i) {
+        Enemy* first = enemies[i];
+        if (!first || first->isDead()) continue;
+        for (std::size_t j = i + 1; j < enemies.size(); ++j) {
+            Enemy* second = enemies[j];
+            if (!second || second->isDead()) continue;
+
+            // Group5 treats Petey as a fixed map hazard: walking enemies pass
+            // it without resolving or pushing either hitbox.
+            if (dynamic_cast<PeteyPiranha*>(first) ||
+                dynamic_cast<PeteyPiranha*>(second)) {
+                continue;
+            }
+
+            const auto overlap = first->hitbox.getGlobalBounds().findIntersection(
+                second->hitbox.getGlobalBounds());
+            if (!overlap) continue;
+
+            Koopa* firstShell = dynamic_cast<Koopa*>(first);
+            Koopa* secondShell = dynamic_cast<Koopa*>(second);
+            if (firstShell && firstShell->isShellKicked()) {
+                second->takeDamage(second->getHealth());
+                if (second->isDead() && scoreChangedCallback)
+                    scoreChangedCallback(second->getPointsValue());
+                continue;
+            }
+            if (secondShell && secondShell->isShellKicked()) {
+                first->takeDamage(first->getHealth());
+                if (first->isDead() && scoreChangedCallback)
+                    scoreChangedCallback(first->getPointsValue());
+                break;
+            }
+
+            // Group5 makes walking enemies turn around on horizontal contact.
+            // Vertical overlaps are left to gravity/block resolution.
+            if (overlap->size.x > overlap->size.y) continue;
+            const float firstCenter = first->getCenter().x;
+            const float secondCenter = second->getCenter().x;
+            const float correction = overlap->size.x * 0.5f;
+            if (firstCenter <= secondCenter) {
+                first->setPosition(first->getPosition().x - correction,
+                                   first->getPosition().y);
+                second->setPosition(second->getPosition().x + correction,
+                                    second->getPosition().y);
+            } else {
+                first->setPosition(first->getPosition().x + correction,
+                                   first->getPosition().y);
+                second->setPosition(second->getPosition().x - correction,
+                                    second->getPosition().y);
+            }
+            first->reverseDirection();
+            second->reverseDirection();
+        }
     }
 }
 
@@ -751,12 +953,12 @@ PlayerManager* LevelManager::findPlayer(int playerId) const {
 ConfiguredLevel::ConfiguredLevel(unsigned int worldNumber,
                                  unsigned int levelNumber,
                                  const std::vector<PlayerManager*>& activePlayers)
-    : world(worldNumber), level(levelNumber),
+    : LevelManager(worldNumber), world(worldNumber), level(levelNumber),
       mapPath("assets/textures/LevelSketch_W" + std::to_string(worldNumber) +
               "_LV" + std::to_string(levelNumber) + ".png") {
-    // ponytail: supports source-root and one-level build launches; use a
-    // packaged asset root if binaries are nested more deeply later.
-    if (!std::filesystem::exists(mapPath)) mapPath = "../" + mapPath;
+    if (const auto resolved = AssetLocator::find(mapPath)) {
+        mapPath = resolved->string();
+    }
     load(mapPath, activePlayers);
 }
 

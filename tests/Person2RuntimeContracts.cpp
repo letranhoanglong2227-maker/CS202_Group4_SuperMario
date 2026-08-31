@@ -3,12 +3,18 @@
 #include "Entities/Enemies/Goomba.hpp"
 #include "Entities/Enemies/Heriss.hpp"
 #include "Entities/Enemies/Koopa.hpp"
+#include "Entities/Enemies/PeteyPiranha.hpp"
+#include "Entities/Players/Luigi.hpp"
 #include "Entities/Players/Mario.hpp"
 #include "Levels/Managers/LevelManager.hpp"
+#include "Levels/LevelFactory.hpp"
 #include "Levels/Stages/W3_LV3.hpp"
 #include "Objects/Blocks/Block.hpp"
 #include "Objects/Blocks/Brick.hpp"
 #include "Objects/Blocks/BrickFragment.hpp"
+#include "Objects/Blocks/CloudBlock.hpp"
+#include "Objects/Blocks/CoinBlock.hpp"
+#include "Objects/Blocks/MushroomBlock.hpp"
 #include "Objects/Blocks/MovingBlock.hpp"
 #include "Objects/Environment/Bullet.hpp"
 #include "Objects/Environment/Cannon.hpp"
@@ -82,6 +88,19 @@ int main() {
 
     passed &= check(nearlyEqual(MapFormat::TILE_SIZE, 64.f),
                     "Group4 and Group5 share a 64px cell size");
+
+    {
+        LevelManager level;
+        Mario fallingPlayer;
+        fallingPlayer.setPosition({0.f, 0.f});
+        fallingPlayer.setGrounded(false);
+        level.setPlayers({&fallingPlayer});
+        level.update(0.1f);
+        passed &= check(nearlyEqual(
+                            fallingPlayer.getMovementComponent()->getVelocity().y,
+                            250.f),
+                        "LevelManager uses the shared 2500px/s2 gameplay gravity");
+    }
 
     {
         TestStageLevel level;
@@ -159,6 +178,35 @@ int main() {
                             nearlyEqual(horizontal.getPosition().x, 0.f) &&
                             nearlyEqual(vertical.getPosition().y, 0.f),
                         "MovingBlock clamps horizontal and vertical endpoints");
+    }
+
+    {
+        CoinBlock coinBlock(1);
+        coinBlock.setPosition({100.f, 200.f});
+        coinBlock.setSizeBlock({64.f, 64.f});
+        coinBlock.update(0.f);
+        coinBlock.reactToCollision(COLLISION_BOTTOM);
+        coinBlock.update(0.1f);
+        const bool coinAtPeak = nearlyEqual(coinBlock.getPosition().y, 190.f) &&
+                                nearlyEqual(coinBlock.hitbox.getPosition().y, 200.f);
+        coinBlock.update(0.1f);
+
+        MushroomBlock mushroomBlock;
+        mushroomBlock.setPosition({100.f, 200.f});
+        mushroomBlock.setSizeBlock({64.f, 64.f});
+        mushroomBlock.update(0.f);
+        mushroomBlock.reactToCollision(COLLISION_BOTTOM);
+        mushroomBlock.update(0.1f);
+        const bool mushroomAtPeak =
+            nearlyEqual(mushroomBlock.getPosition().y, 190.f) &&
+            nearlyEqual(mushroomBlock.hitbox.getPosition().y, 200.f);
+        mushroomBlock.update(0.1f);
+
+        passed &= check(
+            coinAtPeak && mushroomAtPeak &&
+                nearlyEqual(coinBlock.getPosition().y, 200.f) &&
+                nearlyEqual(mushroomBlock.getPosition().y, 200.f),
+            "reward blocks bounce 10px once without moving their colliders");
     }
 
     {
@@ -314,12 +362,35 @@ int main() {
         passed &= check(collision.ceilHit &&
                             nearlyEqual(actor.getPosition().y, 32.f),
                         "ceiling collision resolves on Y axis");
-        passed &= check(ceiling.lastCollisionSide == 0,
-                        "headbutt dispatches Person 4 bottom-side reaction");
+        passed &= check(ceiling.lastCollisionSide == -1,
+                        "enemy ceiling contact does not activate a Block");
+    }
+
+    {
+        PhysicsEngine physics(2500.f);
+        TestEnemy actor({0.f, 0.f});
+        TestBlock floor({0.f, 96.f}, {64.f, 64.f});
+        actor.getMovementComponent()->setVelocity(0.f, 2000.f);
+        const CollisionInfo collision = physics.step(actor, {&floor}, 0.1f);
+        passed &= check(collision.grounded &&
+                            nearlyEqual(actor.getPosition().y, 64.f),
+                        "physics substeps prevent a slow-frame floor tunnel");
+    }
+
+    {
+        PhysicsEngine physics(2500.f);
+        TestEnemy actor({0.f, 0.f});
+        actor.getMovementComponent()->setVelocity(0.f, 1390.f);
+        physics.step(actor, {}, 0.1f);
+        passed &= check(nearlyEqual(
+                            actor.getMovementComponent()->getVelocity().y,
+                            1400.f),
+                        "physics enforces the shared terminal fall speed");
     }
 
     {
         PhysicsEngine physics(0.f);
+        Trampoline referenceTrampoline;
         Trampoline trampoline({0.f, 64.f}, -500.f);
         TestEnemy first({0.f, 20.f});
         TestEnemy second({0.f, 20.f});
@@ -327,14 +398,16 @@ int main() {
         second.getMovementComponent()->setVelocity(0.f, 300.f);
         const CollisionInfo firstHit = physics.step(first, {&trampoline}, 0.05f);
         const CollisionInfo secondHit = physics.step(second, {&trampoline}, 0.05f);
-        passed &= check(firstHit.collided && secondHit.collided &&
+        passed &= check(nearlyEqual(referenceTrampoline.getLaunchVelocity(),
+                                    -1700.f) &&
+                            firstHit.collided && secondHit.collided &&
                             nearlyEqual(first.getMovementComponent()
                                             ->getVelocity().y,
                                         -500.f) &&
                             nearlyEqual(second.getMovementComponent()
                                             ->getVelocity().y,
                                         -500.f),
-                        "Trampoline launches both players without shared debounce");
+                        "Trampoline uses Group5 force and launches both actors without shared debounce");
 
         MovingBlock platform({0.f, 64.f}, 1, sf::Vector2f{10.f, 0.f}, 10.f);
         platform.update(1.f);
@@ -345,6 +418,90 @@ int main() {
                             nearlyEqual(platform.getFrameDelta().x, 10.f) &&
                             nearlyEqual(rider.getPosition().x, 20.f),
                         "MovingBlock frame delta carries a landing actor");
+
+        MovingBlock descending(
+            {0.f, 100.f}, 1, 20.f, 100.f, "basic_ground_mid");
+        descending.update(0.2f); // Reach the right edge.
+        TestEnemy descendingRider({20.f, 68.f});
+        descending.update(0.1f); // Move down by 10px.
+        descendingRider.getMovementComponent()->setVelocity(0.f, 300.f);
+        const CollisionInfo descendingRide =
+            physics.step(descendingRider, {&descending}, 0.05f);
+        passed &= check(
+            descendingRide.grounded &&
+                nearlyEqual(descendingRider.hitbox.getGlobalBounds().position.y +
+                                descendingRider.hitbox.getGlobalBounds().size.y,
+                            descending.hitbox.getGlobalBounds().position.y),
+            "descending MovingBlock snaps the rider once without embedding it");
+
+        PhysicsEngine gameplayPhysics(2500.f);
+        MovingBlock smoothDescent(
+            {0.f, 100.f}, 1, 20.f, 100.f, "basic_ground_mid");
+        smoothDescent.update(0.2f); // Reach the top-right corner.
+        Mario standingRider;
+        standingRider.setPosition({20.f, 36.f});
+        standingRider.setGrounded(true);
+        bool continuouslyGrounded = true;
+        for (int frame = 0; frame < 10; ++frame) {
+            smoothDescent.update(0.016f);
+            const CollisionInfo frameContact = gameplayPhysics.step(
+                standingRider, {&smoothDescent}, 0.016f);
+            const sf::FloatRect riderBounds =
+                standingRider.hitbox.getGlobalBounds();
+            continuouslyGrounded = continuouslyGrounded &&
+                frameContact.grounded && standingRider.isGrounded() &&
+                nearlyEqual(riderBounds.position.y + riderBounds.size.y,
+                            smoothDescent.hitbox.getGlobalBounds().position.y);
+        }
+        passed &= check(
+            continuouslyGrounded,
+            "descending MovingBlock carries a standing player without grounded-state flicker");
+    }
+
+    {
+        LevelManager level;
+        auto block = std::make_unique<MushroomBlock>();
+        block->setPosition({100.f, 200.f});
+        block->setSizeBlock({64.f, 64.f});
+        block->update(0.f);
+        MushroomBlock* blockView = block.get();
+
+        auto enemy = std::make_unique<TestEnemy>(sf::Vector2f{116.f, 168.f});
+        level.addEntity(std::move(block), false, true);
+        level.addEntity(std::move(enemy));
+        blockView->reactToCollision(COLLISION_BOTTOM);
+        level.update(0.016f);
+        passed &= check(
+            level.getEnemies().empty(),
+            "a rising MushroomBlock defeats an enemy standing on top");
+    }
+
+    {
+        LevelManager level;
+        auto petey = std::make_unique<PeteyPiranha>(
+            sf::Vector2f{100.f, 100.f});
+        auto walker = std::make_unique<Goomba>(sf::Vector2f{100.f, 100.f});
+        Enemy* peteyView = petey.get();
+        level.addEntity(std::move(petey));
+        level.addEntity(std::move(walker), true);
+        const sf::Vector2f anchor = peteyView->getPosition();
+        level.update(0.016f);
+        passed &= check(peteyView->getPosition() == anchor,
+                        "walking enemies cannot displace Group5-style fixed Petey");
+    }
+
+    {
+        LevelManager level;
+        auto cloud = std::make_unique<CloudBlock>(
+            sf::Vector2f{0.f, 64.f}, 4, 0.f);
+        CloudBlock* cloudView = cloud.get();
+        level.addEntity(std::move(cloud), false, true);
+        level.update(4.f);
+        const bool hiddenButOwned = !cloudView->isExist() &&
+            level.getEntities().size() == 1 && level.getBlocks().size() == 1;
+        level.update(2.5f);
+        passed &= check(hiddenButOwned && cloudView->isExist(),
+                        "CloudBlock hides and reappears without losing ownership");
     }
 
     {
@@ -354,25 +511,30 @@ int main() {
             [&level](std::unique_ptr<GameObject> spawned) {
                 level.addEntity(std::move(spawned));
             },
-            0.1f, 1.f);
+            0.1f);
         level.addEntity(std::move(cannon), false, true);
         level.update(0.11f);
-        passed &= check(level.getEntities().size() == 2,
-                        "Cannon queues one uniquely-owned Bullet");
+        passed &= check(level.getEntities().size() == 3,
+                        "Cannon queues two uniquely-owned Rockets");
 
-        Bullet* bullet = nullptr;
+        std::vector<Rocket*> cannonRockets;
         for (const auto& entity : level.getEntities()) {
-            if (auto* candidate = dynamic_cast<Bullet*>(entity.get())) {
-                bullet = candidate;
-            }
+            if (auto* rocket = dynamic_cast<Rocket*>(entity.get()))
+                cannonRockets.push_back(rocket);
         }
-        passed &= check(bullet && nearlyEqual(bullet->getPosition().x, 96.f) &&
-                            nearlyEqual(bullet->getPosition().y, 48.f),
-                        "queued Bullet is registered once without a birth-frame update");
-        if (bullet) bullet->deactivate();
+        std::sort(cannonRockets.begin(), cannonRockets.end(),
+                  [](const Rocket* lhs, const Rocket* rhs) {
+                      return lhs->getPosition().x < rhs->getPosition().x;
+                  });
+        passed &= check(cannonRockets.size() == 2 &&
+                            nearlyEqual(cannonRockets[0]->getPosition().x, -32.f) &&
+                            nearlyEqual(cannonRockets[1]->getPosition().x, 96.f) &&
+                            nearlyEqual(cannonRockets[0]->getPosition().y, 31.f),
+                        "queued Rockets start on both sides without a birth update");
+        for (Rocket* rocket : cannonRockets) rocket->deactivate();
         level.update(0.01f);
         passed &= check(level.getEntities().size() == 1,
-                        "inactive Bullet is removed once after update");
+                        "inactive Cannon Rockets are removed once after update");
     }
 
     {
@@ -386,8 +548,10 @@ int main() {
             [&](PlayerManager&) { ++deathCalls; });
         level.update(0.01f);
         level.update(0.01f);
-        passed &= check(smallPlayer.isDead() && deathCalls == 1,
-                        "Lava reports a small-player death exactly once");
+        passed &= check(!smallPlayer.isDead() &&
+                            smallPlayer.getHealth() == 2 &&
+                            smallPlayer.isImmortal() && deathCalls == 0,
+                        "Lava matches Group5's one-damage contact without frame drain");
     }
 
     {
@@ -510,6 +674,7 @@ int main() {
         LevelManager level;
         Mario first;
         Mario second;
+        first.setHealth(1);
         first.setPosition({0.f, 0.f});
         second.setPosition({0.f, 0.f});
         level.setPlayers({&first, &second});
@@ -532,19 +697,29 @@ int main() {
         int completionCalls = 0;
         const sf::Vector2f baseAnchor{128.f, 512.f};
         WinFlag flag(baseAnchor, [&] { ++completionCalls; });
-        const sf::Vector2f expectedTop{
-            baseAnchor.x,
-            baseAnchor.y - 4.f * MapFormat::TILE_SIZE};
+        const sf::Vector2f initialFlagPosition{
+            baseAnchor.x + 25.f, baseAnchor.y};
+        const bool startsAtGroup5Base =
+            flag.getFlagVisualPosition() == initialFlagPosition;
         flag.activate();
         flag.activate();
         flag.update(0.5f);
         const bool callbackWaited = completionCalls == 0;
+        const bool movedHalfwayUp = nearlyEqual(
+            flag.getFlagVisualPosition().y, baseAnchor.y - 235.f);
         flag.update(0.5f);
+        const bool reachedGroup5Top = nearlyEqual(
+            flag.getFlagVisualPosition().y, baseAnchor.y - 470.f);
         flag.update(1.f);
         passed &= check(flag.getPosition() == baseAnchor &&
-                            flag.hitbox.getPosition() == expectedTop &&
-                            callbackWaited && completionCalls == 1,
-                        "WinFlag anchors upward and completes after one slide");
+                            flag.hitbox.getPosition() == baseAnchor &&
+                            flag.hitbox.getSize() ==
+                                sf::Vector2f(MapFormat::TILE_SIZE,
+                                             MapFormat::TILE_SIZE) &&
+                            startsAtGroup5Base && movedHalfwayUp &&
+                            reachedGroup5Top && callbackWaited &&
+                            completionCalls == 1,
+                        "WinFlag preserves Group5 base collider and upward 470px slide");
     }
 
     {
@@ -584,6 +759,7 @@ int main() {
     {
         LevelManager level;
         Mario player;
+        player.setHealth(1);
         player.setPosition({0.f, 0.f});
         player.getMovementComponent()->setVelocity(0.f, 100.f);
         level.setPlayers({&player});
@@ -596,7 +772,7 @@ int main() {
         level.setPlayerDeathCallback([&](PlayerManager&) { ++deaths; });
 
         level.update(0.05f);
-        passed &= check(goombaView->isStomped() && score == 100 &&
+        passed &= check(goombaView->isStomped() && score == 300 &&
                             deaths == 0 &&
                             nearlyEqual(player.getMovementComponent()
                                             ->getVelocity().y,
@@ -604,13 +780,14 @@ int main() {
                         "Goomba stomp resolves once, scores, and bounces player");
 
         level.update(1.01f);
-        passed &= check(level.getEnemies().empty() && score == 100,
+        passed &= check(level.getEnemies().empty() && score == 300,
                         "stomped Goomba expires once and leaves no enemy view");
     }
 
     {
         LevelManager level;
         Mario player;
+        player.setHealth(1);
         player.setPosition({0.f, 0.f});
         player.getMovementComponent()->setVelocity(100.f, 0.f);
         level.setPlayers({&player});
@@ -641,6 +818,7 @@ int main() {
     {
         LevelManager level;
         Mario player;
+        player.setHealth(1);
         player.setPosition({0.f, 0.f});
         player.getMovementComponent()->setVelocity(0.f, 100.f);
         level.setPlayers({&player});
@@ -672,19 +850,104 @@ int main() {
 
     {
         LevelManager level;
+        auto first = std::make_unique<Goomba>(sf::Vector2f{0.f, 0.f});
+        auto second = std::make_unique<Goomba>(sf::Vector2f{48.f, 0.f});
+        Goomba* firstView = first.get();
+        Goomba* secondView = second.get();
+        firstView->setFacingRight(true);
+        secondView->setFacingRight(false);
+        level.addEntity(std::move(first), true);
+        level.addEntity(std::move(second), true);
+        level.update(0.01f);
+        level.update(0.05f);
+        passed &= check(!firstView->isFacingRight() &&
+                            secondView->isFacingRight() &&
+                            firstView->getMovementComponent()->getVelocity().x < 0.f &&
+                            secondView->getMovementComponent()->getVelocity().x > 0.f &&
+                            !firstView->hitbox.getGlobalBounds().findIntersection(
+                                secondView->hitbox.getGlobalBounds()),
+                        "walking enemies separate and keep moving away on contact");
+    }
+
+    {
+        LevelManager level;
+        auto shell = std::make_unique<Koopa>(sf::Vector2f{0.f, 0.f});
+        Koopa* shellView = shell.get();
+        shellView->onStomped();
+        shellView->kickShell(true);
+        level.addEntity(std::move(shell), true);
+        level.addEntity(std::make_unique<Goomba>(sf::Vector2f{32.f, 0.f}),
+                        true);
+        int score = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.update(0.01f);
+        passed &= check(level.getEnemies().size() == 1 &&
+                            level.getEnemies().front() == shellView &&
+                            score == 300,
+                        "kicked Koopa shell defeats and removes one enemy");
+    }
+
+    {
+        LevelManager level;
         Mario player;
         player.setPosition({0.f, 0.f});
         level.setPlayers({&player});
         level.addEntity(std::make_unique<Coin>(sf::Vector2f{0.f, 0.f}));
         int score = 0;
         int coins = 0;
+        int coinCues = 0;
         level.setScoreChangedCallback([&](int delta) { score += delta; });
         level.setCoinCollectedCallback([&](int delta) { coins += delta; });
+        level.setAudioCueCallback([&](AudioCue cue) {
+            if (cue == AudioCue::Coin) ++coinCues;
+        });
         level.update(0.01f);
         level.update(0.01f);
-        passed &= check(score == 200 && coins == 1 &&
+        passed &= check(score == 0 && coins == 1 && coinCues == 1 &&
                             level.getEntities().empty(),
-                        "Coin collection forwards one outcome and removes owner");
+                        "Coin collection forwards one outcome/cue and removes owner");
+    }
+
+    {
+        Mario player;
+        ConfiguredLevel level(1, 1, {&player});
+        CoinBlock* coinBlock = nullptr;
+        for (const auto& entity : level.getEntities()) {
+            if (auto* candidate = dynamic_cast<CoinBlock*>(entity.get())) {
+                coinBlock = candidate;
+                break;
+            }
+        }
+        int score = 0;
+        int coins = 0;
+        int cues = 0;
+        level.setScoreChangedCallback([&](int delta) { score += delta; });
+        level.setCoinCollectedCallback([&](int delta) { coins += delta; });
+        level.setAudioCueCallback([&](AudioCue cue) {
+            if (cue == AudioCue::Coin) ++cues;
+        });
+        const auto initialCoins = std::count_if(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<const Coin*>(entity.get()) != nullptr;
+            });
+        if (coinBlock) {
+            const sf::FloatRect blockBounds = coinBlock->hitbox.getGlobalBounds();
+            player.setPosition({blockBounds.position.x,
+                                blockBounds.position.y + blockBounds.size.y});
+            player.setGrounded(false);
+            player.getMovementComponent()->setVelocity(0.f, -400.f);
+        }
+        level.update(0.05f);
+        const auto poppedCoins = std::count_if(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<const Coin*>(entity.get()) != nullptr;
+            });
+        passed &= check(level.isLoaded() && coinBlock && score == 100 &&
+                            coins == 1 && cues == 1 &&
+                            poppedCoins == initialCoins + 1,
+                        "CoinBlock immediately awards once and owns one visual coin");
     }
 
     {
@@ -717,24 +980,47 @@ int main() {
         int score = 0;
         level.setScoreChangedCallback([&](int delta) { score += delta; });
         level.update(0.01f);
-        passed &= check(player.isBig() && score == 1000 &&
+        passed &= check(player.isBig() && score == 0 &&
                             level.getEntities().empty(),
                         "cleared Mushroom grows player and cleans item once");
     }
 
     {
+        Mushroom mushroom({0.f, 64.f}, true);
+        mushroom.update(0.25f);
+        const bool roseDuringPop = mushroom.getPosition().y < 64.f;
+        mushroom.update(0.25f);
+        passed &= check(roseDuringPop &&
+                            nearlyEqual(mushroom.getPosition().y, 64.f),
+                        "popped Mushroom bobs once and settles at its spawn");
+    }
+
+    {
         LevelManager level;
-        auto wall = std::make_unique<TestBlock>(
-            sf::Vector2f{64.f, 0.f}, sf::Vector2f{64.f, 64.f});
-        level.addEntity(std::move(wall), false, true);
-        auto mushroom = std::make_unique<Mushroom>(sf::Vector2f{0.f, 0.f});
-        Mushroom* mushroomView = mushroom.get();
-        level.addEntity(std::move(mushroom));
-        level.update(0.5f);
-        const bool resolvedAtWall = nearlyEqual(mushroomView->getPosition().x, 0.f);
-        level.update(0.5f);
-        passed &= check(resolvedAtWall && mushroomView->getPosition().x < 0.f,
-                        "moving Mushroom resolves a Block hit and reverses direction");
+        Mario target;
+        target.setPosition({100.f, 300.f});
+        level.setPlayers({&target});
+        level.addEntity(std::make_unique<Bowser>(sf::Vector2f{500.f, 0.f}));
+        level.update(2.01f);
+        Bullet* aimed = nullptr;
+        for (const auto& entity : level.getEntities()) {
+            if (auto* bullet = dynamic_cast<Bullet*>(entity.get())) {
+                aimed = bullet;
+                break;
+            }
+        }
+        const sf::Vector2f birth = aimed ? aimed->getPosition()
+                                         : sf::Vector2f{};
+        level.update(0.1f);
+        passed &= check(
+            aimed && aimed->getSize() ==
+                         sf::Vector2f(MapFormat::TILE_SIZE,
+                                      MapFormat::TILE_SIZE) &&
+                aimed->getPosition().x < birth.x &&
+                aimed->getPosition().y > birth.y &&
+                !level.getEnemies().empty() &&
+                !level.getEnemies().front()->isFacingRight(),
+            "Bowser faces the live player and aims his 64px Bullet at them");
     }
 
     {
@@ -756,6 +1042,45 @@ int main() {
         passed &= check(adoptedAfterTraversal &&
                             spawned->getPosition().x < birthX,
                         "base Enemy projectile request queues one damaging Bullet");
+    }
+
+    {
+        LevelManager level;
+        auto floor = std::make_unique<TestBlock>(
+            sf::Vector2f{0.f, 64.f}, sf::Vector2f{256.f, 32.f});
+        level.addEntity(std::move(floor), false, true);
+        const bool accepted = level.spawnProjectile(
+            {ProjectileKind::Fireball, {0.f, 0.f}, {1.f, 0.f}, 400.f, 1});
+        level.update(0.2f);
+        Fireball* bouncing = nullptr;
+        for (const auto& entity : level.getEntities()) {
+            if (auto* fireball = dynamic_cast<Fireball*>(entity.get())) {
+                bouncing = fireball;
+                break;
+            }
+        }
+        passed &= check(
+            accepted && bouncing && !bouncing->isExpired() &&
+                nearlyEqual(bouncing->getPosition().y, 32.f) &&
+                bouncing->getMovementComponent()->getVelocity().y < 0.f,
+            "Fireball bounces only from a floor top");
+    }
+
+    {
+        LevelManager level;
+        auto wall = std::make_unique<TestBlock>(
+            sf::Vector2f{64.f, 0.f}, sf::Vector2f{32.f, 256.f});
+        level.addEntity(std::move(wall), false, true);
+        const bool accepted = level.spawnProjectile(
+            {ProjectileKind::Fireball, {0.f, 0.f}, {1.f, 0.f}, 400.f, 1});
+        level.update(0.1f);
+        const bool removed = std::none_of(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<Fireball*>(entity.get()) != nullptr;
+            });
+        passed &= check(accepted && removed,
+                        "Fireball expires instead of sticking in a wall");
     }
 
     {
@@ -783,6 +1108,54 @@ int main() {
         passed &= check(rejected && accepted && noProjectileOrEnemy &&
                             score == 100,
                         "Fireball request rejects invalid data and resolves one enemy hit");
+    }
+
+    {
+        LevelManager level;
+        const bool accepted = level.spawnProjectile(
+            {ProjectileKind::Fireball, {32.f, 32.f},
+             {0.f, -2.f}, 750.f, 1});
+        Fireball* fireball = nullptr;
+        for (const auto& entity : level.getEntities()) {
+            if (auto* candidate = dynamic_cast<Fireball*>(entity.get())) {
+                fireball = candidate;
+                break;
+            }
+        }
+        passed &= check(
+            accepted && fireball &&
+                fireball->getMovementComponent()->getVelocity() ==
+                    sf::Vector2f(0.f, -750.f),
+            "Mouse-aimed Fireball accepts and normalizes a vertical shot");
+    }
+
+    {
+        Mario player;
+        ConfiguredLevel level(1, 1, {&player});
+        std::vector<sf::Vector2f> peteyPositions;
+        for (Enemy* enemy : level.getEnemies()) {
+            if (dynamic_cast<PeteyPiranha*>(enemy))
+                peteyPositions.push_back(enemy->getPosition());
+        }
+        level.update(2.01f);
+        std::size_t anchoredPeteys = 0;
+        for (Enemy* enemy : level.getEnemies()) {
+            if (auto* petey = dynamic_cast<PeteyPiranha*>(enemy)) {
+                if (anchoredPeteys < peteyPositions.size() &&
+                    petey->getPosition() == peteyPositions[anchoredPeteys]) {
+                    ++anchoredPeteys;
+                }
+            }
+        }
+        const auto bulletCount = static_cast<std::size_t>(std::count_if(
+            level.getEntities().begin(), level.getEntities().end(),
+            [](const std::unique_ptr<GameObject>& entity) {
+                return dynamic_cast<const Bullet*>(entity.get()) != nullptr;
+            }));
+        passed &= check(!peteyPositions.empty() &&
+                            anchoredPeteys == peteyPositions.size() &&
+                            bulletCount == peteyPositions.size(),
+                        "W1_LV1 Peteys stay anchored and each open with one upward shot");
     }
 
     {
@@ -833,11 +1206,11 @@ int main() {
         std::vector<std::unique_ptr<GameObject>> fragments;
         std::unordered_set<GameObject*> delivered;
         int callbackCalls = 0;
-        Brick brick([&](GameObject* spawned) {
+        Brick brick([&](std::unique_ptr<GameObject> spawned) {
             ++callbackCalls;
             if (spawned) {
-                delivered.insert(spawned);
-                fragments.emplace_back(spawned);
+                delivered.insert(spawned.get());
+                fragments.push_back(std::move(spawned));
             }
         });
         brick.setPosition({64.f, 64.f});
@@ -846,8 +1219,15 @@ int main() {
         const CollisionInfo collision = physics.step(player, {&brick}, 0.05f);
         passed &= check(collision.ceilHit,
                         "real player headbutt reaches normal Brick bottom");
+        passed &= check(brick.isExist() && callbackCalls == 0,
+                        "small player cannot break a Brick");
+
+        player.setBig(true);
+        player.setPosition({64.f, 98.f});
+        player.getMovementComponent()->setVelocity(0.f, -200.f);
+        physics.step(player, {&brick}, 0.05f);
         passed &= check(!brick.isExist(),
-                        "normal Brick reports inactive after headbutt");
+                        "big player breaks a Brick from below");
 
         bool allFragments = fragments.size() == 4;
         for (const auto& fragment : fragments) {
@@ -869,6 +1249,7 @@ int main() {
         LevelManager level;
         Mario player;
         Mario sameFrameFollower;
+        player.setBig(true);
         player.setPosition({64.f, 98.f});
         player.getMovementComponent()->setVelocity(0.f, -200.f);
         player.setGrounded(false);
@@ -878,23 +1259,27 @@ int main() {
         level.setPlayers({&player, &sameFrameFollower});
 
         int callbackCalls = 0;
+        int brickBreakCues = 0;
+        int brickScore = 0;
         std::unordered_set<GameObject*> delivered;
-        auto brick = std::make_unique<Brick>([&](GameObject* spawned) {
+        auto brick = std::make_unique<Brick>([&](std::unique_ptr<GameObject> spawned) {
             ++callbackCalls;
-            if (spawned) delivered.insert(spawned);
-            level.addEntity(std::unique_ptr<GameObject>(spawned));
+            if (spawned) delivered.insert(spawned.get());
+            level.addEntity(std::move(spawned));
         });
         brick->setPosition({64.f, 64.f});
         brick->setSize({32.f, 32.f});
         level.addEntity(std::move(brick), false, true);
+        level.setAudioCueCallback([&](AudioCue cue) {
+            if (cue == AudioCue::BrickBreak) ++brickBreakCues;
+        });
+        level.setScoreChangedCallback([&](int delta) { brickScore += delta; });
 
         level.update(0.05f);
 
         passed &= check(callbackCalls == 4 &&
-                            nearlyEqual(player.getPosition().y, 96.f) &&
-                            nearlyEqual(
-                                player.getMovementComponent()->getVelocity().y,
-                                0.f),
+                            player.getPosition().y >= 96.f &&
+                            player.getMovementComponent()->getVelocity().y > 0.f,
                         "first actor breaks normal Brick before same-frame follower");
         passed &= check(sameFrameFollower.getPosition().y < 96.f &&
                             sameFrameFollower.getMovementComponent()
@@ -909,8 +1294,9 @@ int main() {
             fragmentAddresses.insert(entity.get());
         }
         passed &= check(callbackCalls == 4 && delivered.size() == 4 &&
+                            brickBreakCues == 1 && brickScore == 50 &&
                             fragmentAddresses.size() == 4,
-                        "LevelManager adopts four BrickFragments exactly once");
+                        "LevelManager owns fragments and rewards one Brick break");
         passed &= check(ownsOnlyFragments,
                         "LevelManager removes inactive Brick ownership");
         passed &= check(level.getBlocks().empty(),
@@ -992,6 +1378,132 @@ int main() {
             }
         }
 
+        struct FactoryExpectation {
+            int world;
+            int stage;
+            std::size_t extraEnemies;
+            std::size_t movingBlocks;
+            std::size_t winFlags;
+        };
+        constexpr std::array<FactoryExpectation, 9> factories{{
+            {1, 1, 20, 0, 1}, {1, 2, 16, 1, 1},
+            {1, 3, 18, 7, 1}, {2, 1, 19, 1, 1},
+            {2, 2, 14, 2, 1}, {2, 3, 26, 1, 1},
+            {3, 1, 9, 0, 1},  {3, 2, 14, 0, 1},
+            {3, 3, 1, 0, 0},
+        }};
+        for (const FactoryExpectation& expected : factories) {
+            auto player = std::make_unique<Mario>();
+            auto level = createConfiguredLevel(
+                expected.world, expected.stage, {player.get()});
+            const std::size_t mapEnemyCount = level
+                ? static_cast<std::size_t>(std::count_if(
+                      level->getMapManager().getSpawns().begin(),
+                      level->getMapManager().getSpawns().end(),
+                      [](const MapSpawnInfo& spawn) {
+                          return spawn.type == MapObjectType::Goomba ||
+                                 spawn.type == MapObjectType::Koopa ||
+                                 spawn.type == MapObjectType::FlyingKoopa ||
+                                 spawn.type == MapObjectType::Heriss ||
+                                 spawn.type == MapObjectType::PeteyPiranha ||
+                                 spawn.type == MapObjectType::Bowser;
+                      }))
+                : 0;
+            std::size_t movingBlocks = 0;
+            std::size_t winFlags = 0;
+            bool spawnSafe = level && level->isLoaded();
+            if (level) {
+                const sf::FloatRect playerBounds =
+                    player->hitbox.getGlobalBounds();
+                for (const auto& entity : level->getEntities()) {
+                    if (dynamic_cast<MovingBlock*>(entity.get()))
+                        ++movingBlocks;
+                    if (dynamic_cast<WinFlag*>(entity.get())) ++winFlags;
+                    if ((dynamic_cast<Enemy*>(entity.get()) ||
+                         dynamic_cast<Lava*>(entity.get())) &&
+                        playerBounds.findIntersection(
+                            entity->hitbox.getGlobalBounds())) {
+                        spawnSafe = false;
+                    }
+                }
+                level->update(0.016f);
+                spawnSafe = spawnSafe && !player->isDead();
+            }
+            const auto primarySpawn = level
+                ? std::find_if(
+                      level->getMapManager().getSpawns().begin(),
+                      level->getMapManager().getSpawns().end(),
+                      [](const MapSpawnInfo& spawn) {
+                          return spawn.type == MapObjectType::Player1Spawn;
+                      })
+                : std::vector<MapSpawnInfo>::const_iterator{};
+            auto luigi = std::make_unique<Luigi>();
+            auto luigiLevel = createConfiguredLevel(
+                expected.world, expected.stage, {luigi.get()});
+            const bool selectedCharacterUsesPrimarySpawn =
+                level && luigiLevel && luigiLevel->isLoaded() &&
+                primarySpawn != level->getMapManager().getSpawns().end() &&
+                luigi->getPosition() == primarySpawn->position;
+            passed &= check(
+                level && level->getEnemies().size() ==
+                             mapEnemyCount + expected.extraEnemies &&
+                    movingBlocks == expected.movingBlocks &&
+                    winFlags == expected.winFlags && spawnSafe &&
+                    selectedCharacterUsesPrimarySpawn,
+                "production W" + std::to_string(expected.world) + "_LV" +
+                    std::to_string(expected.stage) +
+                    " factory preserves Group5 extras and a safe spawn" +
+                    (level ? " [enemies " +
+                                 std::to_string(level->getEnemies().size()) +
+                                 "/" + std::to_string(mapEnemyCount +
+                                                        expected.extraEnemies) +
+                                 ", moving " + std::to_string(movingBlocks) +
+                                 "/" + std::to_string(expected.movingBlocks) +
+                                 ", flags " + std::to_string(winFlags) +
+                                 "/" + std::to_string(expected.winFlags) +
+                                  ", safe " + (spawnSafe ? "yes" : "no") +
+                                  ", Luigi primary " +
+                                  (selectedCharacterUsesPrimarySpawn
+                                       ? "yes"
+                                       : "no") +
+                                 ", spawn " +
+                                 std::to_string(static_cast<int>(
+                                     player->getPosition().x)) + "," +
+                                 std::to_string(static_cast<int>(
+                                     player->getPosition().y)) + "]"
+                           : " [level missing]"));
+        }
+
+        for (int world = 1; world <= 3; ++world) {
+            for (int stage = 1; stage <= 3; ++stage) {
+                if (world == 3 && stage == 3) continue;
+                Mario finisher;
+                finisher.setImmortal(true, 10.f);
+                ConfiguredLevel completable(world, stage, {&finisher});
+                std::vector<WinFlag*> flags;
+                for (const auto& entity : completable.getEntities()) {
+                    if (auto* flag = dynamic_cast<WinFlag*>(entity.get()))
+                        flags.push_back(flag);
+                }
+                int completions = 0;
+                completable.setLevelCompletedCallback([&] { ++completions; });
+                if (flags.size() == 1)
+                    finisher.setPosition(flags.front()->hitbox.getPosition());
+                completable.update(0.01f);
+                const bool activatedByPlayer =
+                    flags.size() == 1 && flags.front()->isActivated();
+                completable.update(0.5f);
+                completable.update(0.5f);
+                completable.update(0.1f);
+                passed &= check(
+                    completable.isLoaded() && flags.size() == 1 &&
+                        activatedByPlayer && completions == 1,
+                    "W" + std::to_string(world) + "_LV" +
+                        std::to_string(stage) +
+                        " exposes one player-contact WinFlag completion path");
+            }
+        }
+
         W3_LV3 level;
         const std::size_t mapEnemyCount = static_cast<std::size_t>(
             std::count_if(level.getMapManager().getSpawns().begin(),
@@ -1017,6 +1529,32 @@ int main() {
                             nearlyEqual((*bowser)->getSize().x, 128.f) &&
                             nearlyEqual((*bowser)->getSize().y, 140.f),
                         "W3_LV3 adds the Group5 Bowser on the 64px map");
+
+        Mario bossPlayer;
+        W3_LV3 poweredBossLevel({&bossPlayer});
+        poweredBossLevel.update(5.01f);
+        Mushroom* bossMushroom = nullptr;
+        for (const auto& entity : poweredBossLevel.getEntities()) {
+            if (auto* mushroom = dynamic_cast<Mushroom*>(entity.get())) {
+                bossMushroom = mushroom;
+                break;
+            }
+        }
+        if (bossMushroom)
+            bossPlayer.setPosition(bossMushroom->hitbox.getPosition());
+        poweredBossLevel.update(0.01f);
+        passed &= check(
+            bossMushroom && bossPlayer.isBig() && bossPlayer.canShoot(),
+            "W3_LV3 type-2 mushroom grows the player and unlocks FireBuff shooting");
+
+        int bossCompletionCalls = 0;
+        level.setLevelCompletedCallback([&] { ++bossCompletionCalls; });
+        if (bowser != level.getEnemies().end())
+            (*bowser)->takeDamage((*bowser)->getHealth());
+        level.update(0.01f);
+        level.update(0.01f);
+        passed &= check(bossCompletionCalls == 1,
+                        "defeating Bowser completes W3_LV3 exactly once");
     }
 
     {

@@ -2,6 +2,7 @@
 
 #include "Core/GameObject.hpp"
 #include <functional>
+#include <optional>
 
 class WinFlag : public GameObject {
 public:
@@ -14,14 +15,16 @@ public:
     void setPosition(const sf::Vector2f& position) override;
     void activate();
     bool isActivated() const noexcept;
+    sf::Vector2f getFlagVisualPosition() const noexcept;
 private:
     void syncGeometry();
 
     CompletionCallback callback;
-    sf::RectangleShape pole;
-    sf::ConvexShape flag;
+    std::optional<sf::Sprite> poleSprite;
+    std::optional<sf::Sprite> sphereSprite;
     bool activated{false};
     bool completed{false};
     float animationTime{0.f};
+    int currentFrame{0};
 };
 

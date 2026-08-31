@@ -5,7 +5,10 @@ W3_LV1::W3_LV1(const std::vector<PlayerManager*>& players)
     if (!isLoaded()) return;
 
     addStageEnemy("Goomba", {2100.f, 576.f}, 2013.f, 2545.f);
-    addStageEnemy("Heriss", {300.f, 500.f}, 100.f, 550.f);
+    // Group5 starts this Heriss at x=300, overlapping the sketch's player
+    // spawn at x=320. Keep its stage role and patrol, but start safely on the
+    // far side so W3-LV1 does not deal damage on the first frame.
+    addStageEnemy("Heriss", {500.f, 500.f}, 100.f, 550.f);
     addStageEnemy("Goomba", {9200.f, 134.f}, 9197.f, 9855.f);
     addStageEnemy("Koopa", {9400.f, 134.f}, 9197.f, 9855.f);
     addStageEnemy("Heriss", {9600.f, 134.f}, 9197.f, 9855.f);

@@ -1,20 +1,19 @@
 #include "Core/stdafx.hpp"
+#include "Core/AssetLocator.hpp"
 
 namespace {
 constexpr float LEGACY_SCREEN_HEIGHT = 960.f;
 
-std::string blindFoldPath() {
-    const std::string sourcePath = "assets/textures/BlindFold.png";
-    return std::filesystem::exists(sourcePath) ? sourcePath
-                                                : "../" + sourcePath;
-}
 }
 
 W3_LV2::W3_LV2(const std::vector<PlayerManager*>& players)
     : ConfiguredLevel(3, 2, players), blindFold(blindFoldTexture) {
     if (!isLoaded()) return;
 
-    blindFoldLoaded = blindFoldTexture.loadFromFile(blindFoldPath());
+    const auto blindFoldPath = AssetLocator::find(
+        "assets/textures/BlindFold.png");
+    blindFoldLoaded = blindFoldPath &&
+                      blindFoldTexture.loadFromFile(*blindFoldPath);
     if (blindFoldLoaded) {
         blindFold.setTexture(blindFoldTexture, true);
         const float height = blindFold.getGlobalBounds().size.y;
@@ -53,8 +52,8 @@ void W3_LV2::render(sf::RenderTarget* target) {
 void W3_LV2::positionBlindFold() {
     if (!blindFoldLoaded || getPlayers().empty()) return;
     const sf::FloatRect bounds = blindFold.getGlobalBounds();
-    const sf::Vector2f playerPosition = getPlayers().front()->getPosition();
+    const sf::Vector2f playerCenter = getPlayers().front()->getCenter();
     blindFold.setPosition(
-        {playerPosition.x - bounds.size.x / 2.f - CELL_SIZE,
-         playerPosition.y - bounds.size.y / 2.f + 2.f * CELL_SIZE});
+        {playerCenter.x - bounds.size.x / 2.f,
+         playerCenter.y - bounds.size.y / 2.f + 2.f * CELL_SIZE});
 }

@@ -2,11 +2,14 @@
 #include "Entities/Base/Character.hpp"
 #include "Entities/Base/Enemy.hpp"
 #include "Entities/Base/LivingEntity.hpp"
+#include "Entities/Players/PlayerManager.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include "Objects/Blocks/Block.hpp"
+#include "Objects/Blocks/Brick.hpp"
 #include "Objects/Blocks/MovingBlock.hpp"
 #include "Objects/Environment/Trampoline.hpp"
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 
@@ -15,8 +18,10 @@ PhysicsEngine::PhysicsEngine(float gravityY) : gravity(gravityY) {}
 void PhysicsEngine::applyGravity(MovementComponent& movementComponent, float dt) {
     if (dt <= 0.f) return;
     // Giới hạn delta time để tránh hiện tượng rơi xuyên tường (tunneling) khi sụt giảm FPS
-    float clampedDt = std::min(dt, 0.1f);
-    movementComponent.applyForce({0.f, gravity * clampedDt});
+    constexpr float terminalFallSpeed = 1400.f;
+    sf::Vector2f velocity = movementComponent.getVelocity();
+    velocity.y = std::min(velocity.y + gravity * dt, terminalFallSpeed);
+    movementComponent.setVelocity(velocity);
 }
 
 bool PhysicsEngine::canGrow(const sf::FloatRect& currentHitbox,
@@ -166,17 +171,71 @@ std::vector<Block*> PhysicsEngine::queryNearbyBlocks(
 CollisionInfo PhysicsEngine::step(LivingEntity& entity,
                                   const std::vector<Block*>& blocks,
                                   float dt) {
+    CollisionInfo result;
+    if (!entity.getMovementComponent() || dt <= 0.f) return result;
+
+    constexpr float maximumFrameDt = 0.1f;
+    constexpr float maximumSliceDt = 0.02f;
+    const float frameDt = std::min(dt, maximumFrameDt);
+    float remaining = frameDt;
+    std::unordered_set<const MovingBlock*> carriedPlatforms;
+
+    // A descending platform can move farther in one frame than gravity moves
+    // its rider. Carry actors that were standing on the platform's previous
+    // top before collision stepping, otherwise grounded toggles every frame
+    // and the player visibly flickers between idle and jump animations.
+    const sf::FloatRect actorBounds = entity.hitbox.getGlobalBounds();
+    for (Block* block : blocks) {
+        auto* moving = dynamic_cast<MovingBlock*>(block);
+        if (!moving || !moving->isExist()) continue;
+        const sf::Vector2f delta = moving->getFrameDelta();
+        if (delta == sf::Vector2f{}) continue;
+
+        sf::FloatRect previousPlatform = moving->hitbox.getGlobalBounds();
+        previousPlatform.position -= delta;
+        const float actorBottom =
+            actorBounds.position.y + actorBounds.size.y;
+        const float platformTop = previousPlatform.position.y;
+        const bool horizontallySupported =
+            actorBounds.position.x + actorBounds.size.x >
+                previousPlatform.position.x &&
+            actorBounds.position.x < previousPlatform.position.x +
+                                         previousPlatform.size.x;
+        if (horizontallySupported &&
+            std::abs(actorBottom - platformTop) <= 2.f) {
+            entity.setPosition(entity.getPosition() + delta);
+            carriedPlatforms.insert(moving);
+            break;
+        }
+    }
+
+    while (remaining > 0.f) {
+        const float sliceDt = std::min(remaining, maximumSliceDt);
+        const CollisionInfo slice = stepSlice(
+            entity, blocks, sliceDt, carriedPlatforms);
+        result.collided = result.collided || slice.collided;
+        result.ceilHit = result.ceilHit || slice.ceilHit;
+        result.wallHit = result.wallHit || slice.wallHit;
+        result.grounded = result.grounded || slice.grounded;
+        remaining -= sliceDt;
+    }
+    if (auto* character = dynamic_cast<Character*>(&entity)) {
+        character->setGrounded(result.grounded);
+    }
+    return result;
+}
+
+CollisionInfo PhysicsEngine::stepSlice(
+    LivingEntity& entity, const std::vector<Block*>& blocks, float dt,
+    std::unordered_set<const MovingBlock*>& carriedPlatforms) {
     CollisionInfo info;
     MovementComponent* movement = entity.getMovementComponent();
-    if (!movement || dt <= 0.f) return info;
-
-    const float safeDt = std::min(dt, 0.05f);
-    applyGravity(*movement, safeDt);
+    applyGravity(*movement, dt);
 
     sf::FloatRect bounds = entity.hitbox.getGlobalBounds();
     const std::vector<Block*> nearby = queryNearbyBlocks(bounds, blocks, 2);
 
-    bounds.position.x += movement->getVelocity().x * safeDt;
+    bounds.position.x += movement->getVelocity().x * dt;
     for (Block* block : nearby) {
         if (!block || !block->isExist()) continue;
         const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
@@ -194,7 +253,7 @@ CollisionInfo PhysicsEngine::step(LivingEntity& entity,
         if (auto* enemy = dynamic_cast<Enemy*>(&entity)) enemy->reverseDirection();
     }
 
-    bounds.position.y += movement->getVelocity().y * safeDt;
+    bounds.position.y += movement->getVelocity().y * dt;
     for (Block* block : nearby) {
         if (!block || !block->isExist()) continue;
         const sf::FloatRect blockBounds = block->hitbox.getGlobalBounds();
@@ -210,22 +269,30 @@ CollisionInfo PhysicsEngine::step(LivingEntity& entity,
                                       trampoline->getLaunchVelocity());
                 info.grounded = false;
             } else if (auto* moving = dynamic_cast<MovingBlock*>(block)) {
-                bounds.position += moving->getFrameDelta();
+                if (carriedPlatforms.insert(moving).second) {
+                    // The landing snap already uses the platform's current Y.
+                    // Only horizontal carry is still missing here; adding Y
+                    // again embeds the rider in a descending platform.
+                    bounds.position.x += moving->getFrameDelta().x;
+                }
             }
         } else if (movement->getVelocity().y < 0.f) {
             bounds.position.y = blockBounds.position.y + blockBounds.size.y;
             movement->setVelocity(movement->getVelocity().x, 0.f);
             info.collided = true;
             info.ceilHit = true;
-            block->reactToCollision(0);
+            // Only a player headbutt activates a block. Enemies use the same
+            // physics step but must never break bricks or release items.
+            if (auto* player = dynamic_cast<PlayerManager*>(&entity)) {
+                if (dynamic_cast<Brick*>(block) == nullptr || player->isBig()) {
+                    block->reactToCollision(COLLISION_BOTTOM);
+                }
+            }
         }
     }
 
     entity.hitbox.setPosition(bounds.position);
     entity.setPosition(bounds.position);
-    if (auto* character = dynamic_cast<Character*>(&entity)) {
-        character->setGrounded(info.grounded);
-    }
     return info;
 }
 

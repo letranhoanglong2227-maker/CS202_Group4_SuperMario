@@ -2,10 +2,12 @@
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include "Components/MovementComponent.hpp"
+#include <unordered_set>
 #include <vector>
 
 class Block;
 class LivingEntity;
+class MovingBlock;
 
 enum class AabbContactSide {
     None,
@@ -24,7 +26,7 @@ struct CollisionInfo {
 
 class PhysicsEngine {
 public:
-    PhysicsEngine(float gravityY = 980.f);
+    PhysicsEngine(float gravityY = 2500.f);
 
     // Kiểm tra an toàn trước khi lớn lên (thay đổi Hitbox)
     bool canGrow(const sf::FloatRect& currentHitbox, const sf::Vector2f& newSize,
@@ -52,6 +54,10 @@ public:
 
 private:
     void applyGravity(MovementComponent& movementComponent, float dt);
+    CollisionInfo stepSlice(LivingEntity& entity,
+                            const std::vector<Block*>& blocks,
+                            float dt,
+                            std::unordered_set<const MovingBlock*>& carriedPlatforms);
 
     float gravity;
 };

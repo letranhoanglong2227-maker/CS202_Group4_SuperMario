@@ -18,12 +18,17 @@ void MovementComponent::setVelocity(float x, float y) {
     velocity.y = y;
 }
 
+void MovementComponent::setMaxVelocity(float value) {
+    if (value >= 0.f) maxVelocity = value;
+}
+
 void MovementComponent::applyForce(const sf::Vector2f& force) {
     velocity += force;
 }
 
 void MovementComponent::move(float dirX, float dirY, float dt) {
     if (dt <= 0.f) return;
+    horizontalInputApplied = horizontalInputApplied || dirX != 0.f;
     velocity.x += dirX * acceleration * dt;
     velocity.y += dirY * acceleration * dt;
 }
@@ -31,19 +36,23 @@ void MovementComponent::move(float dirX, float dirY, float dt) {
 void MovementComponent::update(float dt) {
     if (dt <= 0.f) return;
     // Áp dụng ma sát (friction) theo trục X nếu không có lực đẩy
-    if (velocity.x > 0.f) {
-        velocity.x -= friction * dt;
-        if (velocity.x < 0.f) velocity.x = 0.f;
-    } else if (velocity.x < 0.f) {
-        velocity.x += friction * dt;
-        if (velocity.x > 0.f) velocity.x = 0.f;
+    if (!horizontalInputApplied) {
+        if (velocity.x > 0.f) {
+            velocity.x -= friction * dt;
+            if (velocity.x < 0.f) velocity.x = 0.f;
+        } else if (velocity.x < 0.f) {
+            velocity.x += friction * dt;
+            if (velocity.x > 0.f) velocity.x = 0.f;
+        }
     }
+    horizontalInputApplied = false;
 
     // Giới hạn vận tốc trục X
     if (velocity.x > maxVelocity) velocity.x = maxVelocity;
     if (velocity.x < -maxVelocity) velocity.x = -maxVelocity;
     
-    // Giới hạn vận tốc rơi (terminal velocity)
-    float terminalVelocity = maxVelocity * 2.f; 
+    // Match the reference game's world-scale fall speed. Tying this to the
+    // horizontal cap made slow enemies and the player float unnaturally.
+    constexpr float terminalVelocity = 1400.f;
     if (velocity.y > terminalVelocity) velocity.y = terminalVelocity;
 }

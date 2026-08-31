@@ -13,5 +13,6 @@ public:
 private:
     sf::RectangleShape shape;
     float animationTime{0.f};
+    std::size_t animationFrame{};
 };
 

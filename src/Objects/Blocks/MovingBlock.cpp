@@ -1,8 +1,8 @@
 ﻿#include "Objects/Blocks/MovingBlock.hpp"
+#include "Core/AssetLocator.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <string>
 
 namespace {
@@ -19,14 +19,6 @@ sf::IntRect textureRectFor(std::string_view textureName) {
     return {};
 }
 
-std::string tilesetPath() {
-    std::filesystem::path candidate = "assets/textures/Tileset.png";
-    for (int depth = 0; depth < 3; ++depth) {
-        if (std::filesystem::exists(candidate)) return candidate.string();
-        candidate = std::filesystem::path("..") / candidate;
-    }
-    return "assets/textures/Tileset.png";
-}
 }
 
 MovingBlock::MovingBlock(sf::Vector2f pos, int widthInTiles,
@@ -48,7 +40,9 @@ MovingBlock::MovingBlock(sf::Vector2f pos, int widthInTiles,
     path = Path::SquareLoop;
 
     const sf::IntRect textureRect = textureRectFor(textureName);
-    if (textureRect.size.x > 0 && entityTexture.loadFromFile(tilesetPath())) {
+    const auto tileset = AssetLocator::find("assets/textures/Tileset.png");
+    if (textureRect.size.x > 0 && tileset &&
+        entityTexture.loadFromFile(*tileset)) {
         entitySprite.setTexture(entityTexture, true);
         entitySprite.setTextureRect(textureRect);
         entitySprite.setScale(

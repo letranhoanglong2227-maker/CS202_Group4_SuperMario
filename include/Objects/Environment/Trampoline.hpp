@@ -4,7 +4,7 @@
 
 class Trampoline : public Block {
 public:
-    explicit Trampoline(sf::Vector2f position = {}, float launchVelocity = -700.f);
+    explicit Trampoline(sf::Vector2f position = {}, float launchVelocity = -1700.f);
     void initSpritesSheet() override;
     void reactToCollision(int collidedSide) override;
     void update(float dt) override;

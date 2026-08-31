@@ -1,4 +1,5 @@
 #include "Levels/Managers/MapManager.hpp"
+#include "Core/AssetLocator.hpp"
 #include <algorithm>
 #include <array>
 #include <iostream>
@@ -14,11 +15,11 @@ constexpr std::array<sf::Color, 17> SOLID_GROUND{{
     {193, 113, 52}
 }};
 constexpr sf::Color BRICK{146, 73, 0};
-constexpr sf::Color BRICK_WITH_COIN{81, 34, 19};
+constexpr sf::Color BREAKABLE_BRICK{81, 34, 19};
 constexpr sf::Color COIN_BLOCK{255, 146, 85};
 constexpr sf::Color MUSHROOM_BLOCK{246, 109, 109};
-constexpr sf::Color ONE_UP_BLOCK{146, 73, 100};
-constexpr sf::Color STAR_BLOCK{146, 73, 150};
+constexpr sf::Color GROW_MUSHROOM_BLOCK{146, 73, 100};
+constexpr sf::Color DOUBLE_HEAL_MUSHROOM_BLOCK{146, 73, 150};
 constexpr sf::Color LAVA{255, 77, 0};
 constexpr sf::Color LAVA_BOTTOM{175, 55, 0};
 constexpr sf::Color TRAMPOLINE{198, 60, 60};
@@ -55,7 +56,8 @@ MapManager::MapManager(float gridSize)
 
 bool MapManager::loadFromImage(const std::string& filename) {
     sf::Image image;
-    if (!image.loadFromFile(filename)) {
+    const auto resolved = AssetLocator::find(filename);
+    if (!resolved || !image.loadFromFile(*resolved)) {
         std::cerr << "MapManager: Failed to load image " << filename << std::endl;
         return false;
     }
@@ -177,15 +179,16 @@ const std::vector<sf::Vector2f>& MapManager::getBrickSpawns() const {
 }
 
 bool MapManager::loadMap(const std::string& filename) {
-    currentFile = filename;
+    const auto resolved = AssetLocator::find(filename);
+    currentFile = resolved ? resolved->string() : filename;
     lastError.clear();
     mapWidth = 0;
     spawns.clear();
     diagnostics.clear();
 
     sf::Image image;
-    if (!image.loadFromFile(filename)) {
-        lastError = "Failed to load map image: " + filename;
+    if (!resolved || !image.loadFromFile(*resolved)) {
+        lastError = AssetLocator::missingMessage(filename);
         std::cerr << "MapManager: " << lastError << '\n';
         return false;
     }
@@ -251,14 +254,18 @@ void MapManager::decodeObjectPixel(const sf::Color& color, unsigned int x,
     MapSpawnInfo spawn;
     spawn.position = toWorldPosition(x, localY);
 
-    if (std::any_of(Palette::SOLID_GROUND.begin(), Palette::SOLID_GROUND.end(),
-                    [&color](const sf::Color& ground) {
-                        return sameRgb(color, ground);
-                    })) {
+    const auto ground = std::find_if(
+        Palette::SOLID_GROUND.begin(), Palette::SOLID_GROUND.end(),
+        [&color](const sf::Color& candidate) {
+            return sameRgb(color, candidate);
+        });
+    if (ground != Palette::SOLID_GROUND.end()) {
         spawn.type = MapObjectType::SolidGround;
+        spawn.variant = static_cast<int>(
+            std::distance(Palette::SOLID_GROUND.begin(), ground));
     } else if (sameRgb(color, Palette::BRICK)) {
         spawn.type = MapObjectType::Brick;
-    } else if (sameRgb(color, Palette::BRICK_WITH_COIN)) {
+    } else if (sameRgb(color, Palette::BREAKABLE_BRICK)) {
         spawn.type = MapObjectType::Brick;
         spawn.variant = 1;
     } else if (sameRgb(color, Palette::COIN_BLOCK)) {
@@ -266,10 +273,10 @@ void MapManager::decodeObjectPixel(const sf::Color& color, unsigned int x,
     } else if (sameRgb(color, Palette::MUSHROOM_BLOCK)) {
         spawn.type = MapObjectType::MushroomBlock;
         spawn.variant = 1;
-    } else if (sameRgb(color, Palette::ONE_UP_BLOCK)) {
+    } else if (sameRgb(color, Palette::GROW_MUSHROOM_BLOCK)) {
         spawn.type = MapObjectType::MushroomBlock;
         spawn.variant = 2;
-    } else if (sameRgb(color, Palette::STAR_BLOCK)) {
+    } else if (sameRgb(color, Palette::DOUBLE_HEAL_MUSHROOM_BLOCK)) {
         spawn.type = MapObjectType::MushroomBlock;
         spawn.variant = 3;
     } else if (color.r == 0 && color.b == 0 && color.g >= 250) {
@@ -286,6 +293,7 @@ void MapManager::decodeObjectPixel(const sf::Color& color, unsigned int x,
     } else if (sameRgb(color, Palette::CANNON_MID) ||
                sameRgb(color, Palette::CANNON_BOTTOM)) {
         spawn.type = MapObjectType::CannonBody;
+        spawn.variant = sameRgb(color, Palette::CANNON_BOTTOM) ? 1 : 0;
     } else if (sameRgb(color, sf::Color::Black)) {
         spawn.type = MapObjectType::Cannon;
     } else if (color.r == 255 && color.g == 255 && color.b < 40) {

@@ -1,22 +1,27 @@
 ﻿#include "Objects/Environment/WinFlag.hpp"
 #include "Levels/Managers/MapManager.hpp"
+#include "Objects/Blocks/Block.hpp"
 #include <algorithm>
 #include <utility>
 
 namespace {
 constexpr float FLAG_SLIDE_DURATION = 1.f;
+constexpr float FLAG_TRAVEL = 470.f;
 }
 
 WinFlag::WinFlag(sf::Vector2f pos, CompletionCallback completion)
     : callback(std::move(completion)) {
-    setSize({MapFormat::TILE_SIZE, MapFormat::TILE_SIZE * 4.f});
-    pole.setSize({4.f, getSize().y});
-    pole.setFillColor(sf::Color(230, 230, 230));
-    flag.setPointCount(3);
-    flag.setPoint(0, {4.f, 0.f});
-    flag.setPoint(1, {MapFormat::TILE_SIZE, MapFormat::TILE_SIZE * 0.5f});
-    flag.setPoint(2, {4.f, MapFormat::TILE_SIZE});
-    flag.setFillColor(sf::Color(45, 190, 70));
+    setSize({MapFormat::TILE_SIZE, MapFormat::TILE_SIZE});
+    sf::Texture& tileset = TextureBlockManager::getBlocksTexture();
+    entitySprite.setTexture(tileset);
+    entitySprite.setTextureRect({{1, 341}, {14, 16}});
+    entitySprite.setScale({MapFormat::TILE_SIZE / 14.f, 4.f});
+    poleSprite.emplace(tileset);
+    poleSprite->setTextureRect({{42, 138}, {2, 16}});
+    poleSprite->setScale({8.f, 34.f});
+    sphereSprite.emplace(tileset);
+    sphereSprite->setTextureRect({{5, 129}, {8, 8}});
+    sphereSprite->setScale({4.f, 4.f});
     setPosition(pos);
 }
 
@@ -24,6 +29,13 @@ void WinFlag::update(float dt) {
     if (!activated || completed || dt <= 0.f) return;
 
     animationTime = std::min(animationTime + dt, FLAG_SLIDE_DURATION);
+    const int nextFrame = static_cast<int>(animationTime / 0.1f) % 2;
+    if (nextFrame != currentFrame) {
+        currentFrame = nextFrame;
+        entitySprite.setTextureRect(
+            currentFrame == 0 ? sf::IntRect{{1, 341}, {14, 16}}
+                              : sf::IntRect{{18, 341}, {15, 16}});
+    }
     syncGeometry();
     if (animationTime < FLAG_SLIDE_DURATION) return;
 
@@ -33,8 +45,9 @@ void WinFlag::update(float dt) {
 
 void WinFlag::render(sf::RenderTarget* target) {
     if (!target) return;
-    target->draw(pole);
-    target->draw(flag);
+    target->draw(entitySprite);
+    if (poleSprite) target->draw(*poleSprite);
+    if (sphereSprite) target->draw(*sphereSprite);
 }
 
 void WinFlag::setPosition(const sf::Vector2f& baseAnchor) {
@@ -49,15 +62,24 @@ void WinFlag::activate() {
 
 bool WinFlag::isActivated() const noexcept { return activated; }
 
+sf::Vector2f WinFlag::getFlagVisualPosition() const noexcept {
+    return entitySprite.getPosition();
+}
+
 void WinFlag::syncGeometry() {
     const sf::Vector2f baseAnchor = getPosition();
-    const float top = baseAnchor.y - getSize().y;
-    hitbox.setPosition({baseAnchor.x, top});
-    pole.setPosition({baseAnchor.x, top});
+    hitbox.setPosition(baseAnchor);
+    if (poleSprite)
+        poleSprite->setPosition({baseAnchor.x + 22.f,
+                                 baseAnchor.y - FLAG_TRAVEL});
+    if (sphereSprite)
+        sphereSprite->setPosition({baseAnchor.x + 14.f,
+                                   baseAnchor.y - 490.f});
 
     const float progress = std::clamp(
         animationTime / FLAG_SLIDE_DURATION, 0.f, 1.f);
-    flag.setPosition({baseAnchor.x,
-                      top + (getSize().y - MapFormat::TILE_SIZE) * progress});
+    entitySprite.setPosition(
+        {baseAnchor.x + 25.f,
+         baseAnchor.y - FLAG_TRAVEL * progress});
 }
 
