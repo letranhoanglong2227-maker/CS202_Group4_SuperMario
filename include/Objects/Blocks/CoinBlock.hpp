@@ -2,6 +2,7 @@
 #include "Objects/Blocks/Block.hpp"
 #include "Core/Constants.hpp"
 #include <functional>
+#include <memory>
 
 class CoinBlock : public Block {
 private:
@@ -10,18 +11,23 @@ private:
     
     // Bounce effect variables
     bool isBouncing;
-    float bounceVelocity;
-    float bounceGravity;
+    float bounceTimer;
+    float bounceDuration;
     float maxBounceHeight;
 
-    std::function<void(GameObject*)> onSpawnItem;
+    using SpawnCallback = std::function<void(std::unique_ptr<GameObject>)>;
+    using RewardCallback = std::function<void(int, int)>;
+    SpawnCallback onSpawnItem;
+    RewardCallback onReward;
 
 public:
-    CoinBlock(int count = 1, std::function<void(GameObject*)> spawnCallback = nullptr);
+    CoinBlock(int count = 1, SpawnCallback spawnCallback = {},
+              RewardCallback rewardCallback = {});
 
     void initSpritesSheet() override;
     void reactToCollision(int collidedSide) override;
     void update(float dt) override;
+    bool isBumpingUpward() const noexcept override;
 
     ~CoinBlock() = default;
 };

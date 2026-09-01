@@ -12,18 +12,16 @@ BrickFragment::BrickFragment(sf::Vector2f startPos, sf::Vector2f initialVelocity
     // Set up the rotating animation (2 frames)
     animationComponent.addAnimation("Rotate", {spritesSheet["Fragment1"], spritesSheet["Fragment2"]});
     
-    // Small optimization: Fragments are usually smaller than full blocks
-    // This is optional and depends on your exact sprite sheet
-    setSize({8.f, 8.f});
+    setSizeBlock({32.f, 32.f});
 }
 
 void BrickFragment::initSpritesSheet() {
-    // TODO: USER TASK - Update these coordinates for the 2 rotation frames
-    spritesSheet["Fragment1"] = sf::IntRect({53, 113}, {8, 8});
-    spritesSheet["Fragment2"] = sf::IntRect({71, 113}, {8, 8});
+    spritesSheet["Fragment1"] = sf::IntRect({1, 86}, {8, 8});
+    spritesSheet["Fragment2"] = sf::IntRect({9, 86}, {8, 8});
 }
 
 void BrickFragment::reactToCollision(int collidedSide) {
+    (void)collidedSide;
     // Fragments are purely visual and don't react to collisions
 }
 

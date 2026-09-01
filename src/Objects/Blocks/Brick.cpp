@@ -1,8 +1,12 @@
 #include "Objects/Blocks/Brick.hpp"
 #include "Objects/Blocks/BrickFragment.hpp"
 
-Brick::Brick(std::function<void(GameObject*)> spawnCallback)
-    : isBroken(false), onSpawnItem(spawnCallback) 
+#include <utility>
+
+Brick::Brick(SpawnCallback spawnCallback, bool canBreak,
+             sf::IntRect selectedFrame)
+    : isBroken(false), breakable(canBreak), frame(selectedFrame),
+      onSpawnItem(std::move(spawnCallback))
 {
     name = "Brick";
     exist = true; // Make sure it exists initially
@@ -15,14 +19,13 @@ Brick::Brick(std::function<void(GameObject*)> spawnCallback)
 }
 
 void Brick::initSpritesSheet() {
-    // TODO: USER TASK - Update this coordinate for the brick Idle frame
-    spritesSheet["IdleFrame"] = sf::IntRect({19, 113}, {16, 16});
+    spritesSheet["IdleFrame"] = frame;
 }
 
 void Brick::reactToCollision(int collidedSide) {
     // We assume this method is ONLY called when Super Mario hits the block from the bottom.
     // The external collision manager should handle the logic of checking Mario's state.
-    if (collidedSide == COLLISION_BOTTOM && !isBroken) {
+    if (collidedSide == COLLISION_BOTTOM && breakable && !isBroken) {
         isBroken = true;
         
         // Stop rendering the brick by setting alpha to 0 AND exist to false
@@ -33,18 +36,16 @@ void Brick::reactToCollision(int collidedSide) {
 
         // Spawn 4 BrickFragments
         if (onSpawnItem) {
-            // These initial velocities create an arc effect. 
-            // TODO: Physics Tuning Task! Tweak these X and Y values to make the explosion look perfect!
+            // These initial velocities create an arc effect.
             sf::Vector2f velTopLeft(-150.f, -400.f);
             sf::Vector2f velTopRight(150.f, -400.f);
             sf::Vector2f velBotLeft(-200.f, -200.f);
             sf::Vector2f velBotRight(200.f, -200.f);
 
-            // Create and spawn them
-            onSpawnItem(new BrickFragment(position, velTopLeft));
-            onSpawnItem(new BrickFragment(position, velTopRight));
-            onSpawnItem(new BrickFragment(position, velBotLeft));
-            onSpawnItem(new BrickFragment(position, velBotRight));
+            onSpawnItem(std::make_unique<BrickFragment>(position, velTopLeft));
+            onSpawnItem(std::make_unique<BrickFragment>(position, velTopRight));
+            onSpawnItem(std::make_unique<BrickFragment>(position, velBotLeft));
+            onSpawnItem(std::make_unique<BrickFragment>(position, velBotRight));
         }
     }
 }
