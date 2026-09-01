@@ -44,3 +44,6 @@ cmake_install.cmake
 
 # Exclude AI Workspace globally for this repo
 /ai_workspace/
+
+# Exclude updateversion directory
+updateversion/
