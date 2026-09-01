@@ -22,7 +22,6 @@ public:
     AnimationComponent(sf::Sprite& sprite, sf::Texture& textureSheet, float interval = 0.1f);
     ~AnimationComponent() = default;
 
-    // Disable copy to prevent alias references
     AnimationComponent(const AnimationComponent&) = delete;
     AnimationComponent& operator=(const AnimationComponent&) = delete;
 

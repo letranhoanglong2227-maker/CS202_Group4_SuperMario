@@ -5,7 +5,7 @@ AnimationComponent::AnimationComponent(sf::Sprite& sprite, sf::Texture& textureS
     : sprite(sprite), 
       textureSheet(textureSheet), 
       animationTimer(0.f), 
-      animationInterval(interval <= 0.f ? 0.001f : interval), 
+      animationInterval(interval <= 0.f ? 0.001f : interval),
       currentFrame(0), 
       currentAnimationKey("Null") 
 {
@@ -16,14 +16,17 @@ void AnimationComponent::setInterval(float interval) {
     this->animationInterval = interval <= 0.f ? 0.001f : interval;
 }
 
-bool AnimationComponent::addAnimation(const std::string& key, const std::vector<sf::IntRect>& frames) {
-    if (frames.empty()) {
+bool AnimationComponent::addAnimation(
+    const std::string& key, const std::vector<sf::IntRect>& frames) {
+    if (frames.empty() || animations.contains(key)) {
         return false;
     }
-    if (animations.find(key) != animations.end()) {
-        return false;
+    animations.emplace(key, frames);
+    if (currentAnimationKey == "Null") {
+        currentAnimationKey = key;
+        currentFrame = 0;
+        sprite.setTextureRect(frames.front());
     }
-    animations[key] = frames;
     return true;
 }
 
@@ -51,7 +54,6 @@ bool AnimationComponent::play(const std::string& key, float dt) {
 
     // Transition to the next frame if the timer exceeds the interval
     while (this->animationTimer >= this->animationInterval) {
-        // Keep remainder time for deterministic playback
         this->animationTimer -= this->animationInterval;
 
         const std::vector<sf::IntRect>& frames = it->second;
