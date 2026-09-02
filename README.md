@@ -72,30 +72,53 @@ CMakeLists.txt          Production build configuration
 
 ### Requirements
 
-- A C++20 compiler
-- CMake 3.20+
-- SFML 3.1 installed, or Internet access during the first configure so CMake can fetch SFML 3.1 automatically
+- CMake 3.20 or newer.
+- A C++20 toolchain. On Windows, install either:
+  - Visual Studio 2022 Build Tools with the **Desktop development with C++** workload; or
+  - MinGW-w64 GCC together with Ninja, with both `g++` and `ninja` available in `PATH`.
+- SFML 3.1 installed, or Git and Internet access during the first configure so CMake can fetch SFML automatically.
 
-### Configure and build
+Installing CMake alone is not enough because CMake coordinates a compiler and a build tool; it does not replace them.
 
-From the project root:
+### Windows with MinGW and Ninja
 
-```bash
-cmake -S . -B build
-cmake --build build --config Debug --parallel 4
+Open PowerShell in the project root and verify the tools:
+
+```powershell
+cmake --version
+g++ --version
+ninja --version
 ```
 
-Run the game:
+Configure, build, and run:
 
-```bash
-# MinGW / single-config generator
-./build/SuperMario
-
-# Visual Studio / multi-config generator
-./build/Debug/SuperMario
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+.\build\SuperMario.exe
 ```
 
-On Windows, the executable uses the `.exe` suffix.
+### Windows with Visual Studio Build Tools
+
+Open **Developer PowerShell for VS 2022** in the project root, then run:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release --parallel 4
+.\build\Release\SuperMario.exe
+```
+
+### Generator or compiler errors
+
+If CMake reports that `nmake`, `ninja`, `cl`, or a C++ compiler cannot be found, install one of the complete toolchains above and use its matching generator explicitly.
+
+A build directory remembers its generator. Delete that directory before changing from NMake, Visual Studio, or Ninja:
+
+```powershell
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+```
+
+Then run the configure command for the selected toolchain again.
 
 The normal development build finds `assets/` in the project root. For a standalone package, place the complete `assets/` directory beside `SuperMario.exe`. Save and leaderboard files are created beside the executable.
 
