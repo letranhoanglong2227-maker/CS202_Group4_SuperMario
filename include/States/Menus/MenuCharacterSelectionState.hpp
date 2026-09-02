@@ -1,5 +1,25 @@
-﻿#pragma once
+#pragma once
 
-class MenuCharacterSelectionState {
+#include "States/Base/State.hpp"
+#include "UI/GUI.hpp"
+
+#include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Texture.hpp>
+
+class MenuCharacterSelectionState final : public State {
+public:
+    MenuCharacterSelectionState(StateStack& stack, StateContext context);
+
+    void handleEvent(const sf::Event& event) override;
+    void update(float deltaSeconds) override;
+    void render(sf::RenderTarget& target) override;
+
+private:
+    void activate(std::size_t selected);
+
+    sf::Texture m_backgroundTexture;
+    sf::Font m_font;
+    GUI::SelectionMenu m_menu;
+    bool m_backgroundLoaded{};
+    bool m_fontLoaded{};
 };
-

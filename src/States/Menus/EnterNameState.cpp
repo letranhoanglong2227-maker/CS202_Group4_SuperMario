@@ -1,5 +1,9 @@
 #include "States/Menus/EnterNameState.hpp"
 
+#include "Core/AssetLocator.hpp"
+#include "Core/UserData.hpp"
+#include "States/Menus/MenuCharacterSelectionState.hpp"
+
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -30,14 +34,13 @@ void drawCentered(sf::RenderTarget& target, const sf::Font& font, std::string_vi
 }
 
 EnterNameState::EnterNameState(StateStack& stack, StateContext context)
-    : State(stack, context),
-      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")),
-      m_readableFontLoaded(m_readableFont.openFromFile("assets/fonts/American Captain.ttf")) {
+    : State(stack, context) {
+    if (const auto path = AssetLocator::find(
+            "assets/fonts/American Captain.ttf")) {
+        m_fontLoaded = m_font.openFromFile(*path);
+    }
     if (!m_fontLoaded) {
         std::cerr << "Name-entry font unavailable.\n";
-    }
-    if (!m_readableFontLoaded) {
-        std::cerr << "Name-entry readable font unavailable.\n";
     }
 }
 
@@ -54,6 +57,7 @@ void EnterNameState::handleEvent(const sf::Event& event) {
             m_playerName.pop_back();
         } else if (key->code == sf::Keyboard::Key::Enter && hasValidName()) {
             m_confirmed = true;
+            continueToCharacterSelection();
         }
     }
 }
@@ -84,24 +88,25 @@ void EnterNameState::render(sf::RenderTarget& target) {
     if (m_fontLoaded) {
         drawText(target, m_font, "PLAYER NAME", 34, {455.f, 205.f}, sf::Color(255, 218, 62));
         const std::string visibleName = m_playerName.empty() ? "TYPE HERE" : m_playerName;
-        const sf::Font& inputFont = m_readableFontLoaded ? m_readableFont : m_font;
-        drawText(target, inputFont, visibleName, 34, {365.f, 310.f},
+        drawText(target, m_font, visibleName, 34, {365.f, 310.f},
                  m_playerName.empty() ? sf::Color(125, 135, 150) : sf::Color(24, 32, 48));
-        if (m_readableFontLoaded) {
-            drawCentered(target, m_readableFont,
-                         "MAX 16 CHARACTERS  -  ENTER TO CONFIRM  -  ESC TO BACK", 21,
-                         {640.f, 410.f}, sf::Color(220, 230, 242));
-        }
+        drawCentered(target, m_font,
+                     "MAX 16 CHARACTERS  -  ENTER TO CONFIRM  -  ESC TO BACK", 21,
+                     {640.f, 410.f}, sf::Color(220, 230, 242));
         if (m_confirmed) {
-            const sf::Font& statusFont = m_readableFontLoaded ? m_readableFont : m_font;
-            drawCentered(target, statusFont, "NAME ACCEPTED FOR UI PREVIEW", 23,
+            drawCentered(target, m_font,
+                         "CONTINUING TO CHARACTER SELECT", 23,
                          {640.f, 465.f}, sf::Color(100, 225, 125));
-            drawCentered(target, statusFont, "CHARACTER SELECTION WAITS FOR P3 FACTORY AND P4 GUI", 19,
-                         {640.f, 505.f}, sf::Color(255, 185, 85));
         }
     }
 }
 
 bool EnterNameState::hasValidName() const {
     return std::any_of(m_playerName.begin(), m_playerName.end(), [](char value) { return value != ' '; });
+}
+
+void EnterNameState::continueToCharacterSelection() {
+    if (context().userData) context().userData->setPlayerName(m_playerName);
+    (void)requestReplace(std::make_unique<MenuCharacterSelectionState>(
+        stateStack(), context()));
 }

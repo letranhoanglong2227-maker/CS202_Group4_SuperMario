@@ -16,11 +16,10 @@ public:
 
 private:
     [[nodiscard]] bool hasValidName() const;
+    void continueToCharacterSelection();
 
     sf::Font m_font;
-    sf::Font m_readableFont;
     bool m_fontLoaded{};
-    bool m_readableFontLoaded{};
     bool m_confirmed{};
     std::string m_playerName;
 };
