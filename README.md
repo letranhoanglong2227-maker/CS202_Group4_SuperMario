@@ -65,8 +65,7 @@ The project applies five design patterns required by its architecture:
 assets/                 Fonts, audio, textures, and level resources
 include/                Public headers grouped by subsystem
 src/                    Production implementation and main entry point
-tests/                  Focused contracts and application smoke tests
-CMakeLists.txt          Production and test targets
+CMakeLists.txt          Production build configuration
 ```
 
 ## Build and Run
@@ -100,27 +99,9 @@ On Windows, the executable uses the `.exe` suffix.
 
 The normal development build finds `assets/` in the project root. For a standalone package, place the complete `assets/` directory beside `SuperMario.exe`. Save and leaderboard files are created beside the executable.
 
-## Tests
-
-Run the complete registered suite after building:
-
-```bash
-ctest --test-dir build -C Debug --output-on-failure
-```
-
-The current suite contains ten automated targets covering application state flow, runtime physics, entities, items, GUI, animation, and shared asset lookup.
-
-Before sharing or committing a final build, also run:
-
-```bash
-git diff --check
-```
-
 ## Current Verification
 
 - Production target builds successfully.
-- All 10 registered CTest targets pass.
-- Application smoke renders the menus and all nine initial gameplay stages at 1560×960.
 - Human playtesting has covered the main menu-to-game route and representative level, enemy, item, moving-platform, boss, save, and leaderboard behavior.
 
 ## Educational Use
