@@ -27,7 +27,7 @@ protected:
     bool crouching{ false };
     int maxAirJumps{ 1 };
     int airJumpsRemaining{ 1 };
-    
+
     float shootTimer{ 0.f };
     float shootCooldown{ 0.3f };
 

@@ -2,8 +2,8 @@
 
 PowerUpObject::PowerUpObject(const std::string& name) : GameObject(), name(name) {
     animationComponent = std::make_unique<AnimationComponent>(
-        entitySprite, 
-        TextureItemManager::getItemTexture(), 
+        entitySprite,
+        TextureItemManager::getItemTexture(),
         0.1f
     );
 }

@@ -48,7 +48,7 @@ void checkP3(bool condition, const std::string& testName) {
 }
 
 int main() {
-    std::cout << "--- P3 Item & Factory Contracts ---\n";
+    std::cout << "--- Item and Factory Contracts ---\n";
 
     // 1. Factory tests
     auto player1 = EntityFactory::createPlayer("Mario", {10.f, 20.f});
@@ -127,6 +127,6 @@ int main() {
     fireball.update(99.f); // Exceed maxLife (3.f)
     checkP3(fireball.isExpired() && fireball.canBeRemoved(), "Fireball is expired and can be removed after maxLife");
 
-    std::cout << "P3 ItemFactory Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
+    std::cout << "Item Factory Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
     return P3_test_failed > 0 ? 1 : 0;
 }

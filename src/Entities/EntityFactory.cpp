@@ -46,7 +46,7 @@ std::unique_ptr<PlayerManager> EntityFactory::createPlayer(const std::string& ty
     } else if (type == "Mario" || type == "mario" || type == "Player1" || type == "1P") {
         player = std::make_unique<Mario>();
     }
-    
+
     if (player) {
         player->setPosition(position);
         player->hitbox.setPosition(position);

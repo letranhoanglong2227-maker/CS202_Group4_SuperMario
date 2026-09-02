@@ -13,11 +13,11 @@ Fireball::Fireball(const sf::Vector2f& pos, float directionX)
     movementComponent->setVelocity(dirX * 400.f, 0.f);
 
     setHealth(1);
-    
+
     entitySprite.setScale({2.0f, 2.0f});
     animationComponent = std::make_unique<AnimationComponent>(
-        entitySprite, 
-        TextureItemManager::getItemTexture(), 
+        entitySprite,
+        TextureItemManager::getItemTexture(),
         0.05f
     );
     animationComponent->addAnimation("spin", {
@@ -58,7 +58,7 @@ void Fireball::update(float dt) {
     if (movementComponent) {
         // Gravity
         movementComponent->setVelocity(movementComponent->getVelocity().x, movementComponent->getVelocity().y + 1200.f * dt);
-        
+
         position += movementComponent->getVelocity() * dt;
         hitbox.setPosition(position);
         entitySprite.setPosition(position);

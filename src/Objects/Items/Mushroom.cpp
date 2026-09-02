@@ -23,7 +23,7 @@ ItemCollectionResult Mushroom::collect(PlayerManager& player, bool canGrow) {
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     if (type == 2 && !canGrow)
         return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
-    
+
     exist = false;
     if (type == 2)
         return ItemCollectionResult{true, 0, 0, 0, RequestedPlayerForm::Big};

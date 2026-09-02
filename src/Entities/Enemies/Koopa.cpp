@@ -16,7 +16,7 @@ Koopa::Koopa(const sf::Vector2f& pos)
     size = hitbox.getSize();
 
     movementComponent = std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
-    
+
     // Initial scale
     entitySprite.setScale({2.0f, 2.0f});
 
@@ -33,9 +33,9 @@ Koopa::Koopa(const sf::Vector2f& pos)
 
 EnemyContactOutcome Koopa::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
     bool isTop = (kind == PlayerEnemyContactKind::Stomp);
-    
+
     if (!inShell) {
         if (isTop) {
             onStomped();

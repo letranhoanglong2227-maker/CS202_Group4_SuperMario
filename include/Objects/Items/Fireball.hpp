@@ -16,7 +16,7 @@ public:
 
     void reactToCollision();
     void reactToBlockCollision();
-    
+
     bool isExpired() const;
     bool canBeRemoved() const;
 

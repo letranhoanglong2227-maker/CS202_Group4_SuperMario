@@ -43,5 +43,5 @@ cmake_install.cmake
 /SaveData/*
 !/SaveData/.gitkeep
 
-# Exclude AI Workspace globally for this repo
+# Local workspace
 /ai_workspace/

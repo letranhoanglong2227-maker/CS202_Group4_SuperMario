@@ -41,6 +41,6 @@ int main() {
     assert(!empty.handleEvent(sf::Event(
         sf::Event::KeyPressed{sf::Keyboard::Key::Enter})));
 
-    std::cout << "Person 4 GUI contracts passed\n";
+    std::cout << "GUI contracts passed\n";
     return 0;
 }

@@ -46,7 +46,7 @@ public:
 };
 
 int main() {
-    std::cout << "--- P3 Enemy Contracts ---\n";
+    std::cout << "--- Enemy Contracts ---\n";
     Mario player;
     checkP3(TextureEnemyManager::setupTexture(),
             "Enemy texture provider is ready for production rendering");
@@ -208,6 +208,6 @@ int main() {
     bowser.takeDamage(9999);
     checkP3(bowser.isDead() == true, "Enemy isdDead() == true when health <= 0, ready for removal");
 
-    std::cout << "P3 Enemy Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
+    std::cout << "Enemy Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
     return P3_test_failed > 0 ? 1 : 0;
 }

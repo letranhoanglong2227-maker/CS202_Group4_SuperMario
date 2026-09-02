@@ -13,6 +13,6 @@ public:
     virtual ~Mushroom() = default;
 
     ItemCollectionResult collect(PlayerManager& player, bool canGrow = true) override;
-    
+
     void update(float dt) override;
 };

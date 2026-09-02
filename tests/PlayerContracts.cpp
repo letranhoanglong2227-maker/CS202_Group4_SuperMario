@@ -31,7 +31,7 @@ void checkP3(bool condition, const std::string& testName) {
 }
 
 int main() {
-    std::cout << "--- P3 Player Contracts ---\n";
+    std::cout << "--- Player Contracts ---\n";
     Mario mario;
     Luigi luigi;
     checkP3(mario.getHealth() == 3 && luigi.getHealth() == 4,
@@ -40,10 +40,10 @@ int main() {
                 TexturePlayerManager::getPlayerTexture().getSize().x > 0,
             "Player texture provider is ready for production rendering");
     mario.setPosition({100.f, 200.f}); // Bottom is 200 + 64 = 264
-    
+
     // 1. State logic
     checkP3(mario.setBig(true, false) == false, "Growth rejected if canGrow=false");
-    
+
     mario.setBig(true, true);
     checkP3(mario.isBig() == true, "Mario is Big");
     checkP3(mario.canShoot() == true,
@@ -76,32 +76,32 @@ int main() {
     visualMario.updateAnimation(0.f);
     checkP3(visualMario.visualFrame() == sf::IntRect({433, 3}, {16, 30}),
             "stationary Big Mario uses Group5's crouch frame");
-    
+
     mario.setFire(true, true);
     checkP3(mario.isFire() == true && mario.isBig() == true, "Fire form implies Big form");
     checkP3(mario.canShoot() == true, "Fire Mario can shoot");
-    
+
     auto req = mario.shoot(1.f);
     checkP3(req.has_value() && req->type == ProjectileKind::Fireball, "Shoot returns Fireball request");
     checkP3(mario.canShoot() == false, "Cannot shoot again immediately (cooldown)");
-    
+
     // 2. Damage flow
     mario.takeDamage(1);
     checkP3(mario.isFire() == false && mario.isBig() == true, "Damage in Fire form drops to Big form");
     checkP3(mario.isImmortal() == true, "Damage grants immortality");
-    
+
     mario.setImmortal(false);
     mario.takeDamage(1);
     checkP3(mario.isBig() == false && mario.isDead() == false, "Damage in Big form drops to Small form");
     checkP3(mario.getPosition().y == 200.f,
             "Feet anchor preserved when shrinking to 64px");
-    
+
     mario.setImmortal(false);
     mario.setHealth(1);
     mario.takeDamage(1);
     checkP3(mario.isDead() == true,
             "Small player dies when the Group5 health pool is exhausted");
-    
+
     // 3. Reset logic
     mario.resetForRespawn({50.f, 50.f});
     checkP3(mario.isDead() == false && mario.isBig() == false &&
@@ -156,7 +156,7 @@ int main() {
     checkP3(!flashingMario.isImmortal() &&
                 flashingMario.visualAlpha() == 255,
             "player visibility is restored when immunity ends");
-    
-    std::cout << "P3 Player Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
+
+    std::cout << "Player Results: " << P3_test_passed << " PASS, " << P3_test_failed << " FAIL\n";
     return P3_test_failed > 0 ? 1 : 0;
 }

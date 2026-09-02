@@ -238,6 +238,6 @@ int main(int argc, char** argv) {
                     outputDirectory / "P1GameplayW3LV3PoweredPreview.png");
     }
 
-    std::cout << "Person 1 application smoke passed: " << outputDirectory.string() << '\n';
+    std::cout << "Application smoke passed: " << outputDirectory.string() << '\n';
     return 0;
 }

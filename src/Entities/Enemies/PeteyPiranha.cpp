@@ -51,7 +51,7 @@ EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, Pla
     (void)horizontalDirection;
     if (dead || !emerged || kind != PlayerEnemyContactKind::Stomp)
         return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
     if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};

@@ -11,10 +11,10 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
     hitbox.setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     size = hitbox.getSize();
-    
+
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
-        animationComponent->addAnimation("idle", { 
+        animationComponent->addAnimation("idle", {
             sf::IntRect({2, 19}, {16, 16}),
             sf::IntRect({19, 19}, {16, 16}),
             sf::IntRect({36, 19}, {16, 16}),
@@ -26,14 +26,14 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
 ItemCollectionResult FireFlower::collect(PlayerManager& player, bool canGrow) {
     if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     if (!player.isBig() && !canGrow) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
-    
+
     exist = false;
     return ItemCollectionResult{true, 1000, 0, 0, RequestedPlayerForm::Fire};
 }
 
 void FireFlower::update(float dt) {
     if (!exist) return;
-    
+
     // Fireflower doesn't move, just animates
     if (animationComponent) {
         animationComponent->play("idle", dt);

@@ -45,7 +45,7 @@ bool PlayerManager::isFire() const {
 
 bool PlayerManager::setFire(bool fire, bool canGrow) {
     if (fire && !is_big && !canGrow) return false;
-    
+
     if (fire) {
         if (!is_big) {
             setBig(true, canGrow);
@@ -54,7 +54,7 @@ bool PlayerManager::setFire(bool fire, bool canGrow) {
     } else {
         is_fire = false;
     }
-    
+
     updateHitboxSize();
     return true;
 }
@@ -62,25 +62,25 @@ bool PlayerManager::setFire(bool fire, bool canGrow) {
 void PlayerManager::resetForRespawn(const sf::Vector2f& spawnPosition) {
     health = characterName == "Luigi" ? 4 : 3;
     dead = false;
-    
+
     if (movementComponent) {
         movementComponent->setVelocity({0.f, 0.f});
     }
-    
+
     setGrounded(true);
     jumping = false;
-    
+
     is_fire = false;
     is_big = false;
     updateHitboxSize();
-    
+
     buffs.clear();
-    
+
     immortal = false;
     isFlashing = false;
     flashTimer = 0.f;
     entitySprite.setColor(sf::Color::White);
-    
+
     horizontalControlsInverted = false;
     jumpHeld = false;
     running = false;
@@ -89,7 +89,7 @@ void PlayerManager::resetForRespawn(const sf::Vector2f& spawnPosition) {
     isTransforming = false;
     transformationTimer = 0.f;
     shootTimer = 0.f;
-    
+
     setPosition(spawnPosition);
 }
 
@@ -100,13 +100,13 @@ bool PlayerManager::canShoot() const {
 
 std::optional<ProjectileSpawnRequest> PlayerManager::shoot(float direction) {
     if (!canShoot()) return std::nullopt;
-    
+
     shootTimer = shootCooldown;
-    
+
     float dirX = (direction >= 0.f) ? 1.f : -1.f;
     float spawnX = position.x + (dirX > 0 ? size.x : -16.f);
     float spawnY = position.y + 16.f;
-    
+
     return ProjectileSpawnRequest{
         ProjectileKind::Fireball,
         {spawnX, spawnY},

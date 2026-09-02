@@ -12,7 +12,7 @@ public:
     ~Goomba() override = default;
 
     EnemyContactOutcome handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection = 0.f) override;
-    
+
     void onStomped() override;
     void updateAnimation(float dt) override;
     void update(float dt) override;

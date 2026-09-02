@@ -90,7 +90,7 @@ private:
 
 class LifetimePlayer final : public PlayerManager {
 public:
-    explicit LifetimePlayer(bool& alive) : PlayerManager(1, "P1 runtime probe"), m_alive(&alive) {
+    explicit LifetimePlayer(bool& alive) : PlayerManager(1, "state runtime probe"), m_alive(&alive) {
         *m_alive = true;
     }
 
@@ -531,6 +531,6 @@ int main() {
     winMenuContinueContract();
     gameStateRuntimeContract();
     userDataPersistenceContract();
-    std::cout << "Person 1 state/event contracts passed\n";
+    std::cout << "State and event contracts passed\n";
     return 0;
 }

@@ -66,9 +66,7 @@ assets/                 Fonts, audio, textures, and level resources
 include/                Public headers grouped by subsystem
 src/                    Production implementation and main entry point
 tests/                  Focused contracts and application smoke tests
-docs/                   Team plans and renovation/verification notes
 CMakeLists.txt          Production and test targets
-TEAM_COMMIT_HANDOFF.md  Exact file ownership for the final team commits
 ```
 
 ## Build and Run
@@ -110,22 +108,13 @@ Run the complete registered suite after building:
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-The current suite contains ten targets covering P1 state/application flow, P2 runtime and physics, P3 entities/items, P4 GUI/animation, and shared asset lookup.
+The current suite contains ten automated targets covering application state flow, runtime physics, entities, items, GUI, animation, and shared asset lookup.
 
 Before sharing or committing a final build, also run:
 
 ```bash
 git diff --check
 ```
-
-## Team Responsibilities
-
-- **Person 1:** application loop, state stack, menus, gameplay state, mediator, camera, and flow contracts.
-- **Person 2:** movement, map/level runtime, physics, hazards, environment objects, projectiles, flags, and runtime contracts.
-- **Person 3:** entity foundations, Mario/Luigi, enemies, bosses, items, buffs, fireballs, and entity contracts.
-- **Person 4:** animation, blocks, audio, GUI/HUD, persistence, leaderboard, asset resolution, and release/build packaging.
-
-For the exact final-copy and commit list, read [TEAM_COMMIT_HANDOFF.md](TEAM_COMMIT_HANDOFF.md). Do not copy another person's files merely because they are in the same directory.
 
 ## Current Verification
 

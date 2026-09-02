@@ -4,8 +4,8 @@
 
 Enemy::Enemy() : LivingEntity() {
     animationComponent = std::make_unique<AnimationComponent>(
-        entitySprite, 
-        TextureEnemyManager::getEnemyTexture(), 
+        entitySprite,
+        TextureEnemyManager::getEnemyTexture(),
         0.2f
     );
 }
@@ -13,12 +13,12 @@ Enemy::Enemy() : LivingEntity() {
 EnemyContactOutcome Enemy::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
     if (kind == PlayerEnemyContactKind::Stomp) {
         onStomped();
         return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, true};
     }
-    
+
     // Side collision
     if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);

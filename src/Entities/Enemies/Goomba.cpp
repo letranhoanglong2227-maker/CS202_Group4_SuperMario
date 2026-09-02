@@ -8,7 +8,7 @@ Goomba::Goomba(const sf::Vector2f& pos)
     setDamage(1);
     setPointsValue(300);
     setSpeed(300.f);
-    
+
     setPosition(pos);
     hitbox.setSize({CELL_SIZE, CELL_SIZE});
     hitbox.setPosition(pos);
@@ -28,12 +28,12 @@ Goomba::Goomba(const sf::Vector2f& pos)
 EnemyContactOutcome Goomba::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     (void)horizontalDirection;
     if (dead || isSquished) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
     if (kind == PlayerEnemyContactKind::Stomp) {
         onStomped();
         return EnemyContactOutcome{EnemyContactResult::EnemyStomped, pointsValue, -500.f, false};
     }
-    
+
     if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
     return EnemyContactOutcome{player.isDead() ? EnemyContactResult::PlayerKilled : EnemyContactResult::PlayerDamaged, 0, 0.f, false};

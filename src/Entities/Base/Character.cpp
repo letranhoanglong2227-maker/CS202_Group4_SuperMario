@@ -3,8 +3,8 @@
 Character::Character(const std::string& name)
     : LivingEntity(), characterName(name) {
     animationComponent = std::make_unique<AnimationComponent>(
-        entitySprite, 
-        TexturePlayerManager::getPlayerTexture(), 
+        entitySprite,
+        TexturePlayerManager::getPlayerTexture(),
         0.2f
     );
 }

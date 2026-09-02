@@ -12,7 +12,7 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
         animationComponent->setInterval(0.2f);
-        animationComponent->addAnimation("spin", { 
+        animationComponent->addAnimation("spin", {
             sf::IntRect({70, 38}, {10, 14}),
             sf::IntRect({81, 38}, {10, 14}),
             sf::IntRect({92, 38}, {10, 14}),
@@ -24,7 +24,7 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
 ItemCollectionResult Coin::collect(PlayerManager&, bool) {
     if (!exist || isPoppedFromBlock)
         return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
-    
+
     exist = false;
     return ItemCollectionResult{true, 0, 1, 0, RequestedPlayerForm::None};
 }

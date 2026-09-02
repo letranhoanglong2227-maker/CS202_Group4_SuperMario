@@ -14,7 +14,7 @@ Heriss::Heriss(const sf::Vector2f& pos)
     size = hitbox.getSize();
 
     movementComponent = std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
-    
+
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
         animationComponent->addAnimation("walk", {
@@ -27,7 +27,7 @@ EnemyContactOutcome Heriss::handlePlayerContact(PlayerManager& player, PlayerEne
     (void)kind;
     (void)horizontalDirection;
     if (dead) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
-    
+
     // Heriss is spiked! Always damages player!
     if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);

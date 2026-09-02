@@ -34,6 +34,6 @@ int main() {
     assert(zeroInterval.play("safe", 0.001f));
     assert(sprite.getTextureRect() == sf::IntRect({16, 0}, {16, 16}));
 
-    std::cout << "Person 4 animation contracts passed\n";
+    std::cout << "Animation contracts passed\n";
     return 0;
 }
