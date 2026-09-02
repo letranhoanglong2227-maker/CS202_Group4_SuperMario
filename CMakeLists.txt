@@ -41,48 +41,39 @@ endif()
 # ==============================================================================
 
 # Gather source files
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "src/*.cpp"
 )
 
-# Define executable target
-add_executable(SuperMario ${SOURCES})
+set(GAME_CORE_SOURCES ${SOURCES})
+list(FILTER GAME_CORE_SOURCES EXCLUDE REGEX "[/\\\\]main\\.cpp$")
 
-# Target Include Directories pointing to include/
-target_include_directories(SuperMario PRIVATE
+add_library(SuperMarioCore STATIC ${GAME_CORE_SOURCES})
+
+target_include_directories(SuperMarioCore PUBLIC
     "${PROJECT_SOURCE_DIR}/include"
 )
 
-# Link SFML libraries
-target_link_libraries(SuperMario PRIVATE
+target_link_libraries(SuperMarioCore PUBLIC
     SFML::Graphics
     SFML::Audio
     SFML::Window
     SFML::System
 )
 
-# Compilation warning flags configuration
 if(MSVC)
-    target_compile_options(SuperMario PRIVATE /W4)
+    target_compile_options(SuperMarioCore PRIVATE /W4)
 else()
-    target_compile_options(SuperMario PRIVATE -Wall -Wextra)
+    target_compile_options(SuperMarioCore PRIVATE -Wall -Wextra)
 endif()
 
-set(PERSON2_TEST_SOURCES ${SOURCES})
-list(FILTER PERSON2_TEST_SOURCES EXCLUDE REGEX "[/\\\\]main\\.cpp$")
+add_executable(SuperMario src/main.cpp)
+target_link_libraries(SuperMario PRIVATE SuperMarioCore)
+
 add_executable(Person2RuntimeContracts
     tests/Person2RuntimeContracts.cpp
-    ${PERSON2_TEST_SOURCES}
 )
-target_include_directories(Person2RuntimeContracts PRIVATE
-    "${PROJECT_SOURCE_DIR}/include"
-)
-target_link_libraries(Person2RuntimeContracts PRIVATE
-    SFML::Graphics
-    SFML::Audio
-    SFML::Window
-    SFML::System
-)
+target_link_libraries(Person2RuntimeContracts PRIVATE SuperMarioCore)
 if(MSVC)
     target_compile_options(Person2RuntimeContracts PRIVATE /W4)
 else()
@@ -97,9 +88,8 @@ set_tests_properties(Person2RuntimeContracts PROPERTIES
 
 # --- P3 Tests ---
 macro(add_p3_test TEST_NAME)
-    add_executable(${TEST_NAME} tests/${TEST_NAME}.cpp ${PERSON2_TEST_SOURCES})
-    target_include_directories(${TEST_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
-    target_link_libraries(${TEST_NAME} PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+    add_executable(${TEST_NAME} tests/${TEST_NAME}.cpp)
+    target_link_libraries(${TEST_NAME} PRIVATE SuperMarioCore)
     if(MSVC)
         target_compile_options(${TEST_NAME} PRIVATE /W4)
     else()
@@ -113,4 +103,76 @@ add_p3_test(P3FoundationContracts)
 add_p3_test(P3PlayerContracts)
 add_p3_test(P3EnemyContracts)
 add_p3_test(P3ItemFactoryContracts)
+
+add_executable(Person1StateFlowContracts tests/Person1StateFlowContracts.cpp)
+target_link_libraries(Person1StateFlowContracts PRIVATE SuperMarioCore)
+add_test(NAME Person1StateFlowContracts COMMAND Person1StateFlowContracts)
+set_tests_properties(Person1StateFlowContracts PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
+
+add_executable(Person1ApplicationSmoke tests/Person1ApplicationSmoke.cpp)
+target_link_libraries(Person1ApplicationSmoke PRIVATE SuperMarioCore)
+add_test(
+    NAME Person1ApplicationSmoke
+    COMMAND Person1ApplicationSmoke "${CMAKE_BINARY_DIR}"
+)
+set_tests_properties(Person1ApplicationSmoke PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
+
+add_executable(Person4GuiContracts
+    tests/Person4GuiContracts.cpp
+    src/UI/GUI.cpp
+)
+target_include_directories(Person4GuiContracts PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(Person4GuiContracts PRIVATE
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+)
+if(MSVC)
+    target_compile_options(Person4GuiContracts PRIVATE /W4)
+else()
+    target_compile_options(Person4GuiContracts PRIVATE -Wall -Wextra)
+endif()
+add_test(NAME Person4GuiContracts COMMAND Person4GuiContracts)
+
+add_executable(Person4AnimationContracts
+    tests/Person4AnimationContracts.cpp
+    src/Components/AnimationComponent.cpp
+)
+target_include_directories(Person4AnimationContracts PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(Person4AnimationContracts PRIVATE
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+)
+if(MSVC)
+    target_compile_options(Person4AnimationContracts PRIVATE /W4)
+else()
+    target_compile_options(Person4AnimationContracts PRIVATE -Wall -Wextra)
+endif()
+add_test(NAME Person4AnimationContracts COMMAND Person4AnimationContracts)
+
+add_executable(AssetLocatorContracts
+    tests/AssetLocatorContracts.cpp
+    src/Core/AssetLocator.cpp
+)
+target_include_directories(AssetLocatorContracts PRIVATE
+    "${PROJECT_SOURCE_DIR}/include"
+)
+if(MSVC)
+    target_compile_options(AssetLocatorContracts PRIVATE /W4)
+else()
+    target_compile_options(AssetLocatorContracts PRIVATE -Wall -Wextra)
+endif()
+add_test(NAME AssetLocatorContracts COMMAND AssetLocatorContracts)
+set_tests_properties(AssetLocatorContracts PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
 
