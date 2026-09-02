@@ -6,6 +6,7 @@
 #include <SFML/Graphics/Texture.hpp>
 
 #include <cstddef>
+#include <string>
 
 class MainMenuState final : public State {
 public:
@@ -17,6 +18,7 @@ public:
 
 private:
     void activateSelection();
+    void continueGame();
     [[nodiscard]] int optionAt(sf::Vector2f position) const;
 
     sf::Texture m_backgroundTexture;
@@ -26,4 +28,5 @@ private:
     bool m_fontLoaded{};
     bool m_readableFontLoaded{};
     std::size_t m_selected{};
+    std::string m_error;
 };

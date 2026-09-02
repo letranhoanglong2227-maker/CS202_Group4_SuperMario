@@ -1,5 +1,8 @@
 #include "States/Menus/SettingState.hpp"
 
+#include "Core/AssetLocator.hpp"
+#include "Audio/AudioSystem.hpp"
+
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -21,21 +24,31 @@ void drawCentered(sf::RenderTarget& target, const sf::Font& font, std::string_vi
 }
 
 SettingState::SettingState(StateStack& stack, StateContext context)
-    : State(stack, context),
-      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")),
-      m_readableFontLoaded(m_readableFont.openFromFile("assets/fonts/American Captain.ttf")) {
+    : State(stack, context) {
+    if (const auto path = AssetLocator::find(
+            "assets/fonts/Super-Mario-Bros--3.ttf")) {
+        m_fontLoaded = m_font.openFromFile(*path);
+    }
     if (!m_fontLoaded) {
         std::cerr << "Settings font unavailable.\n";
-    }
-    if (!m_readableFontLoaded) {
-        std::cerr << "Settings readable font unavailable.\n";
     }
 }
 
 void SettingState::handleEvent(const sf::Event& event) {
-    if (const auto* key = event.getIf<sf::Event::KeyPressed>();
-        key && (key->code == sf::Keyboard::Key::Escape || key->code == sf::Keyboard::Key::Enter)) {
+    const auto* key = event.getIf<sf::Event::KeyPressed>();
+    if (!key) return;
+    if (key->code == sf::Keyboard::Key::Escape ||
+        key->code == sf::Keyboard::Key::Enter) {
         (void)requestPop();
+    } else if (key->code == sf::Keyboard::Key::M && context().audio) {
+        context().audio->setMusicEnabled(!context().audio->isMusicEnabled());
+    } else if (key->code == sf::Keyboard::Key::S && context().audio) {
+        context().audio->setEffectsEnabled(
+            !context().audio->areEffectsEnabled());
+    } else if (key->code == sf::Keyboard::Key::Left && context().audio) {
+        context().audio->setMusicVolume(context().audio->musicVolume() - 5.f);
+    } else if (key->code == sf::Keyboard::Key::Right && context().audio) {
+        context().audio->setMusicVolume(context().audio->musicVolume() + 5.f);
     }
 }
 
@@ -58,12 +71,28 @@ void SettingState::render(sf::RenderTarget& target) {
     if (m_fontLoaded) {
         drawCentered(target, m_font, "SETTINGS", 38, {640.f, 220.f}, sf::Color(255, 218, 62));
     }
-    if (m_readableFontLoaded) {
-        drawCentered(target, m_readableFont, "AUDIO CONTROLS ARE WAITING FOR THE P4 AUDIOSYSTEM CONTRACT", 23,
-                     {640.f, 330.f}, sf::Color(255, 185, 85));
-        drawCentered(target, m_readableFont, "NO DUPLICATE VOLUME STORE WAS ADDED", 22,
-                     {640.f, 385.f}, sf::Color(205, 220, 235));
-        drawCentered(target, m_readableFont, "ENTER OR ESC TO GO BACK", 25,
-                     {640.f, 475.f}, sf::Color::White);
+    if (m_fontLoaded) {
+        const bool musicEnabled =
+            !context().audio || context().audio->isMusicEnabled();
+        const bool effectsEnabled =
+            !context().audio || context().audio->areEffectsEnabled();
+        const int volume = context().audio
+            ? static_cast<int>(context().audio->musicVolume()) : 0;
+        drawCentered(target, m_font,
+                     effectsEnabled ? "SOUND  ON" : "SOUND  OFF", 27,
+                     {640.f, 295.f}, effectsEnabled
+                         ? sf::Color(100, 225, 125)
+                         : sf::Color(255, 135, 100));
+        drawCentered(target, m_font,
+                     musicEnabled ? "MUSIC  ON" : "MUSIC  OFF", 27,
+                     {640.f, 355.f}, musicEnabled
+                         ? sf::Color(100, 225, 125)
+                         : sf::Color(255, 135, 100));
+        drawCentered(target, m_font,
+                     "VOLUME  " + std::to_string(volume), 27,
+                     {640.f, 415.f}, sf::Color(205, 220, 235));
+        drawCentered(target, m_font,
+                     "S SOUND  M MUSIC  LEFT RIGHT VOLUME  ENTER BACK", 15,
+                     {640.f, 490.f}, sf::Color::White);
     }
 }

@@ -1,6 +1,13 @@
 #include "States/Menus/MainMenuState.hpp"
 
+#include "Core/AssetLocator.hpp"
+#include "Audio/AudioSystem.hpp"
+#include "Core/UserData.hpp"
+#include "Entities/EntityFactory.hpp"
+#include "Levels/LevelFactory.hpp"
+#include "States/Base/GameState.hpp"
 #include "States/Menus/EnterNameState.hpp"
+#include "States/Menus/LeaderboardState.hpp"
 #include "States/Menus/SettingState.hpp"
 
 #include <SFML/Graphics/RectangleShape.hpp>
@@ -17,13 +24,13 @@
 #include <string_view>
 
 namespace {
-constexpr std::array<std::string_view, 4> Options{
-    "NEW GAME", "SETTINGS", "LEADERBOARD", "EXIT"};
+constexpr std::array<std::string_view, 5> Options{
+    "CONTINUE", "NEW GAME", "LEADERBOARD", "SETTINGS", "EXIT"};
 constexpr float ButtonX = 790.f;
-constexpr float ButtonY = 285.f;
+constexpr float ButtonY = 245.f;
 constexpr float ButtonWidth = 390.f;
-constexpr float ButtonHeight = 64.f;
-constexpr float ButtonGap = 18.f;
+constexpr float ButtonHeight = 58.f;
+constexpr float ButtonGap = 12.f;
 
 void drawCenteredText(sf::RenderTarget& target, const sf::Font& font, std::string_view value,
                       unsigned size, sf::Vector2f center, sf::Color color) {
@@ -39,10 +46,19 @@ void drawCenteredText(sf::RenderTarget& target, const sf::Font& font, std::strin
 }
 
 MainMenuState::MainMenuState(StateStack& stack, StateContext context)
-    : State(stack, context),
-      m_backgroundLoaded(m_backgroundTexture.loadFromFile("assets/textures/basic_mainmenu.png")),
-      m_fontLoaded(m_font.openFromFile("assets/fonts/Super-Mario-Bros--3.ttf")),
-      m_readableFontLoaded(m_readableFont.openFromFile("assets/fonts/American Captain.ttf")) {
+    : State(stack, context) {
+    if (const auto path = AssetLocator::find(
+            "assets/textures/basic_mainmenu.png")) {
+        m_backgroundLoaded = m_backgroundTexture.loadFromFile(*path);
+    }
+    if (const auto path = AssetLocator::find(
+            "assets/fonts/Super-Mario-Bros--3.ttf")) {
+        m_fontLoaded = m_font.openFromFile(*path);
+    }
+    if (const auto path = AssetLocator::find(
+            "assets/fonts/American Captain.ttf")) {
+        m_readableFontLoaded = m_readableFont.openFromFile(*path);
+    }
     if (!m_backgroundLoaded) {
         std::cerr << "Main menu background unavailable; using color fallback.\n";
     }
@@ -59,11 +75,14 @@ void MainMenuState::handleEvent(const sf::Event& event) {
         switch (key->code) {
         case sf::Keyboard::Key::Up:
             m_selected = (m_selected + Options.size() - 1) % Options.size();
+            if (context().audio) (void)context().audio->playCue(AudioCue::MenuMove);
             break;
         case sf::Keyboard::Key::Down:
             m_selected = (m_selected + 1) % Options.size();
+            if (context().audio) (void)context().audio->playCue(AudioCue::MenuMove);
             break;
         case sf::Keyboard::Key::Enter:
+            if (context().audio) (void)context().audio->playCue(AudioCue::MenuConfirm);
             activateSelection();
             break;
         case sf::Keyboard::Key::Escape:
@@ -86,13 +105,16 @@ void MainMenuState::handleEvent(const sf::Event& event) {
             const int clicked = optionAt(context().window->mapPixelToCoords(click->position));
             if (clicked >= 0) {
                 m_selected = static_cast<std::size_t>(clicked);
+                if (context().audio) (void)context().audio->playCue(AudioCue::MenuConfirm);
                 activateSelection();
             }
         }
     }
 }
 
-void MainMenuState::update(float) {}
+void MainMenuState::update(float) {
+    if (context().audio) (void)context().audio->playMenuMusic();
+}
 
 void MainMenuState::render(sf::RenderTarget& target) {
     const sf::View& view = target.getView();
@@ -139,32 +161,76 @@ void MainMenuState::render(sf::RenderTarget& target) {
         drawCenteredText(target, m_font, "SUPER MARIO", 36, {980.f, 120.f}, sf::Color(255, 218, 62));
     }
     if (m_readableFontLoaded) {
-        drawCenteredText(target, m_readableFont, "GROUP 4 - UI PREVIEW", 32,
-                         {980.f, 180.f}, sf::Color(238, 245, 255));
-        const std::string_view hint = m_selected == 2
-            ? "LEADERBOARD ROUTE IS WAITING FOR P4"
-            : "ARROWS OR MOUSE TO SELECT  -  ENTER TO CONFIRM";
+        const std::string hint = m_error.empty()
+            ? "ARROWS OR MOUSE TO SELECT  -  ENTER TO CONFIRM"
+            : m_error;
         drawCenteredText(target, m_readableFont, hint, 19,
-                         {980.f, 632.f}, sf::Color(225, 235, 245));
+                         {980.f, 632.f}, m_error.empty()
+                             ? sf::Color(225, 235, 245)
+                             : sf::Color(255, 120, 100));
     }
 }
 
 void MainMenuState::activateSelection() {
     switch (m_selected) {
     case 0:
-        (void)requestPush(std::make_unique<EnterNameState>(stateStack(), context()));
+        continueGame();
         break;
     case 1:
-        (void)requestPush(std::make_unique<SettingState>(stateStack(), context()));
+        if (context().userData) *context().userData = UserData{};
+        (void)requestPush(std::make_unique<EnterNameState>(stateStack(), context()));
         break;
     case 2:
-        break; // P4 owns LeaderboardState; keep the dependency visible and non-clickable.
+        (void)requestPush(std::make_unique<LeaderboardState>(stateStack(), context()));
+        break;
     case 3:
+        (void)requestPush(std::make_unique<SettingState>(stateStack(), context()));
+        break;
+    case 4:
         (void)requestQuit();
         break;
     default:
         break;
     }
+}
+
+void MainMenuState::continueGame() {
+    UserData* data = context().userData;
+    if (!data) {
+        m_error = "PLAYER DATA IS UNAVAILABLE";
+        return;
+    }
+    if (!data->loadFrom(AssetLocator::executableDirectory() / "savegame.txt",
+                        &m_error))
+        return;
+    if (data->checkGameOver()) {
+        m_error = "SAVED GAME HAS NO LIVES - START A NEW GAME";
+        return;
+    }
+
+    auto player = EntityFactory::createPlayer(
+        data->getCharacter() == 1 ? "Luigi" : "Mario");
+    if (!player) {
+        m_error = "SAVED CHARACTER COULD NOT BE CREATED";
+        return;
+    }
+    auto level = createConfiguredLevel(
+        data->getCurrentWorld(), data->getCurrentLevel(), {player.get()});
+    if (!level || !level->isLoaded()) {
+        m_error = "SAVED LEVEL COULD NOT BE LOADED";
+        return;
+    }
+    if (data->getPlayerForm() == 2) player->setFire(true);
+    else if (data->getPlayerForm() == 1) player->setBig(true);
+    auto game = std::make_unique<GameState>(
+        stateStack(), context(), data->getCurrentWorld(),
+        data->getCurrentLevel(), std::move(player), std::move(level));
+    if (!game->isReady()) {
+        m_error = game->loadError();
+        return;
+    }
+    m_error.clear();
+    (void)requestPush(std::move(game));
 }
 
 int MainMenuState::optionAt(sf::Vector2f position) const {
