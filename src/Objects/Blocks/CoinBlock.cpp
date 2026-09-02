@@ -1,14 +1,19 @@
 #include "Objects/Blocks/CoinBlock.hpp"
 #include "Levels/Managers/MapManager.hpp"
 #include "Objects/Items/Coin.hpp"
+#include <algorithm>
+#include <cmath>
+#include <utility>
 
-CoinBlock::CoinBlock(int count, std::function<void(GameObject*)> spawnCallback)
+CoinBlock::CoinBlock(int count, SpawnCallback spawnCallback,
+                     RewardCallback rewardCallback)
     : coinCount(count), 
       isBouncing(false), 
-      bounceVelocity(0.f), 
-      bounceGravity(1500.f), 
+      bounceTimer(0.f),
+      bounceDuration(0.2f),
       maxBounceHeight(10.f),
-      onSpawnItem(spawnCallback) 
+      onSpawnItem(std::move(spawnCallback)),
+      onReward(std::move(rewardCallback))
 {
     if (count <= 0) {
         throw std::invalid_argument("CoinBlock must be initialized with at least 1 coin.");
@@ -24,17 +29,15 @@ CoinBlock::CoinBlock(int count, std::function<void(GameObject*)> spawnCallback)
     // Initialize textures and add animations directly in the constructor
     initSpritesSheet();
 
-    // TODO: USER TASK 
     animationComponent.addAnimation("Active", {spritesSheet["CoinBlock1"], spritesSheet["CoinBlock2"], spritesSheet["CoinBlock3"]});
     animationComponent.addAnimation("Empty", {spritesSheet["EmptyBlock"]});
 }
 
 void CoinBlock::initSpritesSheet() {
-    // TODO: USER TASK - Put your exact IntRect coordinates here!
-    spritesSheet["CoinBlock1"] = sf::IntRect({2, 96}, {16, 16});
-    spritesSheet["CoinBlock2"] = sf::IntRect({19, 96}, {16, 16});
-    spritesSheet["CoinBlock3"] = sf::IntRect({36, 96}, {16, 16});
-    spritesSheet["EmptyBlock"] = sf::IntRect({2, 113}, {16, 16});
+    spritesSheet["CoinBlock1"] = sf::IntRect({1, 52}, {16, 16});
+    spritesSheet["CoinBlock2"] = sf::IntRect({18, 52}, {16, 16});
+    spritesSheet["CoinBlock3"] = sf::IntRect({35, 52}, {16, 16});
+    spritesSheet["EmptyBlock"] = sf::IntRect({1, 69}, {16, 16});
 }
 
 // ---> Note
@@ -43,16 +46,16 @@ void CoinBlock::reactToCollision(int collidedSide) {
         if (coinCount > 0 && !isBouncing) {
             // Trigger bounce
             isBouncing = true;
-            bounceVelocity = -100.f; // Move up
+            bounceTimer = 0.f;
             
             // Spawn Coin
             if (onSpawnItem) {
-                Coin* newCoin = new Coin(
-                    {this->position.x,
-                     this->position.y - MapFormat::TILE_SIZE},
-                    true);
-                onSpawnItem(newCoin);
+                onSpawnItem(std::make_unique<Coin>(
+                    sf::Vector2f{this->position.x,
+                                 this->position.y - MapFormat::TILE_SIZE},
+                    true));
             }
+            if (onReward) onReward(100, 1);
 
             coinCount--;
         }
@@ -75,17 +78,22 @@ void CoinBlock::update(float dt) {
 
     // Handle bouncing logic
     if (isBouncing) {
-        position.y += bounceVelocity * dt;
-        bounceVelocity += bounceGravity * dt; // Gravity pulls it back down
-
-        // If it falls back down to its original position
-        if (position.y >= originalY) {
+        bounceTimer = std::min(
+            bounceTimer + std::max(0.f, dt), bounceDuration);
+        const float phase = bounceDuration > 0.f
+            ? bounceTimer / bounceDuration
+            : 1.f;
+        position.y = originalY -
+            std::sin(phase * 3.14159265f) * maxBounceHeight;
+        if (bounceTimer >= bounceDuration) {
             position.y = originalY;
             isBouncing = false;
-            bounceVelocity = 0.f;
+            bounceTimer = 0.f;
         }
-        
-        // Update sprite position
         entitySprite.setPosition(position);
     }
+}
+
+bool CoinBlock::isBumpingUpward() const noexcept {
+    return isBouncing && bounceTimer <= bounceDuration * 0.5f;
 }

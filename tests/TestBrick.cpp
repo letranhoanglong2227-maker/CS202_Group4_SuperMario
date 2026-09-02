@@ -6,14 +6,14 @@
 #include "Objects/Blocks/Block.hpp"
 
 // We need a vector to hold our active entities to test the spawned fragments
-std::vector<GameObject*> activeEntities;
+std::vector<std::unique_ptr<GameObject>> activeEntities;
 
 // Setup a dummy callback handler
-void spawnCallback(GameObject* newObj) {
+void spawnCallback(std::unique_ptr<GameObject> newObj) {
     std::cout << "Spawn callback triggered!\n";
     if (newObj) {
         std::cout << "Added a new Fragment.\n";
-        activeEntities.push_back(newObj);
+        activeEntities.push_back(std::move(newObj));
     }
 }
 
@@ -29,11 +29,12 @@ int main() {
     }
 
     // 3. Create Brick
-    Block* myBlock = new Brick(spawnCallback);
+    auto ownedBlock = std::make_unique<Brick>(spawnCallback);
+    Block* myBlock = ownedBlock.get();
     
     // Set position and let it initialize originalY
     myBlock->setPosition({400.f, 300.f});
-    activeEntities.push_back(myBlock);
+    activeEntities.push_back(std::move(ownedBlock));
 
     // View to zoom in a bit since sprites are 16x16
     sf::View view(sf::FloatRect({0.f, 0.f}, {800.f, 600.f}));
@@ -63,23 +64,18 @@ int main() {
         }
 
         // Update logic for all entities
-        for (auto* entity : activeEntities) {
+        for (auto& entity : activeEntities) {
             entity->update(dt);
         }
 
         // Render
         window.clear(sf::Color(100, 149, 237)); // Mario sky blue
         
-        for (auto* entity : activeEntities) {
+        for (auto& entity : activeEntities) {
             entity->render(&window);
         }
         
         window.display();
-    }
-
-    // Cleanup
-    for (auto* entity : activeEntities) {
-        delete entity;
     }
 
     return 0;

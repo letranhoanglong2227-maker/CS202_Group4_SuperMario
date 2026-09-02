@@ -6,13 +6,10 @@
 #include "Objects/Blocks/Block.hpp"
 
 // Setup a dummy callback handler
-void spawnCallback(GameObject* newObj) {
+void spawnCallback(std::unique_ptr<GameObject> newObj) {
     std::cout << "Spawn callback triggered!\n";
     if (newObj) {
-        // Normally we would add to activeEntities, but since Mushroom is incomplete
-        // we just log it and delete it to prevent memory leaks if any gets created.
         std::cout << "Added a new Mushroom.\n";
-        delete newObj;
     }
 }
 

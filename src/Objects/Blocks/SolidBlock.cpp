@@ -1,6 +1,6 @@
 #include "Objects/Blocks/SolidBlock.hpp"
 
-SolidBlock::SolidBlock(){
+SolidBlock::SolidBlock(sf::IntRect selectedFrame) : frame(selectedFrame) {
     name = "SolidBlock";
     exist = true;
     initSpritesSheet();
@@ -9,7 +9,7 @@ SolidBlock::SolidBlock(){
 
 void SolidBlock::initSpritesSheet()
 {
-    spritesSheet["SolidBlock"] = sf::IntRect({2, 113}, {16, 16});
+    spritesSheet["SolidBlock"] = frame;
 }
 
 void SolidBlock::reactToCollision(int collidedSide){

@@ -4,6 +4,7 @@
 #include<unordered_map>
 #include<SFML/Graphics.hpp>
 #include"Components/AnimationComponent.hpp"
+#include"Core/AssetLocator.hpp"
 #include"Core/GameObject.hpp"
 
 class Block : public GameObject{
@@ -16,6 +17,8 @@ public:
     Block();
     
     bool isExist() const { return exist; }
+    virtual bool canBeRemoved() const { return !exist; }
+    virtual bool isBumpingUpward() const noexcept { return false; }
     void setSizeBlock(const sf::Vector2f& sz);
 
     virtual void initSpritesSheet() = 0;
@@ -30,15 +33,13 @@ private:
     inline static sf::Texture blocksTexture;
 public:
     static bool setupTexture(){
-        bool loadOk = blocksTexture.loadFromFile("assets/textures/Items_Blocks.png");
-        if (!loadOk) {
-            loadOk = blocksTexture.loadFromFile(
-                "../assets/textures/Items_Blocks.png");
-        }
-        if(loadOk){
-            std::cout << "File loaded!...\n";
-        } else
-            std::cout << "File not found!...\n";
+        const auto path = AssetLocator::find(
+            "assets/textures/Tileset.png");
+        const bool loadOk = path && blocksTexture.loadFromFile(*path);
+        if (!loadOk)
+            std::cerr << AssetLocator::missingMessage(
+                             "assets/textures/Tileset.png")
+                      << '\n';
         return loadOk;
     }
 
