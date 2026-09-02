@@ -1,9 +1,10 @@
 #include "Entities/Enemies/PeteyPiranha.hpp"
 #include "Core/Constants.hpp"
+#include <cmath>
 
 PeteyPiranha::PeteyPiranha(const sf::Vector2f& pos)
-    : Enemy(), baseY(pos.y) {
-    setHealth(5);
+    : Enemy() {
+    setHealth(1);
     setDamage(1);
     setPointsValue(2500);
 
@@ -16,8 +17,10 @@ PeteyPiranha::PeteyPiranha(const sf::Vector2f& pos)
 
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
-        animationComponent->addAnimation("emerged", { sf::IntRect({205, 37}, {16, 24}), sf::IntRect({222, 37}, {16, 24}) });
-        animationComponent->addAnimation("retracted", { sf::IntRect({205, 37}, {16, 24}) });
+        animationComponent->addAnimation(
+            "emerged", {sf::IntRect({205, 37}, {16, 24})});
+        animationComponent->addAnimation(
+            "retracted", {sf::IntRect({222, 37}, {16, 24})});
     }
 }
 
@@ -38,15 +41,16 @@ bool PeteyPiranha::hasPendingProjectile() const {
 }
 
 std::optional<ProjectileSpawnRequest> PeteyPiranha::consumePendingProjectile() {
-    auto res = pendingProjectile;
-    pendingProjectile = std::nullopt;
-    return res;
+    auto request = pendingProjectile;
+    pendingProjectile.reset();
+    return request;
 }
 
 EnemyContactOutcome PeteyPiranha::handlePlayerContact(PlayerManager& player, PlayerEnemyContactKind kind, float horizontalDirection) {
     (void)kind;
     (void)horizontalDirection;
-    if (dead || !emerged) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
+    if (dead || !emerged || kind != PlayerEnemyContactKind::Stomp)
+        return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     
     if (player.isImmortal()) return EnemyContactOutcome{EnemyContactResult::None, 0, 0.f, false};
     player.takeDamage(damage);
@@ -70,32 +74,22 @@ void PeteyPiranha::updateAnimation(float dt) {
 
 void PeteyPiranha::update(float dt) {
     if (dead) {
-        pendingProjectile = std::nullopt;
+        pendingProjectile.reset();
         return;
     }
 
     emergeTimer += dt;
-    if (emergeTimer >= 2.5f) {
-        emergeTimer = 0.f;
+    if (emergeTimer >= 2.f) {
+        emergeTimer = std::fmod(emergeTimer, 2.f);
         emerged = !emerged;
-        hasShot = false; // Reset shot flag when toggling state
-    }
-
-    if (emerged) {
-        position.y = baseY - CELL_SIZE * 1.5f;
-        // Shoot spike when fully emerged (e.g. after 1 second of emerging)
-        if (emergeTimer >= 1.0f && !hasShot) {
-            hasShot = true;
+        if (emerged) {
             pendingProjectile = ProjectileSpawnRequest{
                 ProjectileKind::PeteySpike,
-                {position.x + size.x / 2.f, position.y + 16.f},
-                {0.f, -1.f}, // shoot upwards
-                250.f,
-                damage
-            };
+                {position.x, position.y - CELL_SIZE},
+                {0.f, -1.f},
+                400.f,
+                damage};
         }
-    } else {
-        position.y = baseY;
     }
     hitbox.setPosition(position);
     entitySprite.setPosition(position);

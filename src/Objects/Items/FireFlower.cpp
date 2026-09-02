@@ -15,10 +15,10 @@ FireFlower::FireFlower(const sf::Vector2f& pos, bool popped)
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
         animationComponent->addAnimation("idle", { 
-            sf::IntRect({2, 36}, {16, 16}),
-            sf::IntRect({19, 36}, {16, 16}),
-            sf::IntRect({36, 36}, {16, 16}),
-            sf::IntRect({36, 36}, {16, 16}) // Duplicate last frame since 53,36 is a Star
+            sf::IntRect({2, 19}, {16, 16}),
+            sf::IntRect({19, 19}, {16, 16}),
+            sf::IntRect({36, 19}, {16, 16}),
+            sf::IntRect({53, 19}, {16, 16})
         });
     }
 }

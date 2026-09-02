@@ -1,25 +1,30 @@
 #include "Entities/Enemies/Bowser.hpp"
 #include "Core/Constants.hpp"
+#include <SFML/Graphics/RectangleShape.hpp>
 
 Bowser::Bowser(const sf::Vector2f& pos)
     : Enemy() {
-    setHealth(10); // World 3 Boss high HP
+    setHealth(maxHealth);
     setDamage(2);  // High damage
     setPointsValue(5000);
-    setSpeed(40.f);
+    setSpeed(300.f);
 
     setPosition(pos);
     hitbox.setSize({2.f * CELL_SIZE, 140.f});
     hitbox.setPosition(pos);
     size = hitbox.getSize();
 
-    movementComponent = std::make_unique<MovementComponent>(40.f, 400.f, 0.f);
+    movementComponent =
+        std::make_unique<MovementComponent>(300.f, 2000.f, 0.f);
 
     // Initial scale
     entitySprite.setScale({2.0f, 2.0f});
 
     if (animationComponent) {
-        animationComponent->addAnimation("walk", { sf::IntRect({1, 186}, {32, 35}), sf::IntRect({34, 186}, {32, 35}) });
+        animationComponent->addAnimation("walk", {
+            sf::IntRect({1, 186}, {32, 35}),
+            sf::IntRect({34, 186}, {32, 35}),
+            sf::IntRect({67, 186}, {32, 35}) });
         animationComponent->addAnimation("breathe_fire", { sf::IntRect({100, 186}, {32, 35}), sf::IntRect({133, 186}, {32, 35}), sf::IntRect({166, 186}, {32, 35}), sf::IntRect({199, 186}, {32, 35}) });
     }
 }
@@ -97,7 +102,7 @@ void Bowser::update(float dt) {
                 ProjectileKind::BowserFire,
                 {position.x + (dirX > 0 ? size.x : -32.f), position.y + 32.f},
                 {dirX, 0.f},
-                350.f,
+                500.f,
                 damage
             };
         }
@@ -109,4 +114,26 @@ void Bowser::update(float dt) {
     float dirX = facingRight ? 1.f : -1.f;
     move(dirX, 0.f, dt);
     LivingEntity::update(dt);
+}
+
+void Bowser::render(sf::RenderTarget* target) {
+    if (!target || dead) return;
+    LivingEntity::render(target);
+
+    constexpr float barWidth = 128.f;
+    constexpr float barHeight = 10.f;
+    sf::RectangleShape background({barWidth, barHeight});
+    background.setPosition({position.x, position.y - 18.f});
+    background.setFillColor(sf::Color(90, 15, 15));
+    background.setOutlineColor(sf::Color::Black);
+    background.setOutlineThickness(2.f);
+    target->draw(background);
+
+    sf::RectangleShape remaining(
+        {barWidth * static_cast<float>(health) /
+             static_cast<float>(maxHealth),
+         barHeight});
+    remaining.setPosition(background.getPosition());
+    remaining.setFillColor(sf::Color(45, 210, 75));
+    target->draw(remaining);
 }

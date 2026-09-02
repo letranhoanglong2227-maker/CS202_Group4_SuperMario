@@ -11,6 +11,7 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
 
     entitySprite.setScale({2.0f, 2.0f});
     if (animationComponent) {
+        animationComponent->setInterval(0.2f);
         animationComponent->addAnimation("spin", { 
             sf::IntRect({70, 38}, {10, 14}),
             sf::IntRect({81, 38}, {10, 14}),
@@ -20,11 +21,12 @@ Coin::Coin(const sf::Vector2f& pos, bool popped)
     }
 }
 
-ItemCollectionResult Coin::collect(PlayerManager& player, bool canGrow) {
-    if (!exist) return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
+ItemCollectionResult Coin::collect(PlayerManager&, bool) {
+    if (!exist || isPoppedFromBlock)
+        return ItemCollectionResult{false, 0, 0, 0, RequestedPlayerForm::None};
     
     exist = false;
-    return ItemCollectionResult{true, 200, 1, 0, RequestedPlayerForm::None};
+    return ItemCollectionResult{true, 0, 1, 0, RequestedPlayerForm::None};
 }
 
 void Coin::reactToCollision() {

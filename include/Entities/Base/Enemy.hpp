@@ -2,6 +2,7 @@
 #include "Objects/Items/ProjectileSpawnRequest.hpp"
 #pragma once
 
+#include "Core/AssetLocator.hpp"
 #include "Entities/Base/LivingEntity.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 #include "Entities/Base/EnemyContactOutcome.hpp"
@@ -44,15 +45,12 @@ private:
     inline static sf::Texture enemyTexture;
 public:
     static bool setupTexture() {
-        bool loadOk = enemyTexture.loadFromFile("assets/textures/Enemies.png");
-        if (!loadOk) {
-            loadOk = enemyTexture.loadFromFile("../assets/textures/Enemies.png");
-        }
-        if (loadOk) {
-            std::cout << "Enemy Texture loaded!...\n";
-        } else {
-            std::cout << "Enemy Texture not found!...\n";
-        }
+        const auto path = AssetLocator::find("assets/textures/Enemies.png");
+        const bool loadOk = path && enemyTexture.loadFromFile(*path);
+        if (!loadOk)
+            std::cerr << AssetLocator::missingMessage(
+                             "assets/textures/Enemies.png")
+                      << '\n';
         return loadOk;
     }
 

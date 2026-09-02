@@ -7,6 +7,8 @@ protected:
     bool inShell{ false };
     bool shellKicked{ false };
     float shellSpeed{ 300.f };
+    float shellTimer{};
+    float shellDuration{5.f};
 
 public:
     Koopa(const sf::Vector2f& pos = { 0.f, 0.f });

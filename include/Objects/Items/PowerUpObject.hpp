@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Core/AssetLocator.hpp"
 #include "Core/GameObject.hpp"
 #include "Components/AnimationComponent.hpp"
 #include <string>
 #include <memory>
 #include "Entities/Players/PlayerManager.hpp"
 #include "Objects/Items/ItemCollectionResult.hpp"
+#include <iostream>
 
 class Enemy;
 class Block;
@@ -19,6 +21,8 @@ protected:
     float popTimer{ 0.f };
     float popDuration{ 0.5f };
     sf::Vector2f startPosition;
+
+    void syncVisualToHitbox();
 
 public:
     PowerUpObject(const std::string& name = "PowerUp");
@@ -46,16 +50,14 @@ private:
 
 public:
     static bool setupTexture() {
-        if (!itemTexture.loadFromFile("assets/textures/Items_Blocks.png")) {
-            if (!itemTexture.loadFromFile("../assets/textures/Items_Blocks.png")) {
-                if (!itemTexture.loadFromFile("../../assets/textures/Items_Blocks.png")) {
-                    std::cout << "Item Texture not found!...\n";
-                    return false;
-                }
-            }
-        }
-        std::cout << "Item Texture loaded!...\n";
-        return true;
+        const auto path = AssetLocator::find(
+            "assets/textures/Items_Blocks.png");
+        const bool loadOk = path && itemTexture.loadFromFile(*path);
+        if (!loadOk)
+            std::cerr << AssetLocator::missingMessage(
+                             "assets/textures/Items_Blocks.png")
+                      << '\n';
+        return loadOk;
     }
 
     static sf::Texture& getItemTexture() {
