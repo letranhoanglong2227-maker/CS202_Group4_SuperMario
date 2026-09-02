@@ -1,25 +1,33 @@
 #include "Core/GameEventMediator.hpp"
+#include "Core/MyApp.hpp"
+#include "Core/UserData.hpp"
+#include "Audio/AudioSystem.hpp"
 #include "Entities/EntityFactory.hpp"
 #include "Entities/Players/PlayerManager.hpp"
 #include "Levels/Managers/LevelManager.hpp"
 #include "States/Base/GameState.hpp"
 #include "States/Base/State.hpp"
+#include "States/Menus/WinMenuState.hpp"
 
 #include <SFML/Graphics/RenderTexture.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 namespace {
 class ProbeState final : public State {
 public:
-    enum class Action { None, Push, Pop, Replace, PushThenPop, Quit };
+    enum class Action { None, Push, Pop, Replace, PushThenPop, PopToRoot, Quit };
 
     ProbeState(StateStack& stack, StateContext context, int& destructionCount)
         : State(stack, context), m_destructionCount(&destructionCount) {}
@@ -47,6 +55,9 @@ public:
         }
         case Action::Pop:
             firstRequestAccepted = requestPop();
+            break;
+        case Action::PopToRoot:
+            firstRequestAccepted = requestPopToRoot();
             break;
         case Action::PushThenPop: {
             auto next = std::make_unique<ProbeState>(stateStack(), context(), *m_destructionCount);
@@ -169,11 +180,21 @@ void stateStackContract() {
     assert(stack.size() == 1);
     assert(destructionCount == 3);
 
+    ProbeState* rootChild{};
+    replacement->createdState = &rootChild;
+    replacement->action = ProbeState::Action::Push;
+    stack.update(0.016f);
+    assert(stack.size() == 2);
+    rootChild->action = ProbeState::Action::PopToRoot;
+    stack.update(0.016f);
+    assert(stack.size() == 1);
+    assert(destructionCount == 4);
+
     replacement->action = ProbeState::Action::Quit;
     stack.update(0.016f);
     assert(stack.quitRequested());
     assert(stack.empty());
-    assert(destructionCount == 4);
+    assert(destructionCount == 5);
 }
 
 void mediatorContract() {
@@ -241,17 +262,31 @@ void mediatorContract() {
 }
 
 void cameraContract() {
+    const auto group5Viewport = GameState::buildClampedCamera(
+        {100.f, 100.f}, {1560.f, 960.f},
+        sf::FloatRect({0.f, 0.f}, {8512.f, 960.f}));
+    assert(group5Viewport);
+    assert(group5Viewport->getSize() == sf::Vector2f(1560.f, 960.f));
+    assert(std::abs(group5Viewport->getCenter().y - 480.f) < 0.001f);
+
     const auto wideLeft = GameState::buildClampedCamera(
         {-100.f, 300.f}, {800.f, 600.f}, sf::FloatRect({0.f, 0.f}, {2400.f, 960.f}));
     assert(wideLeft);
     assert(std::abs(wideLeft->getCenter().x - 400.f) < 0.001f);
-    assert(std::abs(wideLeft->getCenter().y - 300.f) < 0.001f);
+    assert(std::abs(wideLeft->getCenter().y - 660.f) < 0.001f);
 
     const auto wideRight = GameState::buildClampedCamera(
         {3000.f, 900.f}, {800.f, 600.f}, sf::FloatRect({0.f, 0.f}, {2400.f, 960.f}));
     assert(wideRight);
     assert(std::abs(wideRight->getCenter().x - 2000.f) < 0.001f);
     assert(std::abs(wideRight->getCenter().y - 660.f) < 0.001f);
+
+    const auto sameStageDifferentJumpHeight = GameState::buildClampedCamera(
+        {1200.f, -500.f}, {800.f, 600.f},
+        sf::FloatRect({0.f, 0.f}, {2400.f, 960.f}));
+    assert(sameStageDifferentJumpHeight);
+    assert(std::abs(sameStageDifferentJumpHeight->getCenter().y -
+                    wideRight->getCenter().y) < 0.001f);
 
     const auto narrow = GameState::buildClampedCamera(
         {900.f, -100.f}, {800.f, 600.f}, sf::FloatRect({100.f, 40.f}, {500.f, 400.f}));
@@ -266,6 +301,24 @@ void cameraContract() {
 
     assert(!GameState::buildClampedCamera(
         {0.f, 0.f}, {0.f, 600.f}, sf::FloatRect({0.f, 0.f}, {800.f, 600.f})));
+}
+
+void winMenuContinueContract() {
+    UserData data("Continue Contract");
+    data.unlockNextLevel(1, 2);
+    assert(data.getCurrentWorld() == 1 && data.getCurrentLevel() == 1);
+
+    StateStack stack(StateContext{nullptr, &data});
+    stack.pushInitial(std::make_unique<WinMenuState>(
+        stack, stack.context(), 1, 1));
+    stack.handleEvent(sf::Event(
+        sf::Event::KeyPressed{sf::Keyboard::Key::Enter}));
+
+    assert(stack.size() == 1); // Win was replaced, not stacked over the game.
+    assert(data.getCurrentWorld() == 1 && data.getCurrentLevel() == 2);
+    stack.handleEvent(sf::Event(
+        sf::Event::KeyPressed{sf::Keyboard::Key::Escape}));
+    assert(stack.size() == 2); // The replacement is a playable GameState.
 }
 
 void gameStateRuntimeContract() {
@@ -320,17 +373,8 @@ void gameStateRuntimeContract() {
         stack.pushInitial(std::move(game));
         stack.update(0.016f);
         assert(levelProbe->updateCalls == 1);
-        assert(scoreDelta == 200);
+        assert(scoreDelta == 0);
         assert(coinDelta == 1);
-
-        const sf::FloatRect world = *gameProbe->activeLevel().getWorldBounds();
-        gameProbe->activePlayer().setPosition(
-            {world.position.x, world.position.y + world.size.y + 65.f});
-        stack.update(0.016f);
-        stack.update(0.016f);
-        assert(levelProbe->updateCalls == 3);
-        assert(deathEvents == 1);
-        assert(affectedPlayer == &gameProbe->activePlayer());
 
         sf::RenderTexture target({320u, 180u});
         const sf::View originalView = target.getView();
@@ -338,6 +382,16 @@ void gameStateRuntimeContract() {
         assert(levelProbe->renderCalls == 1);
         assert(target.getView().getCenter() == originalView.getCenter());
         assert(target.getView().getSize() == originalView.getSize());
+
+        const sf::FloatRect world = *gameProbe->activeLevel().getWorldBounds();
+        gameProbe->activePlayer().setPosition(
+            {world.position.x, world.position.y + world.size.y + 65.f});
+        stack.update(0.016f);
+        stack.update(0.016f);
+        assert(levelProbe->updateCalls == 2);
+        assert(stack.size() == 2); // Death menu pauses the game below it.
+        assert(deathEvents == 1);
+        assert(affectedPlayer == &gameProbe->activePlayer());
         subscription.disconnect();
     }
 
@@ -355,13 +409,128 @@ void gameStateRuntimeContract() {
     assert(!failedProbe->loadError().empty());
     failedStack.update(0.016f);
 }
+
+void userDataPersistenceContract() {
+    const std::filesystem::path path = "UserDataContract.save";
+    const std::filesystem::path leaderboardPath = "LeaderboardContract.save";
+    UserData original("Player One", 5);
+    original.add_score(1234);
+    original.add_coins(17);
+    original.setCharacter(1);
+    original.setPlayerForm(2);
+    original.unlockNextLevel(3, 3); // Unlock progress remains sequential.
+    original.setCurrentLevel(3, 3);
+    assert(original.getMaxUnlockedWorld() == 1 &&
+           original.getMaxUnlockedLevel() == 1);
+    assert(original.getCurrentWorld() == 3 && original.getCurrentLevel() == 3);
+    original.unlockNextLevel(1, 2);
+    original.unlockNextLevel(1, 3);
+    original.unlockNextLevel(2, 1);
+    original.unlockNextLevel(2, 2);
+    original.setCurrentLevel(2, 2);
+
+    std::string error;
+    assert(original.saveTo(path, &error));
+    assert(error.empty());
+
+    UserData loaded;
+    assert(loaded.loadFrom(path, &error));
+    assert(loaded.getPlayerName() == "Player One");
+    assert(loaded.getLives() == 5);
+    assert(loaded.getScore() == 1234);
+    assert(loaded.getNumberOfCoins() == 17);
+    assert(loaded.getCurrentWorld() == 2 && loaded.getCurrentLevel() == 2);
+    assert(loaded.getMaxUnlockedWorld() == 2 &&
+           loaded.getMaxUnlockedLevel() == 2);
+    assert(loaded.getCharacter() == 1);
+    assert(loaded.getPlayerForm() == 2);
+    std::filesystem::remove(path);
+
+    {
+        std::ofstream legacy(path, std::ios::trunc);
+        legacy << "GROUP4_SAVE_V1\n\"Legacy\"\n3 400 5 1 2 1 2 0\n";
+    }
+    UserData legacy;
+    assert(legacy.loadFrom(path, &error));
+    assert(legacy.getPlayerName() == "Legacy");
+    assert(legacy.getPlayerForm() == 0);
+    std::filesystem::remove(path);
+
+    {
+        std::ofstream malformed(path, std::ios::trunc);
+        malformed << "GROUP4_SAVE_V2\n\"Player\"\n3 0 0 1 1 1 1 0 0 EXTRA\n";
+    }
+    assert(!legacy.loadFrom(path, &error));
+    assert(!error.empty());
+    std::filesystem::remove(path);
+
+    for (int index = 0; index < 12; ++index) {
+        UserData candidate("Player " + std::to_string(index), 3);
+        candidate.add_score(index * 100);
+        assert(candidate.updateLeaderboard(leaderboardPath, &error));
+    }
+    UserData improved("Player 5", 3);
+    improved.add_score(5000);
+    improved.unlockNextLevel(1, 2);
+    improved.unlockNextLevel(1, 3);
+    improved.unlockNextLevel(2, 1);
+    improved.unlockNextLevel(2, 2);
+    improved.unlockNextLevel(2, 3);
+    improved.unlockNextLevel(3, 1);
+    improved.unlockNextLevel(3, 2);
+    improved.setCurrentLevel(3, 2);
+    assert(improved.updateLeaderboard(leaderboardPath, &error));
+
+    UserData worseAttempt("Player 5", 3);
+    worseAttempt.add_score(100);
+    worseAttempt.setCurrentLevel(1, 2);
+    assert(worseAttempt.updateLeaderboard(leaderboardPath, &error));
+
+    const auto leaderboard = UserData::loadLeaderboard(leaderboardPath, &error);
+    assert(error.empty());
+    assert(leaderboard.size() == 10);
+    assert(leaderboard.front().playerName == "Player 5");
+    assert(leaderboard.front().score == 5000);
+    assert(leaderboard.front().world == 3 && leaderboard.front().level == 2);
+    assert(std::count_if(
+               leaderboard.begin(), leaderboard.end(),
+               [](const LeaderboardEntry& entry) {
+                   return entry.playerName == "Player 5";
+               }) == 1);
+    for (std::size_t index = 1; index < leaderboard.size(); ++index)
+        assert(leaderboard[index - 1].score >= leaderboard[index].score);
+    std::filesystem::remove(leaderboardPath);
+}
 }
 
 int main() {
+    assert(MyApp::fitWindowToDesktop({1920u, 1080u}) ==
+           sf::Vector2u(1560u, 960u));
+    assert(MyApp::fitWindowToDesktop({1366u, 768u}) ==
+           sf::Vector2u(1122u, 691u));
+
+    const sf::View compactView =
+        MyApp::buildLetterboxedView({1366u, 768u});
+    assert(compactView.getSize() == sf::Vector2f(1560.f, 960.f));
+    assert(compactView.getCenter() == sf::Vector2f(640.f, 360.f));
+    assert(compactView.getViewport().size.x < 1.f);
+    assert(compactView.getViewport().size.y == 1.f);
+
+    static_assert(!std::is_default_constructible_v<AudioSystem>);
+    static_assert(!std::is_copy_constructible_v<AudioSystem>);
+    AudioSystem& audio = AudioSystem::instance();
+    assert(&audio == &AudioSystem::instance());
+    assert(audio.areEffectsEnabled());
+    audio.setEffectsEnabled(false);
+    assert(!audio.areEffectsEnabled() && audio.playCue(AudioCue::Coin));
+    audio.setEffectsEnabled(true);
+    assert(audio.areEffectsEnabled());
     stateStackContract();
     mediatorContract();
     cameraContract();
+    winMenuContinueContract();
     gameStateRuntimeContract();
+    userDataPersistenceContract();
     std::cout << "Person 1 state/event contracts passed\n";
     return 0;
 }
