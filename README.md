@@ -70,37 +70,13 @@ CMakeLists.txt          Production build configuration
 
 ## Build and Run
 
-### Requirements
+Choose one of the following Windows setups. Git and Internet access are required the first time CMake downloads SFML 3.1.
 
-- CMake 3.20 or newer.
-- A C++20 toolchain. On Windows, install either:
-  - Visual Studio 2022 Build Tools with the **Desktop development with C++** workload; or
-  - MinGW-w64 GCC together with Ninja, with both `g++` and `ninja` available in `PATH`.
-- SFML 3.1 installed, or Git and Internet access during the first configure so CMake can fetch SFML automatically.
+### Option 1: Visual Studio 2022
 
-Installing CMake alone is not enough because CMake coordinates a compiler and a build tool; it does not replace them.
+Install **Visual Studio 2022 Community** or **Visual Studio Build Tools 2022**. In Visual Studio Installer, select **Desktop development with C++** and make sure MSVC, Windows SDK, and CMake tools are included.
 
-### Windows with MinGW and Ninja
-
-Open PowerShell in the project root and verify the tools:
-
-```powershell
-cmake --version
-g++ --version
-ninja --version
-```
-
-Configure, build, and run:
-
-```powershell
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 4
-.\build\SuperMario.exe
-```
-
-### Windows with Visual Studio Build Tools
-
-Open **Developer PowerShell for VS 2022** in the project root, then run:
+Open **Developer PowerShell for VS 2022** in the project folder, then run:
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
@@ -108,17 +84,34 @@ cmake --build build --config Release --parallel 4
 .\build\Release\SuperMario.exe
 ```
 
-### Generator or compiler errors
+### Option 2: Visual Studio Code
 
-If CMake reports that `nmake`, `ninja`, `cl`, or a C++ compiler cannot be found, install one of the complete toolchains above and use its matching generator explicitly.
+Install:
 
-A build directory remembers its generator. Delete that directory before changing from NMake, Visual Studio, or Ninja:
+- Visual Studio Code with the Microsoft **C/C++** extension.
+- CMake 3.20 or newer.
+- MinGW-w64 with `g++` available in `PATH`.
+- Ninja with `ninja` available in `PATH`.
+- Git with `git` available in `PATH`.
+
+Restart VS Code after changing `PATH`. Open its PowerShell terminal in the project folder and verify:
 
 ```powershell
-Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+cmake --version
+g++ --version
+ninja --version
+git --version
 ```
 
-Then run the configure command for the selected toolchain again.
+Then configure, build, and run:
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+.\build\SuperMario.exe
+```
+
+If you change compiler or generator, delete the old cache first with `Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue`, then configure again.
 
 The normal development build finds `assets/` in the project root. For a standalone package, place the complete `assets/` directory beside `SuperMario.exe`. Save and leaderboard files are created beside the executable.
 
