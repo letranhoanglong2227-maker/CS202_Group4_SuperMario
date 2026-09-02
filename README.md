@@ -1,23 +1,50 @@
-# Super Mario — Group 4
+# Super Mario Bros — Group 4
 
 ## Overview
 
-This project is a C++20/SFML 3.1 platform game inspired by classic Super Mario gameplay. It provides a complete menu-to-game flow, Mario and Luigi, nine stages across three worlds, enemies, bosses, items, hazards, moving platforms, save data, audio, HUD, and a top-ten leaderboard.
+This project is a C++20 platform game built with SFML 3.1. It recreates classic Super Mario gameplay with Mario and Luigi, nine stages across three worlds, multiple enemies and bosses, interactive environments, save data, audio, and a leaderboard.
 
-The implementation uses deterministic enemy behavior, a state-driven application flow, and `std::unique_ptr`-based runtime ownership.
+## Features
 
-## Gameplay Features
+### Classic Gameplay
 
 - Choose Mario or Luigi.
 - Explore three worlds with three levels each.
-- Enter any of the nine maps directly from the world/level menus.
 - Fight Goomba, Koopa, Flying Koopa, Heriss, Petey Piranha, and Bowser.
-- Use blocks, pipes, trampolines, moving platforms, cannons, lava, rockets, bullets, and win flags.
-- Collect coins and mushrooms, grow into a powered form, and shoot fireballs.
-- Continue through consecutive stages after completing a level.
-- Save and continue a session from the main menu.
-- Submit scores from any map to a top-ten leaderboard. Each player name keeps its best score and the stage where that score was achieved.
-- Configure music, sound effects, and volume.
+- Collect coins, mushrooms, and fire flowers.
+- Grow into a powered form and shoot fireballs.
+- Break bricks and interact with coin and mushroom blocks.
+
+### Game Mechanics
+
+- Physics-based movement, jumping, gravity, and collision handling.
+- Sprite-atlas animations for players, enemies, items, and blocks.
+- Pipes, trampolines, moving platforms, cannons, bullets, rockets, lava, and win flags.
+- Camera tracking across maps larger than the game window.
+- Continuous level progression and direct access to all nine stages.
+
+### Additional Systems
+
+- Main menu, character selection, world selection, level selection, pause, death, and win screens.
+- Save and continue support.
+- Top-ten leaderboard with each player's best score.
+- Music, sound effects, and volume settings.
+- Responsive game window for different desktop resolutions.
+
+## Technical Details
+
+### Built With
+
+- **C++20** — core programming language.
+- **SFML 3.1** — graphics, window, input, and audio.
+- **CMake 3.20+** — cross-platform build configuration.
+
+### Architecture
+
+- State-driven application and menu flow.
+- AABB physics and map-driven level construction.
+- Mediated events for gameplay, score, audio, and level completion.
+- Reusable movement and animation components.
 
 ## Controls
 
@@ -30,53 +57,19 @@ The implementation uses deterministic enemy behavior, a state-driven application
 | Shoot horizontally while powered | `K` or Numpad `0` |
 | Aim and shoot while powered | Left mouse button |
 | Pause / return | `Esc` |
-| Menu navigation | Arrow keys, mouse, `Enter` / Space where shown |
+| Menu navigation | Arrow keys, mouse, `Enter`, or Space |
 
-Settings shortcuts:
+In the Settings menu, press `M` to toggle music, `S` to toggle sound effects, and Left/Right to change volume.
 
-- `M`: toggle music.
-- `S`: toggle sound effects.
-- Left / Right arrows: decrease or increase volume.
+## Installation and Setup
 
-## Technical Design
+Download or clone the project, then open a terminal in the folder containing `CMakeLists.txt`. Git and Internet access are needed during the first build if SFML 3.1 is not already installed.
 
-- **Language:** C++20
-- **Framework:** SFML 3.1
-- **Build system:** CMake 3.20 or newer
-- **Ownership:** runtime entities are owned with RAII and `std::unique_ptr`; borrowed pointers are non-owning views only
-- **State flow:** main menu, name entry, character/world/level selection, gameplay, pause, death, win, settings, and leaderboard states
-- **Runtime:** map-driven level construction, AABB physics, bounded camera, event mediator, deferred entity adoption/removal, and deterministic collision outcomes
-- **Presentation:** sprite-atlas animation, world backgrounds, screen-space HUD, music, and sound effects
-- **Persistence:** versioned save data and one-best-entry-per-player leaderboard files
+### Visual Studio 2022
 
-## Design Patterns
-
-The project applies five design patterns required by its architecture:
-
-1. **State:** `State` and `StateStack` manage menus, gameplay, pause, death, and completion screens without a monolithic application loop.
-2. **Mediator:** `GameEventMediator` routes typed gameplay, score, life, completion, and audio events between otherwise independent systems.
-3. **Singleton:** `AudioSystem::instance()` provides one process-wide audio resource service through a function-local static instance.
-4. **Simple Factory:** `EntityFactory` and the level factory create concrete players, enemies, items, and stages from validated identifiers.
-5. **Component:** `LivingEntity` composes reusable `MovementComponent` and `AnimationComponent` behaviors.
-
-## Project Layout
-
-```text
-assets/                 Fonts, audio, textures, and level resources
-include/                Public headers grouped by subsystem
-src/                    Production implementation and main entry point
-CMakeLists.txt          Production build configuration
-```
-
-## Build and Run
-
-Choose one of the following Windows setups. Git and Internet access are required the first time CMake downloads SFML 3.1.
-
-### Option 1: Visual Studio 2022
-
-Install **Visual Studio 2022 Community** or **Visual Studio Build Tools 2022**. In Visual Studio Installer, select **Desktop development with C++** and make sure MSVC, Windows SDK, and CMake tools are included.
-
-Open **Developer PowerShell for VS 2022** in the project folder, then run:
+1. Install **Visual Studio 2022 Community** or **Visual Studio Build Tools 2022**.
+2. In Visual Studio Installer, select **Desktop development with C++** and include MSVC, Windows SDK, and CMake tools.
+3. Open **Developer PowerShell for VS 2022** in the project folder and run:
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
@@ -84,17 +77,12 @@ cmake --build build --config Release --parallel 4
 .\build\Release\SuperMario.exe
 ```
 
-### Option 2: Visual Studio Code
+### Visual Studio Code
 
-Install:
-
-- Visual Studio Code with the Microsoft **C/C++** extension.
-- CMake 3.20 or newer.
-- MinGW-w64 with `g++` available in `PATH`.
-- Ninja with `ninja` available in `PATH`.
-- Git with `git` available in `PATH`.
-
-Restart VS Code after changing `PATH`. Open its PowerShell terminal in the project folder and verify:
+1. Install Visual Studio Code with the Microsoft **C/C++** and **CMake Tools** extensions.
+2. Install CMake 3.20+, MinGW-w64, Ninja, and Git.
+3. Add `cmake`, `g++`, `ninja`, and `git` to `PATH`, then restart VS Code.
+4. Open a PowerShell terminal in the project folder and verify:
 
 ```powershell
 cmake --version
@@ -103,7 +91,7 @@ ninja --version
 git --version
 ```
 
-Then configure, build, and run:
+5. Configure, build, and run:
 
 ```powershell
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -111,15 +99,32 @@ cmake --build build --parallel 4
 .\build\SuperMario.exe
 ```
 
-If you change compiler or generator, delete the old cache first with `Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue`, then configure again.
+If the compiler or generator changes, remove the old cache before configuring again:
 
-The normal development build finds `assets/` in the project root. For a standalone package, place the complete `assets/` directory beside `SuperMario.exe`. Save and leaderboard files are created beside the executable.
+```powershell
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+```
 
-## Current Verification
+Run the game from the project folder so it can find `assets/`. Save and leaderboard data are created beside the executable.
 
-- Production target builds successfully.
-- Human playtesting has covered the main menu-to-game route and representative level, enemy, item, moving-platform, boss, save, and leaderboard behavior.
+## Save and Progress
 
-## Educational Use
+The game can save the player name, score, lives, selected character, current stage, settings, and completed-level progress. The leaderboard stores each player's best result.
 
-This project was created by CS202 Group 4 for educational purposes. Mario-related characters, names, and concepts belong to Nintendo. This is a non-commercial fan project.
+## Project Structure
+
+```text
+assets/                 Fonts, audio, textures, and level resources
+include/                Public headers grouped by subsystem
+src/                    Game implementation and main entry point
+CMakeLists.txt          Production build configuration
+README.md               Project information and setup guide
+```
+
+## Credits
+
+Created by CS202 Group 4 as an educational project.
+
+## License Notice
+
+This is a non-commercial fan project. Mario-related characters, names, and concepts belong to Nintendo.
