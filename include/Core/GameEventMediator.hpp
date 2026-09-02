@@ -47,6 +47,7 @@ enum class AudioCue {
     Coin,
     BrickBreak,
     PowerUp,
+    Shoot,
     PlayerDeath,
     LevelComplete
 };

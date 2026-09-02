@@ -22,6 +22,10 @@ bool State::requestReplace(std::unique_ptr<State> state) {
     return m_stack->request({StateStack::Change::Replace, std::move(state)});
 }
 
+bool State::requestPopToRoot() {
+    return m_stack->request({StateStack::Change::PopToRoot, nullptr});
+}
+
 bool State::requestQuit() {
     return m_stack->request({StateStack::Change::Quit, nullptr});
 }
@@ -116,6 +120,9 @@ void StateStack::applyPendingChange() {
             m_states.pop_back();
         }
         m_states.push_back(std::move(pending.state));
+        break;
+    case Change::PopToRoot:
+        while (m_states.size() > 1) m_states.pop_back();
         break;
     case Change::Quit:
         m_states.clear();

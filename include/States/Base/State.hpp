@@ -13,9 +13,13 @@ class RenderWindow;
 }
 
 class StateStack;
+class UserData;
+class AudioSystem;
 
 struct StateContext {
     sf::RenderWindow* window{}; // Non-owning; MyApp owns the window.
+    UserData* userData{};       // Non-owning; MyApp owns the session data.
+    AudioSystem* audio{};       // Non-owning; Singleton owns the service lifetime.
 };
 
 class State {
@@ -34,6 +38,7 @@ protected:
     [[nodiscard]] bool requestPush(std::unique_ptr<State> state);
     [[nodiscard]] bool requestPop();
     [[nodiscard]] bool requestReplace(std::unique_ptr<State> state);
+    [[nodiscard]] bool requestPopToRoot();
     [[nodiscard]] bool requestQuit();
 
     [[nodiscard]] StateStack& stateStack() const;
@@ -65,7 +70,7 @@ public:
 private:
     friend class State;
 
-    enum class Change { Push, Pop, Replace, Quit };
+    enum class Change { Push, Pop, Replace, PopToRoot, Quit };
 
     struct PendingChange {
         Change change;
