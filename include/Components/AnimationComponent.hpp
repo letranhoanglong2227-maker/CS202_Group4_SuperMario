@@ -22,12 +22,15 @@ public:
     AnimationComponent(sf::Sprite& sprite, sf::Texture& textureSheet, float interval = 0.1f);
     ~AnimationComponent() = default;
 
+    AnimationComponent(const AnimationComponent&) = delete;
+    AnimationComponent& operator=(const AnimationComponent&) = delete;
+
     // Set the interval speed for all animations on this component
     void setInterval(float interval);
 
     // Register a new animation "tape"
-    void addAnimation(const std::string& key, const std::vector<sf::IntRect>& frames);
+    bool addAnimation(const std::string& key, const std::vector<sf::IntRect>& frames);
 
     // Play/Update an animation
-    void play(const std::string& key, float dt);
+    bool play(const std::string& key, float dt);
 };

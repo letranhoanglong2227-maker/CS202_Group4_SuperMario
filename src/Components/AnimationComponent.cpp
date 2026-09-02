@@ -5,7 +5,7 @@ AnimationComponent::AnimationComponent(sf::Sprite& sprite, sf::Texture& textureS
     : sprite(sprite), 
       textureSheet(textureSheet), 
       animationTimer(0.f), 
-      animationInterval(interval), 
+      animationInterval(interval <= 0.f ? 0.001f : interval),
       currentFrame(0), 
       currentAnimationKey("Null") 
 {
@@ -13,28 +13,28 @@ AnimationComponent::AnimationComponent(sf::Sprite& sprite, sf::Texture& textureS
 }
 
 void AnimationComponent::setInterval(float interval) {
-    this->animationInterval = interval;
+    this->animationInterval = interval <= 0.f ? 0.001f : interval;
 }
 
-void AnimationComponent::addAnimation(const std::string& key, const std::vector<sf::IntRect>& frames) {
-    try {
-        // Kiểm tra xem key đã tồn tại trong map chưa
-        if (animations.find(key) != animations.end()) {
-            throw std::invalid_argument("Animation key '" + key + "' already exists!");
-        }
-        animations[key] = frames;
-    } 
-    catch (const std::invalid_argument& e) {
-        std::cerr << "Exception caught: " << e.what() << std::endl;
+bool AnimationComponent::addAnimation(
+    const std::string& key, const std::vector<sf::IntRect>& frames) {
+    if (frames.empty() || animations.contains(key)) {
+        return false;
     }
+    animations.emplace(key, frames);
+    if (currentAnimationKey == "Null") {
+        currentAnimationKey = key;
+        currentFrame = 0;
+        sprite.setTextureRect(frames.front());
+    }
+    return true;
 }
 
-void AnimationComponent::play(const std::string& key, float dt) {
+bool AnimationComponent::play(const std::string& key, float dt) {
     // Check if the requested animation exists
     auto it = animations.find(key);
     if (it == animations.end()) {
-        std::cerr << "Warning: Animation key '" << key << "' not found!" << std::endl;
-        return;
+        return false;
     }
 
     // If switching to a new animation, reset the frame and timer
@@ -53,9 +53,8 @@ void AnimationComponent::play(const std::string& key, float dt) {
     this->animationTimer += dt;
 
     // Transition to the next frame if the timer exceeds the interval
-    if (this->animationTimer >= this->animationInterval) {
-        // Reset timer
-        this->animationTimer = 0.f; // Can also do: this->animationTimer -= this->animationInterval;
+    while (this->animationTimer >= this->animationInterval) {
+        this->animationTimer -= this->animationInterval;
 
         const std::vector<sf::IntRect>& frames = it->second;
         
@@ -67,4 +66,6 @@ void AnimationComponent::play(const std::string& key, float dt) {
             this->sprite.setTextureRect(frames[this->currentFrame]);
         }
     }
+
+    return true;
 }
